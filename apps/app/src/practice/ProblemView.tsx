@@ -125,6 +125,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
       <Workspace
         mode={{ kind: 'problem', problemId: problem.id }}
         initial={() => problemStart(problem.load)}
+        topSummary={<strong>{problem.title}</strong>}
         top={
           <>
             <Brief problem={problem} />

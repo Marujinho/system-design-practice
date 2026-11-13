@@ -6,14 +6,128 @@
 }
 
 .workspace-body {
+  --palette-w: 200px;
+  --side-w: 320px;
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 320px;
+  grid-template-columns: var(--palette-w) minmax(0, 1fr) var(--side-w);
   min-height: 0;
 }
 
-.palette {
+.workspace-body.palette-collapsed {
+  --palette-w: 32px;
+}
+
+.workspace-body.side-collapsed {
+  --side-w: 32px;
+}
+
+/* Panels around the canvas fold into a 32px strip (edge-hover FR-8–FR-10) */
+.collapsible {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.collapsible-left,
+.collapsible-right {
+  flex-direction: column;
+}
+
+.collapsible-left {
   border-right: 1px solid var(--line);
+}
+
+.collapsible-right {
+  border-left: 1px solid var(--line);
+}
+
+.collapsible-left > .collapse-toggle {
+  align-self: flex-end;
+  margin: 6px 6px 0;
+}
+
+.collapsible-right > .collapse-toggle {
+  align-self: flex-start;
+  margin: 6px 6px 0;
+}
+
+.collapsible-left.collapsed > .collapse-toggle,
+.collapsible-right.collapsed > .collapse-toggle {
+  align-self: center;
+  margin: 6px 0;
+}
+
+/* expanded, the brief and the load panel draw their own bottom lines */
+.collapsible-top {
+  align-items: flex-start;
+}
+
+.collapsible-top > .collapse-toggle {
+  order: 2;
+  margin: 6px 8px;
+}
+
+.collapsible-top.collapsed {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  height: 32px;
+  padding-left: 16px;
+}
+
+.collapsible-top.collapsed > .collapse-toggle {
+  order: 0;
+  margin: 0;
+}
+
+.collapsible-body {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
+}
+
+.collapsible-body[hidden] {
+  display: none;
+}
+
+.collapsible-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapse-toggle {
+  display: inline-grid;
+  place-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.collapse-toggle:hover {
+  color: var(--text);
+}
+
+.selection-badge {
+  display: inline-grid;
+  place-content: center;
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--text-muted);
+  border-radius: 50%;
+  font-size: 10px;
+}
+
+.palette {
   padding: 12px;
 }
 
@@ -77,8 +191,6 @@
 }
 
 .side-panel {
-  border-left: 1px solid var(--line);
-  overflow-y: auto;
   min-height: 0;
 }
 
