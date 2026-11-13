@@ -1,4 +1,5 @@
 import { cleanup, render } from '@testing-library/react';
+import { catalog } from '@archsim/catalog';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ServiceFigure } from './figure';
 import { figureFor, figureIds } from './registry';
@@ -102,9 +103,39 @@ describe('reduced motion (FR-31)', () => {
   });
 });
 
-describe('registry', () => {
+describe('registry (FR-33)', () => {
   it('maps service ids to figures', () => {
-    expect(figureIds()).toContain('aws.ec2');
     expect(figureFor('aws.ec2')?.name).toBe('rack');
+  });
+
+  it('has a figure for every service in the catalog, and nothing else', () => {
+    expect(figureIds()).toEqual(catalog.services.map((s) => s.id).sort());
+  });
+
+  it('gives every figure its own name', () => {
+    const names = figureIds().map((id) => figureFor(id)?.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe.each(catalog.services.map((s) => [s.id, s.label] as const))('figure of %s', (id, label) => {
+  beforeEach(() => {
+    stubBrowser(false);
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('mounts, paints with classes only, and empties on unmount', () => {
+    const { container, unmount } = render(<ServiceFigure serviceId={id} label={label} />);
+    const svg = container.querySelector('svg');
+    expect(svg?.querySelectorAll('path').length).toBeGreaterThan(2);
+    for (const el of container.querySelectorAll('svg *:not(defs, defs *)')) {
+      expect(el.getAttribute('stroke')).toBeNull();
+      expect(el.getAttribute('fill')).toBeNull();
+    }
+    unmount();
+    expect(svg?.childNodes.length).toBe(0);
   });
 });
