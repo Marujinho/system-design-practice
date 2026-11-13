@@ -46,3 +46,20 @@ test('keyboard only: open the free canvas, add a service, edit it, read the resu
   await page.keyboard.press('Enter');
   await expect(page.getByText('400 req/s').first()).toBeVisible();
 });
+
+test('keyboard only: collapse and expand the palette (edge-hover NFR-2)', async ({
+  page,
+  browserName,
+}) => {
+  TAB = browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
+  await page.goto('/#/free');
+  await tabTo(page, (e) => e.name === 'Recolher paleta');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('searchbox', { name: 'Buscar serviço' })).toBeHidden();
+  // the same button, now named for what it does next
+  await expect(page.getByRole('button', { name: 'Expandir paleta' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await tabTo(page, (e) => e.name === 'Buscar serviço');
+  await page.keyboard.type('ec2');
+  await expect(page.getByRole('button', { name: 'EC2', exact: true })).toBeVisible();
+});
