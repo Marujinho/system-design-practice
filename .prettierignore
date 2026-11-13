@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+**/vendor/**
+*.archsim.json
+schemas/*.json
+CLAUDE.md
+docs/
+.claude/
