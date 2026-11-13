@@ -30,6 +30,8 @@ The user calling it simple doesn't decide; the diff does. If the "small fix" tur
 
 More tools will be added — use them when they fit; don't improvise around one that exists.
 
+Praticar um problema do ArchSim (follow-ups, explicar o score) não é uma tarefa de código: siga o `AGENTS.md` e não edite arquivos.
+
 ## Inputs
 
 Every stage takes a reference, not a file. `$ARGUMENTS` can be any of these:

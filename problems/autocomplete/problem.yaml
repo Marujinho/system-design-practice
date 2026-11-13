@@ -1,0 +1,117 @@
+id: autocomplete
+title: Autocomplete de busca
+difficulty: medio
+statement: |
+  Projete o autocomplete da caixa de busca de um e-commerce.
+
+  A cada tecla, o site envia o prefixo digitado e mostra até 10 sugestões de produtos,
+  ordenadas por popularidade. As sugestões precisam aparecer enquanto a pessoa digita.
+  O catálogo de produtos muda ao longo do dia e o índice recebe atualizações contínuas.
+
+  No pico há **6.000 consultas de prefixo/s** e **20 atualizações do índice/s**. Os prefixos
+  mais curtos se repetem muito: poucos milhares de prefixos respondem pela maior parte do tráfego.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Sugerir até 10 produtos para um prefixo
+  - Ordenar por popularidade
+  - Refletir atualizações do catálogo
+quantitative:
+  - id: suggest-throughput
+    label: Sugestões atendidas
+    metric: throughput
+    class: suggest
+    op: '>='
+    value: 6000
+    unit: req/s
+  - id: index-throughput
+    label: Atualizações do índice
+    metric: throughput
+    class: index
+    op: '>='
+    value: 20
+    unit: req/s
+  - id: suggest-p99
+    label: p99 da sugestão
+    metric: p99
+    class: suggest
+    op: '<='
+    value: 400
+    unit: ms
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: suggest
+      label: Sugestão por prefixo
+      mode: rps
+      op: read
+      rps: 6000
+      payloadKB: 1
+      cacheable: true
+    - name: index
+      label: Atualização do índice
+      mode: rps
+      op: write
+      rps: 20
+      payloadKB: 2
+      cacheable: false
+qualitative:
+  - Estrutura para busca por prefixo (trie, edge n-grams)
+  - Quanto tempo uma sugestão desatualizada pode ficar no cache
+  - Reduzir chamadas do cliente (debounce, mínimo de caracteres)
+followups:
+  - id: autocomplete.structure
+    question: Que estrutura de dados resolve busca por prefixo, e onde ela vive no seu desenho?
+    topic: qualitative
+    lookFor:
+      - trie ou edge n-grams no índice de busca
+      - pré-computar o top 10 por prefixo
+  - id: autocomplete.no-cache
+    question: Cada tecla vai até o índice de busca. Quantos prefixos distintos existem de fato, e o que isso sugere?
+    when:
+      missingService:
+        - aws.elasticache-valkey
+    lookFor:
+      - poucos prefixos curtos concentram o tráfego
+      - cache com hit ratio alto antes do índice
+  - id: autocomplete.search-hot
+    question: O índice de busca está trabalhando acima de 60%. O que você ajusta primeiro, e quanto custa cada opção?
+    when:
+      metric:
+        path: kind:search.utilization
+        op: '>'
+        value: 0.6
+    lookFor:
+      - subir o hit ratio do cache
+      - mais nós no índice e o custo de cada um
+  - id: autocomplete.p99
+    question: As sugestões chegam devagar. Onde está o tempo do p99?
+    when:
+      requirementFails: suggest-p99
+    lookFor:
+      - ler a latência por nó
+      - tirar o índice do caminho da maioria das consultas
+  - id: autocomplete.staleness
+    question: Um produto saiu de linha agora. Por quanto tempo ele ainda aparece nas sugestões, e isso é aceitável?
+    topic: qualitative
+    lookFor:
+      - TTL do cache como janela de desatualização
+      - invalidação por prefixo quando necessário
+  - id: autocomplete.black-friday
+    question: Na Black Friday a busca vai receber 4× o tráfego. O que satura?
+    loadMultiplier: 4
+    lookFor:
+      - identificar o primeiro nó a saturar
+      - escalar a API e o cache, não só o índice
+  - id: autocomplete.client
+    question: O que dá para fazer no próprio navegador para reduzir as chamadas?
+    topic: qualitative
+    lookFor:
+      - debounce entre teclas
+      - mínimo de 2 ou 3 caracteres
+      - cache local de prefixos já vistos

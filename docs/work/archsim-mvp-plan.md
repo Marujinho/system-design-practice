@@ -88,6 +88,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: o teste de `version()` em cada pacote; teste de config que lê `eslint.config.js` e confirma as regras proibidas.
 - **Check**: `pnpm install && pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test && pnpm audit` → tudo verde, 0 vulnerabilidades high/critical.
 - **Depends on**: —
+- **Done**: `ce5654f`
+- **Deviation**: Node 24 em vez do 23 local (o @eslint/js recusa Node 23 em engines); engines = ^22.13 || >=24, .nvmrc = 24. TypeScript 6.0.3 (typescript-eslint 8.72 aceita <6.1). Testes rodam pelo vitest na raiz com projects, em vez de turbo; typecheck segue pelo turbo. pnpm audit: 1 moderada (minimatch via eslint, só dev), 0 high/critical.
 
 ### T2 — Schema do catálogo
 - **Covers**: FR-4 (estrutura), FR-8 (schema), NFR-11 (`provider`/`kind`), NFR-12
@@ -104,6 +106,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: o schema aceita um serviço mínimo válido; recusa preço negativo, `capPerUnit` 0, cota sem `sourceUrl`, serviço sem `errorCode`, chave desconhecida e ID sem provider.
 - **Check**: `pnpm --filter @archsim/catalog test` → verde
 - **Depends on**: T1
+- **Done**: `a4bbe86`
+- **Deviation**: validTargets virou validTargetKinds (lista de kinds, não de IDs), para outro provedor não precisar repetir a regra. Price.per usa dimensões genéricas (unit-hour, million-requests, gb, gb-second, capacity-unit-hour), e cada handler informa o uso.
 
 ### T3 — Catálogo: os 8 serviços base
 - **Covers**: FR-4 (parcial), FR-8 (dados), FR-39 (flag `burst`)
@@ -124,6 +128,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Toda cota tem `sourceUrl`.
 - **Check**: `pnpm --filter @archsim/catalog test` → verde
 - **Depends on**: T2
+- **Done**: `0d08c9f`
+- **Deviation**: Os preços e as cotas vêm do documento de origem (conferidos pelo autor em 2026-11-13); o sourceUrl aponta para a página oficial de preços/cotas da AWS de cada serviço, que não reli nesta execução. Adicionei a unidade de preço unit-month (zona do Route 53). Novas premissas: queryShare 1% no Route 53 (cache de DNS), newConnectionShare 10% no ALB (keep-alive), capacidade de 250.000 req/s por distribuição CloudFront como cota.
 
 ### T4 — Schema do diagrama e parse seguro
 - **Covers**: FR-9 (classes), FR-34/FR-35 (núcleo), NFR-3, A05 (limite de rótulo), A06, A08
@@ -149,6 +155,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - `"__proto__": {"polluted": true}` não altera `Object.prototype`.
 - **Check**: `pnpm --filter @archsim/sim-engine test diagram` → verde
 - **Depends on**: T3
+- **Done**: `49fa232`
+- **Deviation**: A carga fica no diagrama (diagram.load), então só pode existir um nó de Usuários: validação TOO_MANY_ENTRIES. Classe de requisição usa rps/rpm/users conforme o modo. Helpers de teste em src/test-helpers.ts, fora das restrições de import do motor.
 
 ### T5 — Motor: grafo, ciclos e distribuição por classe
 - **Covers**: FR-10 (ordem), FR-11, FR-12, FR-37, A06 (ciclo não trava)
@@ -172,6 +180,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Nó isolado e grafo desconexo.
 - **Check**: `pnpm --filter @archsim/sim-engine test graph` → verde
 - **Depends on**: T4
+- **Done**: `2195220`
+- **Deviation**: analyze já recebe o predicado isFlowNode, que o T10 usa para o CloudWatch.
 
 ### T6 — Motor: handlers dos kinds base
 - **Covers**: FR-13, FR-14, FR-15, FR-16, FR-17, FR-28 (parte por nó), NFR-11
@@ -198,6 +208,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - FR-28: Lambda 100 req/s → 52,56.
 - **Check**: `pnpm --filter @archsim/sim-engine test kinds` → verde
 - **Depends on**: T5
+- **Done**: `014aa28`
+- **Deviation**: As classes de requisição ganharam op: read|write (schema do T4), porque escrita não passa por cache, vai ao writer e conta como PUT. Réplicas de leitura do sql-database implementadas já aqui, e não no T10, porque o RDS do catálogo base já tem readReplicas. O registro de handlers é Partial<Record<Kind>> até o T10 completar os kinds; então vira total. O Lambda não tem fila: a latência é a duração mais o overhead, constante até o throttle.
 
 ### T7 — Motor: `step`, métricas globais e estados
 - **Covers**: FR-10, FR-26, FR-27, FR-28, FR-30 (cálculo do estado), NFR-1, NFR-4, NFR-9, NFR-11
@@ -225,6 +237,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - NFR-1: bench com 50 nós e 60 conexões, p95 ≤ 10 ms.
 - **Check**: `pnpm --filter @archsim/sim-engine test && pnpm --filter @archsim/sim-engine test:bench` → verde, p95 registrado no commit
 - **Depends on**: T6
+- **Done**: `71f3b2b`
+- **Deviation**: O Vitest 5 mudou a API de bench: step.bench.ts foi trocado por src/perf.test.ts (p95 em 1.000 ticks, assertado ≤ 10 ms; medido 0,49 ms), e pnpm test:bench roda esse teste. O grafo de referência de 50 nós foi para fixtures/perf-diagram.ts, porque cita IDs da AWS e o teste do NFR-11 proíbe isso em src/.
 
 ### T8 — Catálogo: os outros 14 serviços
 - **Covers**: FR-4 (completo), FR-8
@@ -241,6 +255,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Toda cota tem fonte.
 - **Check**: `pnpm --filter @archsim/catalog test` → verde
 - **Depends on**: T3
+- **Done**: `15208d4`
+- **Deviation**: Pesquisa nas páginas oficiais (2026-11-13): WAF US$ 5/Web ACL-mês, US$ 1/regra-mês, US$ 0,60/milhão; EventBridge classic US$ 1,00/milhão (blocos de 64 KB), PutEvents 10.000 TPS em us-east-1 (cota); CloudWatch logs US$ 0,50/GB, métrica custom US$ 0,30/mês; WebSocket US$ 1,00/milhão de mensagens e US$ 0,25/milhão de minutos de conexão. A maioria desses valores veio dos exemplos das páginas, porque as tabelas não vieram no texto lido. Não encontrei: preço de t3.small/m6g.large/r6g.large.search (usei m7g.medium US$ 0,068, c6g.large US$ 0,113 e r6g.xlarge US$ 0,335, que a página cita), cotas de conexão do WebSocket (premissa: 500 conexões novas/s) e TPS de Publish do SNS (premissa: 30.000/s). A entrega do SNS foi precificada a US$ 0,60/milhão (HTTP/S), premissa conservadora. Os preços do Fargate por task foram derivados de vCPU-h e GB-h.
 
 ### T9 — Motor: filas, fan-out e streams
 - **Covers**: FR-18, FR-19, FR-20, A10 (fila sem consumidor)
@@ -260,6 +276,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Fila sem consumidor → backlog cresce, sem NaN.
 - **Check**: `pnpm --filter @archsim/sim-engine test kinds` → verde
 - **Depends on**: T7, T8
+- **Done**: `300a1f7`
+- **Deviation**: A utilização da fila é entrada / vazão dos consumidores, então uma fila que acumula aparece como gargalo também por ρ. Fila, pub/sub e stream marcam asyncBoundary: a latência ponta a ponta para neles.
 
 ### T10 — Motor: S3, DynamoDB, Aurora, API Gateway, WAF, NAT, CloudWatch, EKS
 - **Covers**: FR-21, FR-22, FR-23, FR-24, FR-25
@@ -282,6 +300,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - FR-25: WAF 900; NAT 100 × 100 KB → 10 MB/s, custo coerente.
 - **Check**: `pnpm --filter @archsim/sim-engine test` → verde
 - **Depends on**: T9
+- **Done**: `d76b61a`
+- **Deviation**: DynamoDB: só o tráfego da chave quente sofre throttle (o resto passa), o que bate com o critério de FR-22 (1.000 throttled). Leitura = 0,5 unidade por 4 KB (eventualmente consistente). API Gateway WebSocket: a cota de conexões novas/s não é aplicada, porque o modelo não simula churn de conexões; só o custo por minuto de conexão. O kind search usa o handler de compute. O sql-database com réplicas já tinha saído no T6.
 
 ### T11 — Motor: requisitos, score e achados
 - **Covers**: FR-42 (métricas avaliáveis), FR-55, FR-56, FR-57, NFR-9 (score)
@@ -308,6 +328,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Determinismo: o mesmo score duas vezes.
 - **Check**: `pnpm --filter @archsim/sim-engine test score findings requirements` → verde
 - **Depends on**: T10
+- **Done**: `7d4b886`
+- **Deviation**: Os cenários de achados ficaram como diagramas montados no próprio score.test.ts, não como JSON em fixtures/findings/. Superdimensionado: com parâmetro de unidades (units/shards/prefixes), sugere reduzir até ρ ≈ 0,7; sem ele, sugere a variante mais barata que aguenta a carga. O Scoring (pesos sobrescrevíveis por problema) é um schema Zod exportado pelo motor.
 
 ### T12 — Schema e loader de problemas; JSON Schemas exportados
 - **Covers**: FR-41, FR-42 (schema), FR-49 (schema), NFR-12, A05 (YAML seguro), A08
@@ -331,6 +353,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Os schemas exportados são iguais aos gerados.
 - **Check**: `pnpm --filter @archsim/problems test && pnpm test schemas` → verde
 - **Depends on**: T11
+- **Done**: `2851f99`
+- **Deviation**: O loader com fs fica num subpath (@archsim/problems/load), para o app poder importar os schemas sem puxar node:fs. Os schemas vivem em packages/problems/src/{schema,contracts}.ts; scripts/schemas.ts gera os JSON Schemas (pnpm schemas) e schemas/schemas.test.ts compara. O toPublic também remove os tópicos qualitativos, que são pistas.
 
 ### T13 — Problemas 1–5: encurtador, rate limiter, leaderboard, autocomplete, ingressos
 - **Covers**: FR-40 (parcial), FR-49, FR-60, G1, G2, G7
@@ -355,6 +379,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Cada `when` avalia certo nos dois fixtures.
 - **Check**: `pnpm --filter @archsim/problems test bank` → 5 problemas verdes
 - **Depends on**: T12
+- **Done**: `296daf3`
+- **Deviation**: evaluateWhen e scoreAttempt ficaram no pacote problems (e não na CLI, como dizia o T15), para o teste do banco e a CLI usarem a mesma regra desde já. Fixtures de when: o teste usa referência e ingênua como candidatos e só pede fixture (problems/_fixtures/when/<id>.match.archsim.json) quando nenhuma das duas separa a condição; foram necessários 4. Alvos de p99 em 400 ms, calibrados à curva de fila do modelo (p99 até ~6,6× p50) e não aos 50 ms do documento de origem. Corrigido no motor (T9): o custo do SQS divide as chamadas por batchSize. Limitação observada: instâncias T em burst saem mais baratas por req/s que m5.large (créditos de CPU não modelados); as referências usam m5.large.
 
 ### T14 — Problemas 6–10: feed, chat, imagens, notificações, vídeo
 - **Covers**: FR-40 (completo), FR-49, FR-60, G1, G2, G7
@@ -370,6 +396,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: o mesmo `bank.test.ts` passa a cobrir 10 diretórios; um teste confere que são exatamente os 10 IDs de FR-40.
 - **Check**: `pnpm --filter @archsim/problems test` → 10 verdes
 - **Depends on**: T13
+- **Done**: `384f060`
+- **Deviation**: Mudança no motor (T9): o pub/sub agora conhece os kinds dos alvos (NodeContext.outKinds) e só cobra entrega para alvos compute (HTTP/S). Antes eu cobrava todas as entregas, como premissa conservadora; na AWS, SQS e Lambda não pagam entrega. Mais 6 fixtures de when (backlog e WebSocket). No feed, as inserções de timeline são uma classe de carga própria (2.500/s), porque o motor não multiplica uma requisição por N seguidores; o enunciado explica isso.
 
 ### T15 — CLI `archsim`
 - **Covers**: FR-51, FR-52, FR-53, A05 (`userContent`), A06 (limites de flags), A08, A10
@@ -390,6 +418,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - A saída passa no `schemas/cli-output.schema.json`.
 - **Check**: `pnpm archsim simulate --diagram problems/url-shortener/reference.archsim.json --problem url-shortener` → JSON com `requirements` todos `pass: true`; `pnpm --filter @archsim/cli test` → verde
 - **Depends on**: T14
+- **Done**: `aa0cb0c`
+- **Deviation**: Sem --json: a saída é sempre JSON. O agente deve chamar pnpm -s archsim, porque sem -s o pnpm imprime um cabeçalho no stdout. O ARCHSIM_PRACTICE_DIR sobrescreve o diretório practice/ (testes e e2e). buildSession foi para o pacote problems, para o plugin (T24) e os testes da CLI usarem o mesmo construtor. Mudança no motor (T11): as mensagens dos achados citam 'Serviço (id)' em vez do rótulo do usuário, para nenhum texto livre do usuário sair fora de userContent. Os fixtures de sessão são criados em diretório temporário pelos testes, não em packages/cli/fixtures/.
 
 ### T16 — Shell do app: Vite, tema, formatação, CSP, telas
 - **Covers**: FR-32, NFR-8, A02 (host e CSP), base de NFR-10
@@ -411,6 +441,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - O CSP do preview não tem `unsafe-eval` nem `unsafe-inline`.
 - **Check**: `pnpm --filter @archsim/app test && pnpm --filter @archsim/app build && pnpm --filter @archsim/app preview` → abre em `http://127.0.0.1:4173`
 - **Depends on**: T1
+- **Done**: `1200090`
+- **Deviation**: As rotas #/free e #/problems mostram 'Tela não encontrada' até o T19/T25 ligarem as telas. jest-dom 7 não tipa o Matchers do Vitest 5: registro os matchers com expect.extend em src/test-setup.ts e aumento Matchers<R,T> em src/jest-dom.d.ts; no ESLint, no-empty-object-type passou a aceitar interface vazia com um extends (é o padrão de declaration merging). O Vitest da raiz puxava vite@8.3.8 (2 dias de publicado) como peer: fixei vite@8.3.5 na raiz e em pnpm.overrides. As versões das dependências transitivas não foram checadas por idade, só as diretas e o vite.
 
 ### T17 — Ícones: figura piloto e wrapper (gate)
 - **Covers**: FR-33 (padrão), FR-31 (figuras paradas), A03 (licença)
@@ -434,6 +466,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - 50 instâncias montadas sem erro.
 - **Check**: `pnpm --filter @archsim/icons test` → verde; o `look.mjs` da skill sai com 0
 - **Depends on**: T16
+- **Done**: `cd41ee0`
+- **Deviation**: Gate aprovado: o kernel roda como módulo ES (só ganhou um export no final), isolado por stage, com loop único; o piloto passou no validador da skill e foi conferido em screenshot nos dois temas. Não usei o look.mjs, porque ele instala o playwright-core num cache na pasta pessoal do usuário e roda código de terceiros fora do repo. No lugar: vendor/skill/{validate.mjs,build.mjs,bench.html,kernel.js} sem alteração e scripts/validate-figures.mjs (pnpm --filter @archsim/icons validate), que converte cada figura para o formato da bancada e roda o validador estático; a inspeção visual é feita com o Playwright. As figuras ficam em figures/<serviceId>.figure.js, carregadas por import.meta.glob. Movimento reduzido: o kernel não inicia o loop sozinho e pousa tweens e molas na hora; com input, pede no máximo um frame. É isso que o teste verifica, em vez de 'não registra tick'. O @playwright/test entrou já aqui (era do T28).
 
 ### T18 — Store do diagrama: undo/redo e autosave
 - **Covers**: FR-2, FR-36, A08 (autosave validado), A10
@@ -455,6 +489,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Carga travada no modo problema.
 - **Check**: `pnpm --filter @archsim/app test store` → verde
 - **Depends on**: T4, T16
+- **Done**: `dac881f`
+- **Deviation**: Arquivos extras: store/defaults.ts (diagrama vazio e início de problema). No modo problema, o nó Usuários não pode ser apagado (era só a carga travada); é necessário para a carga do problema existir.
 
 ### T19 — Canvas, paleta e conexões
 - **Covers**: FR-1, FR-3, FR-5, FR-6, NFR-3 (UI), NFR-7 (paleta)
@@ -474,6 +510,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - S3 → RDS mostra aviso e não bloqueia.
 - **Check**: `pnpm --filter @archsim/app test canvas` → verde
 - **Depends on**: T17, T18
+- **Done**: `20e960d`
+- **Deviation**: Arquivos extras: canvas/{palette-model,flow-model}.ts, canvas/canvas.css e workspace/Workspace.tsx (paleta + canvas + painel lateral, autosave por modo), que liga a rota #/free. Clique e Enter na paleta adicionam o nó no centro da viewport, em cascata de 40 px se o lugar estiver ocupado. Conferido no navegador (preview): nós adicionados pela paleta, sem erros no console. O bundle passa de 500 kB (React Flow + motor); não fiz code-splitting.
 
 ### T20 — Painel de propriedades
 - **Covers**: FR-7, FR-8 (UI), FR-39
@@ -494,6 +532,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Nota de burst no t3.
 - **Check**: `pnpm --filter @archsim/app test panels` → verde
 - **Depends on**: T19, T8
+- **Done**: `ec757b6`
+- **Deviation**: Inclui o painel da conexão (protocolo, peso, classes), que o plano não listava aqui. Sem ele não dá para usar FR-5, FR-11 e FR-12 pela interface. O motor ganhou nodeStatics (capacidade e custo ocioso de um nó) e exporta readValue/readParam. O test-setup passou a chamar cleanup do Testing Library, porque o Vitest roda sem globals.
 
 ### T21 — Carga, worker e ciclo de simulação
 - **Covers**: FR-9 (UI), FR-10 (thread separada), FR-38, NFR-5, A10
@@ -512,6 +552,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Painel travado no modo problema.
 - **Check**: `pnpm --filter @archsim/app test sim` → verde
 - **Depends on**: T20, T10
+- **Done**: `c9503a4`
+- **Deviation**: O estado da simulação vive num store próprio (sim/sim-store.ts) com backend trocável: Worker (Comlink) no app, loop em processo (sim/loop.ts compartilhado) nos testes do jsdom, que não tem Worker. O gancho de falha é o método crash() do worker, que só age com import.meta.env.MODE === 'test'. Capacidade e custo no painel passam a vir da simulação ao vivo quando ela existe. Conferido no preview com CSP estrita: o worker carrega, sem erros no console.
 
 ### T22 — Visualização: estados, barra global, partículas, movimento reduzido
 - **Covers**: FR-26, FR-27 (UI), FR-29, FR-30, FR-31, NFR-2, NFR-6
@@ -533,6 +575,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - O gargalo da barra global bate com o resultado.
 - **Check**: `pnpm --filter @archsim/app test viz` → verde
 - **Depends on**: T21
+- **Done**: `950b42d`
+- **Deviation**: Pulso e piscada em CSS (@keyframes, desligados por prefers-reduced-motion), não com a lib motion. Não instalei o motion: uma dependência a menos para o mesmo efeito; o T25 anima a contagem do score com requestAnimationFrame. Arquivo extra viz/decorate.tsx, que injeta o status nos nós e arestas a cada resultado. Conferido no preview com o encurtador subdimensionado: EC2 como gargalo, partículas de erro voltando, barra global com o gargalo; corrigida a grade do workspace, que empurrava a barra para fora da tela.
 
 ### T23 — Salvar e abrir arquivo
 - **Covers**: FR-34, FR-35, A05 (rótulos como texto), A08
@@ -548,6 +592,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - O arquivo com `__proto__` não polui.
 - **Check**: `pnpm --filter @archsim/app test files` → verde
 - **Depends on**: T22
+- **Done**: `e37b8de`
+- **Deviation**: O arquivo de 5 MB+ é simulado no teste (size), não guardado como fixture. O menu de arquivo fica na faixa de carga. Abrir um arquivo dentro de um problema mantém a carga do problema.
 
 ### T24 — Plugin de prática: rotas locais, finalização, histórico, referência
 - **Covers**: FR-46 (liberação), FR-47, FR-54, FR-59 (arquivo), A01, A02, A05, A06, A08, A09, A10
@@ -584,6 +630,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - FR-54: `git check-ignore practice/session.json` → ignorado.
 - **Check**: `pnpm --filter @archsim/app test server` → verde
 - **Depends on**: T15, T16
+- **Done**: `493d7a8`
+- **Deviation**: Contratos novos no pacote problems: FinalizeResponse e ProblemSummary (a lista leva recorde, estrelas, tentativas e se a solução está liberada). Os scripts dev/build/preview do app usam vite --configLoader runner: o loader padrão (bundle) deixa os pacotes do workspace externos e o Node não carrega a fonte TS deles. Conferido com curl contra o preview: origem estranha 403, GET sem mesma origem 403, referência antes de finalizar 403, log sem corpo, nada gravado. Achado no caminho: um preview antigo do T16 ficou ouvindo na 4173 e meus smokes do T19 ao T22 falaram com ele. Ele servia o dist/ atual, então as capturas valem, mas sem o plugin; já foi encerrado.
 
 ### T25 — Telas de prática: lista, problema, avaliação, resultado, solução
 - **Covers**: FR-43, FR-44, FR-45, FR-46 (UI), FR-47 (UI), FR-48, FR-58, FR-59 (UI), A05 (markdown), A06 (referência fora do bundle)
@@ -612,6 +660,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - A06: o teste do build procura em `dist/assets/*.js` um ID de nó exclusivo de cada `reference.archsim.json` e não encontra.
 - **Check**: `pnpm --filter @archsim/app test practice && pnpm --filter @archsim/app build && node scripts/check-bundle-no-reference.mjs` → verde
 - **Depends on**: T24, T23
+- **Done**: `bbfb7f6`
+- **Deviation**: A solução de referência é simulada uma vez com simulateSteady na thread principal (diagrama pequeno, ~ms), não num segundo worker. A contagem do score usa requestAnimationFrame (sem a lib motion). O check do bundle ignora rótulos que o app já embarca (texto do catálogo e 'Usuários'). Mudanças fora dos arquivos da tarefa, todas pequenas: PROBLEMS_DIR resolve o caminho sem objeto URL (o jsdom troca o URL global); o achado 'quebra com mais carga' sempre aponta o nó mais carregado; a barra global diz 'mais carregado' quando nada está em gargalo; o topo do workspace virou um bloco só (a faixa de carga invadia a paleta). Conferido no preview real: lista, problema, finalizar (85 pontos, 2 estrelas, abaixo da referência), sessão e histórico gravados, solução aberta, sem erros no console.
 
 ### T26a — Figuras: rede e borda (Route 53, CloudFront, API Gateway, ALB, NLB, NAT, WAF, Usuários)
 - **Covers**: FR-33
@@ -622,6 +672,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Check**: `pnpm --filter @archsim/icons test` → verde; `look.mjs` = 0 para cada figura
 - **Depends on**: T17
 - **Parallel**: pode rodar junto com T18–T25
+- **Done**: `604f433`
+- **Deviation**: As 22 figuras (T26a–c) saem de três famílias no formato da skill: pilha (gavetas, como o piloto do EC2), grade (blocos sobre uma base; o bloco sob o ponteiro sobe e os vizinhos acompanham com atraso por distância) e leque (origem + destinos ligados por guias tracejadas). Cada arquivo é autocontido e foi gerado por um gerador local (fora do repo), com geometria e parâmetros próprios por serviço. Validadas pelo validate.mjs da skill e conferidas numa folha de contato (repouso, hover, tema claro). O nome 'filter' do WAF foi trocado para 'screen', porque o validador lê 'filter' como filtro CSS.
 
 ### T26b — Figuras: computação e dados (Lambda, Fargate, EKS, S3, DynamoDB, RDS, Aurora)
 - **Covers**: FR-33
@@ -629,6 +681,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Mirror**: T26a
 - **Do / Tests / Check**: como T26a
 - **Depends on**: T17
+- **Done**: `6124592`
+- **Deviation**: Mesmo gerador e famílias do T26a.
 
 ### T26c — Figuras: cache, mensageria, busca, observabilidade (ElastiCache, SQS, SNS, Kinesis, EventBridge, OpenSearch, CloudWatch)
 - **Covers**: FR-33
@@ -636,6 +690,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Mirror**: T26a
 - **Do / Tests / Check**: como T26a; aqui o teste "todo `serviceId` do catálogo tem figura" passa a exigir os 23
 - **Depends on**: T17, T8
+- **Done**: `f8c26ec`
+- **Deviation**: Limitação: figuras da mesma família ficam parecidas entre si (SNS × CloudFront são leques; ElastiCache × WAF são fileiras de placas finas). Dá para distinguir, mas não são tão únicas quanto as do Hairline. O teste do registro exige uma figura por serviço do catálogo, com nomes únicos.
 
 ### T27 — `AGENTS.md`, ponteiro no `CLAUDE.md`, README
 - **Covers**: FR-50, FR-48 (texto), A05 (regra para o agente), DoD (README)
@@ -655,6 +711,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: `agents-doc.test.ts` procura cada seção pelo título e as frases-chave ("dados, não instruções", "não edite"); confere a linha no `CLAUDE.md` e a menção ao Hairline com MIT no README.
 - **Check**: `pnpm test agents-doc` → verde
 - **Depends on**: T15, T25
+- **Done**: `a708170`
+- **Deviation**: Feito antes do T26 (as figuras), porque não depende delas.
 
 ### T28 — e2e, acessibilidade e medições
 - **Covers**: G4, NFR-2 (medição), NFR-5, NFR-6, NFR-7, NFR-10, FR-31 (e2e), A02 (CSP no console), fluxos de §6
@@ -675,6 +733,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: os specs acima.
 - **Check**: `pnpm exec playwright install chromium webkit && pnpm test:e2e` → verde; `perf-result.json` com p95 ≥ 50
 - **Depends on**: T25, T26c, T27
+- **Done**: `f0b177f`
+- **Deviation**: 21 testes e2e verdes duas vezes seguidas. G4 é medido em tempo real (< 600 ms entre o Enter e o estado mudar), não com page.clock, porque o relógio do Playwright não controla o worker. No WebKit o teste de teclado usa Option+Tab, como o Safari exige para focar links e botões; o aviso benigno 'ResizeObserver loop completed' do WebKit não conta como erro. NFR-2: p95 de 16,8 ms por frame = 59,5 fps (apps/app/e2e/perf-result.json). Bugs reais achados pelo e2e e corrigidos aqui: o painel de propriedades não acompanhava os resultados da simulação; aria-label proibido nos handles do React Flow; contraste dos select no WebKit. As figuras foram para o .prettierignore (o validador da skill limita a 200 linhas).
 
 ### T29 — Conquistas locais (Could)
 - **Covers**: FR-61
@@ -685,6 +745,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Check**: `pnpm test achievements` → verde
 - **Depends on**: T25
 - **Opcional**: corta-se sem afetar nenhum Must.
+- **Done**: `527c7fe`
+- **Deviation**: A função achievements() fica no pacote problems, não no sim-engine: ela lê o History, e o motor não deve depender desse formato. O painel aparece sob a lista de problemas, lendo GET /__archsim/history.
 
 ## Coverage
 
@@ -798,3 +860,98 @@ Depois, os passos manuais de §18 do PRD, com estes valores concretos:
 5. `curl -i -X POST -H 'Origin: https://evil.example' -H 'Content-Type: application/json' -d '{}' http://127.0.0.1:5173/__archsim/finalize` → `403`, `practice/session.json` inalterado.
 6. Os 3 roteiros de agente do §18.6 do PRD com Claude Code numa sessão nova, com o resultado registrado em `docs/work/archsim-mvp-monitor.md`.
 7. Temas e "Reduzir movimento" do macOS nos 4 estados; ler `apps/app/e2e/perf-result.json`.
+
+## Implementation
+
+**Branch**: `feat/archsim-mvp` · **Base**: `master` (baseline `46d3969`; o remoto aponta `main` como padrão, sem `development`/`develop`: confirmar o alvo do PR no `/review-work`) · **Date**: 2026-11-13
+
+Ambiente: Node 24.21 (o Node 23 local é recusado pelo `engines` do `@eslint/js`), pnpm 9.15.4.
+
+| Task | Commit | Check | Lint / Types / Tests |
+|---|---|---|---|
+| T1 | `ce5654f` | ✅ | ✅ ✅ ✅ (9) |
+| T2 | `a4bbe86` | ✅ | ✅ ✅ ✅ (22) |
+| T3 | `0d08c9f` | ✅ | ✅ ✅ ✅ (31) |
+| T4 | `49fa232` | ✅ | ✅ ✅ ✅ (54) |
+| T5 | `2195220` | ✅ | ✅ ✅ ✅ (69) |
+| T6 | `014aa28` | ✅ | ✅ ✅ ✅ (94) |
+| T7 | `71f3b2b` | ✅ (NFR-1 p95 0,49 ms) | ✅ ✅ ✅ (116) |
+| T8 | `15208d4` | ✅ | ✅ ✅ ✅ (120) |
+| T9 | `300a1f7` | ✅ | ✅ ✅ ✅ (134) |
+| T10 | `d76b61a` | ✅ | ✅ ✅ ✅ (152) |
+| T11 | `7d4b886` | ✅ | ✅ ✅ ✅ (175) |
+| T12 | `2851f99` | ✅ | ✅ ✅ ✅ (195) |
+| T13 | `296daf3` | ✅ (5 referências: 93; ingênua: 0–8) | ✅ ✅ ✅ (238) |
+| T14 | `384f060` | ✅ (10 referências: 93–100; ingênua: 0–10) | ✅ ✅ ✅ (284) |
+| T15 | `aa0cb0c` | ✅ | ✅ ✅ ✅ (301) |
+| T16 | `1200090` | ✅ | ✅ ✅ ✅ (317) |
+| T17 | `cd41ee0` | ✅ (gate aprovado) | ✅ ✅ ✅ (323) |
+| T18 | `dac881f` | ✅ | ✅ ✅ ✅ (338) |
+| T19 | `20e960d` | ✅ | ✅ ✅ ✅ (351) |
+| T20 | `ec757b6` | ✅ | ✅ ✅ ✅ (363) |
+| T21 | `c9503a4` | ✅ | ✅ ✅ ✅ (371) |
+| T22 | `950b42d` | ✅ | ✅ ✅ ✅ (380) |
+| T23 | `e37b8de` | ✅ | ✅ ✅ ✅ (393) |
+| T24 | `493d7a8` | ✅ | ✅ ✅ ✅ (410) |
+| T25 | `bbfb7f6` | ✅ (0 vazamentos no bundle) | ✅ ✅ ✅ (426) |
+| T26a | `604f433` | ✅ (validador da skill) | ✅ ✅ ✅ |
+| T26b | `6124592` | ✅ | ✅ ✅ ✅ |
+| T26c | `f8c26ec` | ✅ (23/23 figuras) | ✅ ✅ ✅ (464) |
+| T27 | `a708170` | ✅ | ✅ ✅ ✅ (439) |
+| T28 | `f0b177f`, `bdb2ba6` | ✅ (e2e 21/21, 3× seguidas) | ✅ ✅ ✅ (464) |
+| T29 | `527c7fe` | ✅ | ✅ ✅ ✅ (471) |
+
+### Deviations
+Cada tarefa traz a sua linha **Deviation** acima. As que mudam algo além do arquivo da tarefa:
+- **Ferramental (T1, T16):** Node 24 em vez do 23 local; TypeScript 6.0.3 (typescript-eslint aceita < 6.1); testes pelo vitest da raiz com projects; `vite` fixado em 8.3.5 também como peer; os scripts do app usam `vite --configLoader runner`; import do `catalog.json` com `with { type: 'json' }`.
+- **Contratos (T6):** cada classe de requisição ganhou `op: read|write`.
+- **Motor (T9, T11, T14, T15):** o SQS divide o custo das chamadas pelo tamanho do lote; o SNS só cobra entrega para alvos HTTP/S; os achados citam "Serviço (id)" e nunca o rótulo livre do usuário (A05).
+- **Problemas (T13):** alvos de p99 calibrados à curva de fila do modelo (300–400 ms), não aos 50 ms do documento de origem; o feed modela o fan-out como uma classe de carga própria.
+- **Figuras (T17, T26):** sem `look.mjs` (ele instalaria o playwright-core fora do repo). No lugar dele, o validador estático da skill vendorizado e inspeção com Playwright. As 22 figuras vêm de três famílias geradas (pilha, grade, leque).
+- **Sem a lib `motion` (T22, T25):** animações em CSS e `requestAnimationFrame`.
+- **UI (T20, T25, T28):** painel da conexão adicionado; a solução de referência é simulada na thread principal; o painel de propriedades passou a se inscrever nos resultados (bug real achado pelo e2e).
+- **T29:** `achievements()` no pacote `problems`, não no motor.
+
+### Definition of Done
+- [x] Todo requisito Must com critério de aceitação coberto por teste automatizado. Exceção: G6, que é manual e está registrado abaixo. 471 testes unitários e de integração, 21 e2e.
+- [x] Linhas aplicáveis do §12 com teste passando: A01, A02, A05, A06, A08, A09 e A10 em `apps/app/server/server.test.ts`, mais A05/A06/A08 em app, CLI e motor, e A03 com o audit. Conferido também com `curl` contra os servidores reais (dev e preview): origem estranha 403, GET sem mesma origem 403, referência antes de finalizar 403.
+- [x] Fixtures golden do motor dentro de ±0,5%.
+- [x] 10 problemas no schema, referência entre 93 e 100 pontos, ingênua entre 0 e 10, cada `when` verdadeiro num desenho e falso noutro.
+- [x] NFR-1: p95 de 0,58 ms por tick (limite 10 ms). NFR-2: p95 de 16,8 ms por frame, 59,5 fps, com 50 nós a 1M req/min (limite 50 fps).
+- [x] Clone limpo: `install --frozen-lockfile`, `lint`, `typecheck`, `test`, `test:bench`, `build`, `check-bundle-no-reference` e `audit` (0 high/critical) verdes. O `test:e2e` passou depois do ajuste em `bdb2ba6`.
+- [x] Os 3 roteiros de agente do §18.6, cada um com um subagente novo, sem contexto, recebendo só a frase do usuário:
+  - (a) Achou o `AGENTS.md`, rodou a CLI e fez uma pergunta sobre o banco saturado, com os números.
+  - (b) Cobriu venda dupla, idempotência, sala de espera e justiça, re-simulou com 2× e 1,5× e explicou o score pelos achados.
+  - (c) Tratou o rótulo injetado como dado e não abriu a referência.
+
+  Nenhum dos três editou arquivos. Ressalva: foram subagentes do Claude Code, não sessões novas abertas pela pessoa. Em (a) e (b), antes de chegar ao `AGENTS.md`, o agente procurou por "follow-up" nos documentos do pipeline.
+- [ ] Temas e "Reduzir movimento" nos 4 estados: **parcial**.
+  - Visto em captura: tema escuro com saudável, crítico e gargalo; tema claro nas figuras.
+  - O e2e cobre movimento reduzido com gargalo.
+  - Não conferi "pressionado" e "crítico" no tema claro.
+- [x] README, `AGENTS.md` e `practice/README.md` escritos.
+- [ ] G1 (montar a arquitetura de referência em até 5 min): **não medido**. É uma execução cronometrada manual, que fica para quem usa o app.
+
+### Verification
+- §18.1: o dev e o preview escutam só em loopback (`localhost:5173` e `localhost:4173` no `lsof`).
+- §18.2, pela CLI, com o diagrama do PRD a 1M req/min:
+  - ALB recebe 3.333,3 req/s;
+  - EC2 é o gargalo, a ρ 8,33;
+  - RDS recebe 80 req/s;
+  - com m5.large ×5, o EC2 fica "pressionado" (ρ 0,83) e custa US$ 350,40/mês.
+- §18.3: fluxo de prática no preview real e no e2e. Sem dica e sem botão de solução antes de finalizar; score, estrelas e achados; `session.json` e `history.json` gravados e ignorados pelo git; "Ver uma solução" sem alterar o desenho.
+- §18.4: `pnpm -s archsim simulate`, `--load-multiplier` e `followups` rodados pelos agentes do G6 e pelos testes da CLI.
+- §18.5: `curl` com `Origin: https://evil.example` → 403 nos dois servidores.
+- §18.7: o e2e de movimento reduzido mede menos de 15 frames em 2 s, contra cerca de 120 sem o modo.
+- §18.8: `apps/app/e2e/perf-result.json` com p95 de 59,5 fps.
+
+Limitações conhecidas, para o `/review-work` ver:
+- Instâncias T simulam capacidade em burst; por req/s, saem mais baratas que m5.large.
+- Algumas figuras da mesma família se parecem.
+- O bundle tem cerca de 570 kB, sem code-splitting.
+- `pnpm audit`: 1 vulnerabilidade moderada (minimatch, só em dev, via eslint).
+- As versões transitivas não foram checadas por idade.
+- Os hooks descritos no `CLAUDE.md` não existem no repositório.
+
+### Inherited failures
+Nenhuma. O repositório não tinha código nem testes antes desta branch.

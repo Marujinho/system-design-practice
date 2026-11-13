@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "__proto__": { "polluted": true },
+  "catalogVersion": "2026-11-13.1",
+  "name": "Encurtador de URL — referência",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 120
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "alb",
+      "serviceId": "aws.alb",
+      "variantId": "alb",
+      "position": {
+        "x": 220,
+        "y": 120
+      },
+      "label": "ALB",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "app",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 440,
+        "y": 120
+      },
+      "label": "API de redirecionamento",
+      "props": {
+        "units": 30
+      },
+      "overrides": {}
+    },
+    {
+      "id": "cache",
+      "serviceId": "aws.elasticache-valkey",
+      "variantId": "cache.t4g.micro",
+      "position": {
+        "x": 680,
+        "y": 40
+      },
+      "label": "Cache de URLs",
+      "props": {
+        "units": 1,
+        "hitRatio": 0.95
+      },
+      "overrides": {}
+    },
+    {
+      "id": "db",
+      "serviceId": "aws.rds-postgres",
+      "variantId": "db.t4g.small",
+      "position": {
+        "x": 900,
+        "y": 120
+      },
+      "label": "Banco de URLs",
+      "props": {
+        "readReplicas": 2
+      },
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-alb",
+      "source": "users",
+      "target": "alb",
+      "protocol": "http"
+    },
+    {
+      "id": "alb-app",
+      "source": "alb",
+      "target": "app",
+      "protocol": "http"
+    },
+    {
+      "id": "app-cache",
+      "source": "app",
+      "target": "cache",
+      "protocol": "tcp",
+      "classes": [
+        "redirect"
+      ]
+    },
+    {
+      "id": "cache-db",
+      "source": "cache",
+      "target": "db",
+      "protocol": "tcp"
+    },
+    {
+      "id": "app-db",
+      "source": "app",
+      "target": "db",
+      "protocol": "tcp",
+      "classes": [
+        "create"
+      ]
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "redirect",
+        "label": "Redirecionamento",
+        "mode": "rps",
+        "op": "read",
+        "rps": 10000,
+        "payloadKB": 0.5,
+        "cacheable": true
+      },
+      {
+        "name": "create",
+        "label": "Criação de link",
+        "mode": "rps",
+        "op": "write",
+        "rps": 100,
+        "payloadKB": 1,
+        "cacheable": false
+      }
+    ]
+  }
+}

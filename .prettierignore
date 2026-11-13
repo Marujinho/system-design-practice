@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+**/vendor/**
+*.archsim.json
+schemas/*.json
+CLAUDE.md
+docs/
+.claude/
+# figures follow the hairline-create style; its validator caps them at 200 lines
+packages/icons/figures/
+*.tmp.*

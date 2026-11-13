@@ -1,0 +1,142 @@
+id: news-feed
+title: Feed de notícias com usuários celebridade
+difficulty: dificil
+statement: |
+  Projete o feed de uma rede social.
+
+  Cada usuário segue outros usuários e, ao abrir o app, vê os posts mais recentes de quem
+  segue. Em média, um post é entregue a 50 seguidores, mas algumas contas (celebridades)
+  têm milhões de seguidores.
+
+  No pico há **5.000 aberturas de feed/s** e **50 posts/s**. Entregar cada post nas timelines
+  dos seguidores gera **2.500 inserções de timeline/s** (50 posts × 50 seguidores), que já
+  estão contadas na carga. O post pode levar alguns segundos para aparecer nos feeds, mas
+  abrir o feed precisa ser rápido.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Publicar um post
+  - Abrir o feed com os posts recentes de quem a pessoa segue
+  - Aceitar que um post leve alguns segundos para chegar aos feeds
+quantitative:
+  - id: feed-throughput
+    label: Aberturas de feed atendidas
+    metric: throughput
+    class: feed
+    op: '>='
+    value: 5000
+    unit: req/s
+  - id: post-throughput
+    label: Posts aceitos
+    metric: throughput
+    class: post
+    op: '>='
+    value: 50
+    unit: req/s
+  - id: fanout-throughput
+    label: Inserções de timeline aceitas
+    metric: throughput
+    class: fanout
+    op: '>='
+    value: 2500
+    unit: req/s
+  - id: feed-p99
+    label: p99 da abertura do feed
+    metric: p99
+    class: feed
+    op: '<='
+    value: 400
+    unit: ms
+  - id: delivery-age
+    label: Atraso máximo para chegar aos feeds
+    metric: queueAge
+    op: '<='
+    value: 30
+    unit: s
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: feed
+      label: Abrir o feed
+      mode: rps
+      op: read
+      rps: 5000
+      payloadKB: 4
+      cacheable: true
+    - name: post
+      label: Publicar post
+      mode: rps
+      op: write
+      rps: 50
+      payloadKB: 2
+      cacheable: false
+    - name: fanout
+      label: Entrega nas timelines
+      mode: rps
+      op: write
+      rps: 2500
+      payloadKB: 0.1
+      cacheable: false
+qualitative:
+  - Fan-out na escrita × fan-out na leitura
+  - Tratamento híbrido para celebridades
+  - Ordenação e paginação do feed
+followups:
+  - id: news-feed.push-vs-pull
+    question: Você entrega o post nas timelines na hora em que ele é publicado ou monta o feed na hora em que ele é aberto? Por quê?
+    topic: qualitative
+    lookFor:
+      - fan-out na escrita deixa a leitura barata
+      - fan-out na leitura evita escrever para quem nunca abre o app
+      - a razão leitura/escrita decide
+  - id: news-feed.celebrity
+    question: Uma celebridade com 30 milhões de seguidores posta. O que acontece com a sua fila de fan-out?
+    topic: qualitative
+    lookFor:
+      - fan-out na escrita explode para contas grandes
+      - híbrido, com posts de celebridades mesclados na leitura
+  - id: news-feed.sync-fanout
+    question: Você faz o fan-out no caminho da requisição de post. O que acontece com a latência de quem posta?
+    when:
+      missingService:
+        - aws.sqs
+        - aws.kinesis
+    lookFor:
+      - fila desacopla o post do fan-out
+      - quem posta não espera 50 escritas
+  - id: news-feed.backlog
+    question: A fila de fan-out está acumulando. Quanto tempo um post leva para aparecer?
+    when:
+      metric:
+        path: kind:queue.queueAgeS
+        op: '>'
+        value: 30
+    lookFor:
+      - ler a idade da fila
+      - mais workers de fan-out
+  - id: news-feed.feed-p99
+    question: Abrir o feed ficou lento. De onde vem o feed no seu desenho?
+    when:
+      requirementFails: feed-p99
+    lookFor:
+      - timeline pré-montada em memória
+      - não juntar posts de centenas de contas na hora da leitura
+  - id: news-feed.timeline-memory
+    question: As timelines vivem no Redis. Quanta memória isso exige, e o que você guarda em cada uma?
+    when:
+      hasService:
+        - aws.elasticache-valkey
+    lookFor:
+      - guardar só IDs dos posts, não o conteúdo
+      - limitar o tamanho de cada timeline
+  - id: news-feed.event
+    question: Um grande evento esportivo vai triplicar tudo. O que quebra primeiro?
+    loadMultiplier: 3
+    lookFor:
+      - identificar o primeiro nó a saturar
+      - a fila de fan-out absorve enquanto os workers escalam

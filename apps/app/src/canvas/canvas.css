@@ -1,0 +1,269 @@
+.workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.workspace-body {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 320px;
+  min-height: 0;
+}
+
+.palette {
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.palette-search {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.palette h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 14px 0 6px;
+  font-weight: 500;
+}
+
+.palette ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.palette-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  cursor: grab;
+}
+
+.palette-item:hover {
+  border-color: var(--line-strong);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.canvas {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.canvas-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  color: var(--text-muted);
+  pointer-events: none;
+  margin: 0;
+}
+
+.side-panel {
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.notice {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+
+/* React Flow, in the Hairline palette */
+.react-flow {
+  --xy-background-color: var(--bg);
+  --xy-edge-stroke: var(--hairline-mid);
+  --xy-edge-stroke-selected: var(--hairline-hi);
+  --xy-edge-stroke-width: 1;
+  --xy-handle-background-color: var(--hairline-plate);
+  --xy-handle-border-color: var(--hairline-edge);
+  --xy-minimap-background-color: var(--hairline-plate);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--bg) 70%, transparent);
+  --xy-minimap-node-background-color: var(--hairline-lo);
+  --xy-controls-button-background-color: var(--hairline-plate);
+  --xy-controls-button-color: var(--hairline-hi);
+  --xy-controls-button-border-color: var(--hairline-lo);
+  --xy-background-pattern-dots-color: var(--hairline-lo);
+  --xy-selection-background-color: transparent;
+  --xy-selection-border: 1px dashed var(--hairline-edge);
+}
+
+.service-node {
+  width: 120px;
+  padding: 6px 6px 8px;
+  background: var(--hairline-plate);
+  border: 1px solid var(--hairline-lo);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.service-node.selected {
+  border-color: var(--hairline-hi);
+}
+
+.service-figure {
+  width: 100%;
+}
+
+.service-node-text {
+  display: grid;
+  gap: 1px;
+  font-size: 11px;
+}
+
+.service-node-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-node-kind {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.edge-label {
+  position: absolute;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 0 4px;
+  border-radius: 4px;
+  pointer-events: all;
+}
+
+.edge-warning {
+  display: inline-grid;
+  place-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--state-pressured);
+  border-radius: 50%;
+  color: var(--state-pressured);
+  font-weight: 600;
+}
+
+.particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.global-bar {
+  position: absolute;
+  left: 56px;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  max-width: calc(100% - 280px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.node-status {
+  display: grid;
+  gap: 1px;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.health-badge {
+  justify-self: start;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0 6px;
+  color: var(--text);
+}
+
+.service-node[data-health='pressured'] {
+  border-color: var(--state-pressured);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+.service-node[data-health='critical'] {
+  border-color: var(--state-critical);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.service-node[data-health='bottleneck'] {
+  border-color: var(--state-critical);
+  border-width: 2px;
+  animation: blink 0.8s steps(2, start) infinite;
+}
+
+.service-node[data-health='unsimulated'] {
+  border-style: dashed;
+}
+
+.health-badge.pressured {
+  border-color: var(--state-pressured);
+  color: var(--state-pressured);
+}
+
+.health-badge.critical,
+.health-badge.bottleneck {
+  border-color: var(--state-critical);
+  color: var(--state-critical);
+}
+
+.flow-edge.errors {
+  stroke: var(--state-critical) !important;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes blink {
+  to {
+    border-color: var(--hairline-lo);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-node[data-health] {
+    animation: none !important;
+  }
+}

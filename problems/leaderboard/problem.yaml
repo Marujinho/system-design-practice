@@ -1,0 +1,123 @@
+id: leaderboard
+title: Leaderboard em tempo real
+difficulty: medio
+statement: |
+  Projete o ranking em tempo real de um jogo mobile.
+
+  Ao fim de cada partida, o jogo envia a pontuação do jogador. O ranking global (top 100) e a
+  posição de cada jogador precisam refletir a nova pontuação em poucos segundos. Todo histórico
+  de pontuações precisa ser guardado de forma durável para auditoria.
+
+  No pico há **1.000 atualizações de pontuação/s** e **4.000 consultas ao ranking/s**.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Registrar a pontuação de cada partida
+  - Consultar o top 100 e a posição de um jogador
+  - Guardar todo o histórico de pontuações de forma durável
+quantitative:
+  - id: top-throughput
+    label: Consultas atendidas
+    metric: throughput
+    class: top
+    op: '>='
+    value: 4000
+    unit: req/s
+  - id: score-throughput
+    label: Atualizações aceitas
+    metric: throughput
+    class: score
+    op: '>='
+    value: 1000
+    unit: req/s
+  - id: top-p99
+    label: p99 da consulta
+    metric: p99
+    class: top
+    op: '<='
+    value: 400
+    unit: ms
+  - id: persist-age
+    label: Atraso máximo para persistir
+    metric: queueAge
+    op: '<='
+    value: 5
+    unit: s
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: top
+      label: Consulta do top 100
+      mode: rps
+      op: read
+      rps: 4000
+      payloadKB: 1
+      cacheable: true
+    - name: score
+      label: Atualização de pontuação
+      mode: rps
+      op: write
+      rps: 1000
+      payloadKB: 0.2
+      cacheable: false
+qualitative:
+  - Estrutura de dados para ranking (sorted set) e custo de calcular a posição
+  - Durabilidade do ranking em memória e reconstrução após falha
+  - Empates e jogadores com pontuações iguais
+followups:
+  - id: leaderboard.data-structure
+    question: Como você calcula a posição de um jogador entre milhões sem ordenar tudo a cada consulta?
+    topic: qualitative
+    lookFor:
+      - sorted set (ZADD, ZRANK, ZREVRANGE)
+      - custo O(log n) por atualização
+  - id: leaderboard.durability
+    question: O ranking vive em memória. O que acontece se o Redis reiniciar?
+    topic: qualitative
+    lookFor:
+      - reconstrução a partir do histórico durável
+      - persistência do Redis (AOF/snapshot) e seus limites
+  - id: leaderboard.sync-db
+    question: Você grava cada pontuação direto no banco relacional, no caminho da requisição. O que isso faz com a latência e com o banco no pico?
+    when:
+      missingService:
+        - aws.sqs
+        - aws.kinesis
+    lookFor:
+      - escrita síncrona acopla a latência ao banco
+      - fila ou stream desacopla e absorve picos
+  - id: leaderboard.backlog
+    question: A fila de persistência está acumulando. Quanto tempo leva para uma pontuação ficar durável?
+    when:
+      metric:
+        path: kind:queue.queueAgeS
+        op: '>'
+        value: 5
+    lookFor:
+      - ler a idade da fila na simulação
+      - escalar os consumidores
+      - gravar em lote
+  - id: leaderboard.top-p99
+    question: A consulta ao top 100 ficou lenta. Onde está o tempo?
+    when:
+      requirementFails: top-p99
+    lookFor:
+      - servir o top 100 da memória
+      - cache do resultado por alguns segundos
+  - id: leaderboard.tournament
+    question: Um torneio vai multiplicar tudo por 5 durante uma hora. O que quebra primeiro?
+    loadMultiplier: 5
+    lookFor:
+      - identificar o primeiro nó a saturar
+      - a fila absorve as escritas enquanto os workers escalam
+  - id: leaderboard.ties
+    question: Dois jogadores fazem a mesma pontuação. Quem fica na frente, e como você garante isso no Redis?
+    topic: qualitative
+    lookFor:
+      - critério de desempate (quem pontuou primeiro)
+      - codificar o desempate na pontuação

@@ -1,0 +1,19 @@
+{
+  "name": "@archsim/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/run.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@archsim/catalog": "workspace:*",
+    "@archsim/problems": "workspace:*",
+    "@archsim/sim-engine": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

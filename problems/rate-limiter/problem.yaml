@@ -1,0 +1,108 @@
+id: rate-limiter
+title: Rate limiter distribuído
+difficulty: medio
+statement: |
+  Projete um rate limiter para uma API pública.
+
+  Cada cliente (identificado por uma chave de API) pode fazer até 100 requisições por minuto.
+  Acima disso, a API responde `429 Too Many Requests`. O limite precisa valer para o cliente
+  inteiro, mesmo que as requisições dele caiam em instâncias diferentes da API.
+
+  A API recebe **5.000 requisições/s** no pico. Toda requisição passa pelo limitador antes de
+  seguir, então ele não pode virar o gargalo nem deixar a API lenta.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Limitar cada chave de API a 100 requisições por minuto
+  - Responder 429 quando o limite estourar
+  - O limite vale para o cliente em todas as instâncias da API
+quantitative:
+  - id: api-throughput
+    label: Requisições atendidas
+    metric: throughput
+    class: api
+    op: '>='
+    value: 5000
+    unit: req/s
+  - id: api-p99
+    label: p99 da chamada
+    metric: p99
+    class: api
+    op: '<='
+    value: 400
+    unit: ms
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: api
+      label: Chamada de API
+      mode: rps
+      op: read
+      rps: 5000
+      payloadKB: 1
+      cacheable: false
+qualitative:
+  - Algoritmo de limitação (janela fixa, janela deslizante, token bucket)
+  - Contagem atômica entre instâncias
+  - Comportamento quando o armazenamento de contadores falha (fail-open × fail-closed)
+followups:
+  - id: rate-limiter.algorithm
+    question: Qual algoritmo você usa para contar as requisições, e o que acontece na virada da janela?
+    topic: qualitative
+    lookFor:
+      - janela fixa permite rajada de até 2× na virada
+      - janela deslizante ou token bucket suavizam
+      - custo de memória de cada algoritmo
+  - id: rate-limiter.atomicity
+    question: Duas instâncias recebem requisições do mesmo cliente no mesmo milissegundo. Como você garante que a contagem não perde incrementos?
+    topic: qualitative
+    lookFor:
+      - incremento atômico (INCR, Lua script)
+      - não fazer leitura e escrita separadas
+  - id: rate-limiter.no-shared-store
+    question: Você não colocou um armazenamento compartilhado para os contadores. Como o limite vale para o cliente inteiro se ele cai em instâncias diferentes?
+    when:
+      missingService:
+        - aws.elasticache-valkey
+        - aws.dynamodb
+    lookFor:
+      - contador local por instância multiplica o limite pelo número de instâncias
+      - armazenamento compartilhado de baixa latência
+  - id: rate-limiter.dynamo-cost
+    question: Você guardou os contadores no DynamoDB. Quanto custa cada requisição da API só em escrita de contador?
+    when:
+      hasService:
+        - aws.dynamodb
+    lookFor:
+      - custo por milhão de escritas em volume alto
+      - Redis em memória é mais barato para contadores efêmeros
+  - id: rate-limiter.p99
+    question: O p99 da chamada passou do alvo. Quanto do tempo é o limitador e quanto é o resto?
+    when:
+      requirementFails: api-p99
+    lookFor:
+      - ler a latência por nó na simulação
+      - o limitador deve custar poucos milissegundos
+      - escalar a camada que satura
+  - id: rate-limiter.redis-down
+    question: O Redis dos contadores caiu. A API para de funcionar ou deixa tudo passar?
+    topic: qualitative
+    lookFor:
+      - fail-open × fail-closed e o risco de cada um
+      - réplica e failover do Redis
+  - id: rate-limiter.traffic-3x
+    question: Um cliente grande vai triplicar o tráfego. O que satura primeiro?
+    loadMultiplier: 3
+    lookFor:
+      - identificar o nó que satura na simulação
+      - o contador por chave quente
+  - id: rate-limiter.api-gateway
+    question: Por que não usar o throttling do próprio API Gateway?
+    lookFor:
+      - cota de 10.000 req/s por conta e região somando todas as APIs
+      - limites por chave do API Gateway (usage plans) e suas restrições

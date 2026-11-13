@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "catalogVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "nodes": {
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "serviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "variantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "props": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "overrides": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "required": [
+          "id",
+          "serviceId",
+          "variantId",
+          "position",
+          "label",
+          "props",
+          "overrides"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "maxItems": 400,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "http",
+              "grpc",
+              "tcp",
+              "websocket",
+              "pubsub",
+              "queue"
+            ]
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "classes": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,31}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "target",
+          "protocol"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "load": {
+      "type": "object",
+      "properties": {
+        "classes": {
+          "minItems": 1,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,31}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "users",
+                  "rps",
+                  "rpm"
+                ]
+              },
+              "op": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "write"
+                ]
+              },
+              "users": {
+                "type": "number",
+                "minimum": 0
+              },
+              "reqPerUserPerMin": {
+                "type": "number",
+                "minimum": 0
+              },
+              "rps": {
+                "type": "number",
+                "minimum": 0
+              },
+              "rpm": {
+                "type": "number",
+                "minimum": 0
+              },
+              "payloadKB": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1048576
+              },
+              "cacheable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "label",
+              "mode",
+              "op",
+              "payloadKB",
+              "cacheable"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "classes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "catalogVersion",
+    "nodes",
+    "edges",
+    "load"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Básico",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": { "x": 0, "y": 0 },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "alb",
+      "serviceId": "aws.alb",
+      "variantId": "alb",
+      "position": { "x": 200, "y": 0 },
+      "label": "ALB",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "app",
+      "serviceId": "aws.ec2",
+      "variantId": "t3.micro",
+      "position": { "x": 400, "y": 0 },
+      "label": "App",
+      "props": { "units": 2 },
+      "overrides": {}
+    },
+    {
+      "id": "db",
+      "serviceId": "aws.rds-postgres",
+      "variantId": "db.t4g.micro",
+      "position": { "x": 600, "y": 0 },
+      "label": "Banco",
+      "props": {},
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "users", "target": "alb", "protocol": "http" },
+    { "id": "e2", "source": "alb", "target": "app", "protocol": "http" },
+    { "id": "e3", "source": "app", "target": "db", "protocol": "tcp" }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "default",
+        "label": "Requisições",
+        "mode": "users",
+        "op": "read",
+        "users": 100000,
+        "reqPerUserPerMin": 10,
+        "payloadKB": 10,
+        "cacheable": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+id: realtime-chat
+title: Chat em tempo real
+difficulty: dificil
+statement: |
+  Projete um chat com conversas em grupo, no estilo Slack.
+
+  Cada pessoa conectada mantém uma conexão WebSocket aberta. Uma mensagem enviada precisa
+  chegar a todos os membros online da conversa em menos de meio segundo, mesmo que eles
+  estejam conectados em servidores diferentes. O histórico fica guardado para sempre.
+
+  No pico há **200.000 pessoas conectadas**, **3.000 mensagens enviadas/s** e
+  **1.000 carregamentos de histórico/s**.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Enviar mensagens para uma conversa
+  - Entregar a mensagem aos membros online, em qualquer servidor
+  - Carregar o histórico de uma conversa
+  - Mostrar quem está online
+quantitative:
+  - id: message-throughput
+    label: Mensagens aceitas
+    metric: throughput
+    class: message
+    op: '>='
+    value: 3000
+    unit: msg/s
+  - id: history-throughput
+    label: Históricos atendidos
+    metric: throughput
+    class: history
+    op: '>='
+    value: 1000
+    unit: req/s
+  - id: message-p99
+    label: p99 da entrega
+    metric: p99
+    class: message
+    op: '<='
+    value: 400
+    unit: ms
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: message
+      label: Enviar mensagem
+      mode: rps
+      op: write
+      rps: 3000
+      payloadKB: 0.5
+      cacheable: false
+    - name: history
+      label: Carregar histórico
+      mode: rps
+      op: read
+      rps: 1000
+      payloadKB: 4
+      cacheable: true
+qualitative:
+  - Rotear a mensagem até o servidor onde o destinatário está conectado
+  - Presença online e o custo de manter esse estado
+  - Ordem das mensagens dentro de uma conversa
+  - Reconexão e mensagens perdidas durante a queda
+followups:
+  - id: realtime-chat.routing
+    question: A Ana está no servidor 3 e o Bruno no servidor 7. Como a mensagem da Ana chega ao Bruno?
+    when:
+      missingService:
+        - aws.elasticache-valkey
+    lookFor:
+      - barramento pub/sub entre servidores (Redis pub/sub)
+      - registro de qual servidor guarda cada conexão
+  - id: realtime-chat.presence
+    question: Como você sabe quem está online sem consultar 200 mil conexões a cada segundo?
+    topic: qualitative
+    lookFor:
+      - heartbeat com TTL
+      - publicar mudança de estado só para quem se importa
+  - id: realtime-chat.ordering
+    question: Duas pessoas mandam mensagem na mesma conversa no mesmo instante. Em que ordem todo mundo vê?
+    topic: qualitative
+    lookFor:
+      - sequência por conversa
+      - ordenação no servidor, não no relógio do cliente
+  - id: realtime-chat.websocket-cost
+    question: Você usou o API Gateway WebSocket. Quanto custam 200 mil conexões abertas e 3 mil mensagens por segundo?
+    when:
+      hasService:
+        - aws.api-gateway
+    lookFor:
+      - custo por minuto de conexão
+      - custo por milhão de mensagens
+      - comparar com servidores próprios atrás de um NLB
+  - id: realtime-chat.hot-room
+    question: O banco de mensagens está perto do limite de escrita. O que acontece com um canal de 50 mil membros muito ativo?
+    when:
+      metric:
+        path: kind:kv-database.utilization
+        op: '>'
+        value: 0.8
+    lookFor:
+      - partição quente por conversa
+      - escrita em lote ou chave composta
+  - id: realtime-chat.p99
+    question: As mensagens estão chegando devagar. Onde está o tempo?
+    when:
+      requirementFails: message-p99
+    lookFor:
+      - ler a latência por nó
+      - não esperar a gravação durável para entregar
+  - id: realtime-chat.all-hands
+    question: Uma reunião geral vai quadruplicar as mensagens por alguns minutos. O que satura?
+    loadMultiplier: 4
+    lookFor:
+      - identificar o primeiro nó a saturar
+      - capacidade de escrita do banco

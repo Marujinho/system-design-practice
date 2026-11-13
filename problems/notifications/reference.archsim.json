@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Sistema de notificações — referência",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 160
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "alb",
+      "serviceId": "aws.alb",
+      "variantId": "alb",
+      "position": {
+        "x": 220,
+        "y": 200
+      },
+      "label": "ALB",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "ingest",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 440,
+        "y": 200
+      },
+      "label": "API de eventos",
+      "props": {
+        "units": 6
+      },
+      "overrides": {}
+    },
+    {
+      "id": "topic",
+      "serviceId": "aws.sns",
+      "variantId": "standard",
+      "position": {
+        "x": 660,
+        "y": 200
+      },
+      "label": "Tópico de notificações",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "push-q",
+      "serviceId": "aws.sqs",
+      "variantId": "standard",
+      "position": {
+        "x": 880,
+        "y": 60
+      },
+      "label": "Fila push",
+      "props": {
+        "batchSize": 10
+      },
+      "overrides": {}
+    },
+    {
+      "id": "email-q",
+      "serviceId": "aws.sqs",
+      "variantId": "standard",
+      "position": {
+        "x": 880,
+        "y": 200
+      },
+      "label": "Fila e-mail",
+      "props": {
+        "batchSize": 10
+      },
+      "overrides": {}
+    },
+    {
+      "id": "sms-q",
+      "serviceId": "aws.sqs",
+      "variantId": "standard",
+      "position": {
+        "x": 880,
+        "y": 340
+      },
+      "label": "Fila SMS",
+      "props": {
+        "batchSize": 10
+      },
+      "overrides": {}
+    },
+    {
+      "id": "push",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 1100,
+        "y": 60
+      },
+      "label": "Workers push",
+      "props": {
+        "units": 4
+      },
+      "overrides": {}
+    },
+    {
+      "id": "email",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 1100,
+        "y": 200
+      },
+      "label": "Workers e-mail",
+      "props": {
+        "units": 4
+      },
+      "overrides": {}
+    },
+    {
+      "id": "sms",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 1100,
+        "y": 340
+      },
+      "label": "Workers SMS",
+      "props": {
+        "units": 4
+      },
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-alb",
+      "source": "users",
+      "target": "alb",
+      "protocol": "http"
+    },
+    {
+      "id": "alb-ingest",
+      "source": "alb",
+      "target": "ingest",
+      "protocol": "http"
+    },
+    {
+      "id": "ingest-topic",
+      "source": "ingest",
+      "target": "topic",
+      "protocol": "pubsub"
+    },
+    {
+      "id": "topic-push-q",
+      "source": "topic",
+      "target": "push-q",
+      "protocol": "pubsub"
+    },
+    {
+      "id": "topic-email-q",
+      "source": "topic",
+      "target": "email-q",
+      "protocol": "pubsub"
+    },
+    {
+      "id": "topic-sms-q",
+      "source": "topic",
+      "target": "sms-q",
+      "protocol": "pubsub"
+    },
+    {
+      "id": "push-q-push",
+      "source": "push-q",
+      "target": "push",
+      "protocol": "queue"
+    },
+    {
+      "id": "email-q-email",
+      "source": "email-q",
+      "target": "email",
+      "protocol": "queue"
+    },
+    {
+      "id": "sms-q-sms",
+      "source": "sms-q",
+      "target": "sms",
+      "protocol": "queue"
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "event",
+        "label": "Evento a notificar",
+        "mode": "rps",
+        "op": "write",
+        "rps": 2000,
+        "payloadKB": 1,
+        "cacheable": false
+      }
+    ]
+  }
+}
