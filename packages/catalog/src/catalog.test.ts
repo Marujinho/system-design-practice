@@ -171,6 +171,18 @@ function vcpusOf(label: string): number {
   return Number(m[1].replace(',', '.'));
 }
 
+function gibOf(label: string): number {
+  const m = /([\d.,]+) GiB/.exec(label);
+  if (!m?.[1]) throw new Error(`sem GiB no rótulo: ${label}`);
+  return Number(m[1].replace(',', '.'));
+}
+
+/** The AWS instance family of a type, without its size: db.r7g.xlarge → db.r7g, c5.large-nodes → c5. */
+function generationOf(id: string): string {
+  const bare = id.replace(/-nodes$/, '').replace(/\.search$/, '');
+  return bare.includes('.') ? bare.slice(0, bare.lastIndexOf('.')) : 'all';
+}
+
 const EC2_PER_VCPU = { burst: 300, general: 400, compute: 500, memory: 400 } as const;
 
 function capacityRule(serviceId: string, v: Variant): number {
@@ -180,6 +192,9 @@ function capacityRule(serviceId: string, v: Variant): number {
     case 'aws.eks':
       if (v.id.startsWith('t3.medium')) return 500;
       return EC2_PER_VCPU[v.family ?? 'general'] * cpu;
+    case 'aws.rds-postgres':
+    case 'aws.aurora-postgres':
+      return v.family === 'burst' ? 300 * gibOf(v.label) : 1500 * cpu;
     default:
       throw new Error(`sem regra para ${serviceId}`);
   }
@@ -198,29 +213,35 @@ function hourlyOf(v: Variant): number {
 const ids = (serviceId: string) => findService(catalog, serviceId)?.variants.map((v) => v.id);
 
 describe('instance types (aws-instance-types)', () => {
-  it.each(['aws.ec2', 'aws.eks'])('%s: every new type follows the capacity rule', (serviceId) => {
-    const added = newVariants(serviceId);
-    expect(added.length).toBeGreaterThan(0);
-    for (const v of added) {
-      expect(v.capPerUnit, `${serviceId}/${v.id}`).toBe(capacityRule(serviceId, v));
-      expect(v.capSource).toBe('assumption');
-      expect(v.family, `${serviceId}/${v.id}`).toBeDefined();
-    }
-  });
-
-  it.each(['aws.ec2', 'aws.eks'])('%s: capacity grows with size within a family', (serviceId) => {
-    const variants = findService(catalog, serviceId)?.variants ?? [];
-    for (const family of ['burst', 'general', 'compute', 'memory'] as const) {
-      const sorted = variants
-        .filter((v) => v.family === family)
-        .sort((a, b) => hourlyOf(a) - hourlyOf(b));
-      for (let i = 1; i < sorted.length; i += 1) {
-        expect(sorted[i]?.capPerUnit, `${serviceId}/${family}`).toBeGreaterThan(
-          sorted[i - 1]?.capPerUnit ?? 0,
-        );
+  it.each(['aws.ec2', 'aws.eks', 'aws.rds-postgres', 'aws.aurora-postgres'])(
+    '%s: every new type follows the capacity rule',
+    (serviceId) => {
+      const added = newVariants(serviceId);
+      expect(added.length).toBeGreaterThan(0);
+      for (const v of added) {
+        expect(v.capPerUnit, `${serviceId}/${v.id}`).toBe(capacityRule(serviceId, v));
+        expect(v.capSource).toBe('assumption');
+        expect(v.family, `${serviceId}/${v.id}`).toBeDefined();
       }
-    }
-  });
+    },
+  );
+
+  it.each(['aws.ec2', 'aws.eks', 'aws.rds-postgres', 'aws.aurora-postgres'])(
+    '%s: capacity grows with size within an instance family',
+    (serviceId) => {
+      const variants = findService(catalog, serviceId)?.variants ?? [];
+      for (const family of new Set(variants.map((v) => generationOf(v.id)))) {
+        const sorted = variants
+          .filter((v) => generationOf(v.id) === family)
+          .sort((a, b) => hourlyOf(a) - hourlyOf(b));
+        for (let i = 1; i < sorted.length; i += 1) {
+          expect(sorted[i]?.capPerUnit, `${serviceId}/${family}`).toBeGreaterThan(
+            sorted[i - 1]?.capPerUnit ?? 0,
+          );
+        }
+      }
+    },
+  );
 
   it('EC2: compute beats general, which matches memory, and c5.xlarge is 10 × t3.micro', () => {
     const cap = (id: string) => variantOf('aws.ec2', id).capPerUnit;
@@ -291,7 +312,49 @@ describe('instance types (aws-instance-types)', () => {
         expect(v.label, v.id).toContain(type);
         expect(v.label, v.id).toMatch(/\d+ vCPU, [\d.,]+ GiB/);
       }
-      for (const v of newVariants('aws.ec2')) expect(v.label.startsWith(v.id), v.id).toBe(true);
+      for (const id of ['aws.ec2', 'aws.rds-postgres', 'aws.aurora-postgres'])
+        for (const v of newVariants(id)) expect(v.label.startsWith(v.id), v.id).toBe(true);
     },
   );
+
+  it('RDS PostgreSQL: the 12 types, t4g burstable, Single-AZ prices', () => {
+    expect(ids('aws.rds-postgres')).toEqual([
+      'db.t4g.micro',
+      'db.t4g.small',
+      'db.m7g.large',
+      'db.t4g.medium',
+      'db.t4g.large',
+      'db.m7g.xlarge',
+      'db.m7g.2xlarge',
+      'db.m7g.4xlarge',
+      'db.r7g.large',
+      'db.r7g.xlarge',
+      'db.r7g.2xlarge',
+      'db.r7g.4xlarge',
+    ]);
+    for (const v of findService(catalog, 'aws.rds-postgres')?.variants ?? []) {
+      expect(v.burst, v.id).toBe(v.id.startsWith('db.t4g.'));
+    }
+    expect(priceOf('aws.rds-postgres', 'db.t4g.large', 'hourly')).toBe(0.129);
+    expect(priceOf('aws.rds-postgres', 'db.m7g.4xlarge', 'hourly')).toBe(1.348);
+    expect(priceOf('aws.rds-postgres', 'db.r7g.xlarge', 'hourly')).toBe(0.478);
+  });
+
+  it('Aurora PostgreSQL: the 9 types, Standard storage prices', () => {
+    expect(ids('aws.aurora-postgres')).toEqual([
+      'db.r5.large',
+      'db.t4g.medium',
+      'db.r5.xlarge',
+      'db.r5.2xlarge',
+      'db.r5.4xlarge',
+      'db.r7g.large',
+      'db.r7g.xlarge',
+      'db.r7g.2xlarge',
+      'db.r7g.4xlarge',
+    ]);
+    expect(variantOf('aws.aurora-postgres', 'db.t4g.medium').burst).toBe(true);
+    expect(priceOf('aws.aurora-postgres', 'db.t4g.medium', 'hourly')).toBe(0.073);
+    expect(priceOf('aws.aurora-postgres', 'db.r5.4xlarge', 'hourly')).toBe(2.32);
+    expect(priceOf('aws.aurora-postgres', 'db.r7g.large', 'hourly')).toBe(0.276);
+  });
 });

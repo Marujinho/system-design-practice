@@ -94,6 +94,21 @@ Na UI:
 - **Check**: `pnpm vitest run packages/catalog packages/sim-engine` → verde
 - **Depends on**: T2
 
+- **Preços pesquisados (2026-11-13)**: origens `https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json` (set "PostgreSQL … Single-AZ") e `…/rds/USD/current/rds-aurora-ondemand.json` (set "Aurora PostgreSQL … Single-AZ", armazenamento Standard, sem I/O-Optimized). São os mapas que as páginas citadas no `sourceUrl` carregam. Os preços atuais (db.t4g.micro 0,016, db.m7g.large 0,168, Aurora db.r5.large 0,29) batem.
+
+  | RDS | US$/h | | Aurora | US$/h |
+  |---|---|---|---|---|
+  | db.t4g.medium | 0,065 | | db.t4g.medium | 0,073 |
+  | db.t4g.large | 0,129 | | db.r5.xlarge | 0,58 |
+  | db.m7g.xlarge | 0,337 | | db.r5.2xlarge | 1,16 |
+  | db.m7g.2xlarge | 0,674 | | db.r5.4xlarge | 2,32 |
+  | db.m7g.4xlarge | 1,348 | | db.r7g.large | 0,276 |
+  | db.r7g.large | 0,239 | | db.r7g.xlarge | 0,553 |
+  | db.r7g.xlarge | 0,478 | | db.r7g.2xlarge | 1,106 |
+  | db.r7g.2xlarge | 0,956 | | db.r7g.4xlarge | 2,211 |
+  | db.r7g.4xlarge | 1,913 | | | |
+- **Deviation**: o teste "a capacidade cresce" agrupa por família de instância da AWS (`db.r5`, `db.r7g`, `c5`…), não pelo campo `family`. No Aurora, `db.r5.large` e `db.r7g.large` têm a mesma capacidade (mesmos vCPUs) com preços diferentes, então a ordem por preço misturando as duas gerações não é estritamente crescente. O mapa do Aurora não traz vCPU/GiB; usei as specs das famílias r5/r7g e t4g, as mesmas do RDS e do EC2.
+
 ### T4 — ElastiCache Valkey, OpenSearch, Fargate e `catalogVersion`
 - **Covers**: FR-4, FR-5, FR-7, FR-8, FR-9, FR-11, FR-14, G1, G2, A08
 - **Files**: `packages/catalog/src/catalog.json` (edit), `packages/catalog/src/catalog.test.ts` (edit), `apps/app/src/store/defaults.ts` (sem mudança: lê `catalog.catalogVersion`), `packages/problems/src/bank.test.ts` (edit, se não houver teste de compatibilidade), plano (tabela de preços)
