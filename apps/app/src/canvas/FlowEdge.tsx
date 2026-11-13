@@ -35,8 +35,10 @@ export function FlowEdge(props: EdgeProps<FlowFlowEdge>) {
   const warning = props.data?.warning ?? null;
   const caption = props.data?.caption ?? '';
   const [hovered, setHovered] = useState(false);
-  // labels live inside the zoomed viewport: undo the zoom so the button stays clickable
-  const zoom = useStore((s) => s.transform[2]);
+  const showRemove = hovered || props.selected === true;
+  // Labels live inside the zoomed viewport: undo the zoom so the button stays clickable.
+  // Only an edge showing its button follows the zoom; the others don't re-render with it.
+  const zoom = useStore((s) => (showRemove ? s.transform[2] : 1));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -58,7 +60,6 @@ export function FlowEdge(props: EdgeProps<FlowFlowEdge>) {
     }, HOVER_GRACE_MS);
   };
 
-  const showRemove = hovered || props.selected === true;
   return (
     <>
       <g onMouseEnter={enter} onMouseLeave={leave}>

@@ -8,12 +8,15 @@ import { FlowEdge, HOVER_GRACE_MS, REMOVE_PX, type FlowFlowEdge } from './FlowEd
 
 // jsdom has no layout, so React Flow never draws edges or mounts the label layer:
 // render the label in place and test the edge on its own (the e2e covers the real canvas).
-const rf = vi.hoisted(() => ({ zoom: 1 }));
+const rf = vi.hoisted(() => ({ zoom: 1, read: [] as unknown[] }));
 vi.mock('@xyflow/react', async (original) => ({
   ...(await original<typeof import('@xyflow/react')>()),
   EdgeLabelRenderer: ({ children }: { children: ReactNode }) => <>{children}</>,
-  useStore: <T,>(select: (s: { transform: [number, number, number] }) => T): T =>
-    select({ transform: [0, 0, rf.zoom] }),
+  useStore: <T,>(select: (s: { transform: [number, number, number] }) => T): T => {
+    const v = select({ transform: [0, 0, rf.zoom] });
+    rf.read.push(v);
+    return v;
+  },
 }));
 
 const s = () => useDiagram.getState();
@@ -65,6 +68,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   rf.zoom = 1;
+  rf.read = [];
 });
 
 describe('FlowEdge remove (edge-hover FR-1, FR-4, FR-5, FR-7)', () => {
@@ -176,5 +180,12 @@ describe('FlowEdge remove (edge-hover FR-1, FR-4, FR-5, FR-7)', () => {
     if (!button) throw new Error('no button');
     expect(parseFloat(button.style.width) * zoom).toBeCloseTo(REMOVE_PX);
     expect(parseFloat(button.style.height) * zoom).toBeCloseTo(REMOVE_PX);
+  });
+
+  it('ignores the zoom while the button is hidden, so zooming does not re-render every edge', () => {
+    rf.zoom = 0.5;
+    renderEdge(edgeProps(ab));
+    expect(rf.read.length).toBeGreaterThan(0);
+    expect(rf.read.every((v) => v === 1)).toBe(true);
   });
 });
