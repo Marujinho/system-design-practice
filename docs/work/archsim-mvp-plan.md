@@ -733,6 +733,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: os specs acima.
 - **Check**: `pnpm exec playwright install chromium webkit && pnpm test:e2e` → verde; `perf-result.json` com p95 ≥ 50
 - **Depends on**: T25, T26c, T27
+- **Done**: `f0b177f`
+- **Deviation**: 21 testes e2e verdes duas vezes seguidas. G4 é medido em tempo real (< 600 ms entre o Enter e o estado mudar), não com page.clock, porque o relógio do Playwright não controla o worker. No WebKit o teste de teclado usa Option+Tab, como o Safari exige para focar links e botões; o aviso benigno 'ResizeObserver loop completed' do WebKit não conta como erro. NFR-2: p95 de 16,8 ms por frame = 59,5 fps (apps/app/e2e/perf-result.json). Bugs reais achados pelo e2e e corrigidos aqui: o painel de propriedades não acompanhava os resultados da simulação; aria-label proibido nos handles do React Flow; contraste dos select no WebKit. As figuras foram para o .prettierignore (o validador da skill limita a 200 linhas).
 
 ### T29 — Conquistas locais (Could)
 - **Covers**: FR-61
