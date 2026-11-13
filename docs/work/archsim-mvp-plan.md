@@ -466,6 +466,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - 50 instâncias montadas sem erro.
 - **Check**: `pnpm --filter @archsim/icons test` → verde; o `look.mjs` da skill sai com 0
 - **Depends on**: T16
+- **Done**: `cd41ee0`
+- **Deviation**: Gate aprovado: o kernel roda como módulo ES (só ganhou um export no final), isolado por stage, com loop único; o piloto passou no validador da skill e foi conferido em screenshot nos dois temas. Não usei o look.mjs, porque ele instala o playwright-core num cache na pasta pessoal do usuário e roda código de terceiros fora do repo. No lugar: vendor/skill/{validate.mjs,build.mjs,bench.html,kernel.js} sem alteração e scripts/validate-figures.mjs (pnpm --filter @archsim/icons validate), que converte cada figura para o formato da bancada e roda o validador estático; a inspeção visual é feita com o Playwright. As figuras ficam em figures/<serviceId>.figure.js, carregadas por import.meta.glob. Movimento reduzido: o kernel não inicia o loop sozinho e pousa tweens e molas na hora; com input, pede no máximo um frame. É isso que o teste verifica, em vez de 'não registra tick'. O @playwright/test entrou já aqui (era do T28).
 
 ### T18 — Store do diagrama: undo/redo e autosave
 - **Covers**: FR-2, FR-36, A08 (autosave validado), A10
