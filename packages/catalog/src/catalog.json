@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "2026-11-13.1",
+  "catalogVersion": "2026-11-13.2",
   "services": [
     {
       "id": "core.users",
@@ -1013,7 +1013,168 @@
             }
           ],
           "limits": [],
-          "burst": true
+          "burst": true,
+          "family": "burst"
+        },
+        {
+          "id": "cache.t4g.small",
+          "label": "cache.t4g.small (2 vCPU, 1,37 GiB)",
+          "capPerUnit": 30000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.0256,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": true,
+          "family": "burst"
+        },
+        {
+          "id": "cache.t4g.medium",
+          "label": "cache.t4g.medium (2 vCPU, 3,09 GiB)",
+          "capPerUnit": 40000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.052,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": true,
+          "family": "burst"
+        },
+        {
+          "id": "cache.m7g.large",
+          "label": "cache.m7g.large (2 vCPU, 6,38 GiB)",
+          "capPerUnit": 50000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.1264,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": false,
+          "family": "general"
+        },
+        {
+          "id": "cache.m7g.xlarge",
+          "label": "cache.m7g.xlarge (4 vCPU, 12,93 GiB)",
+          "capPerUnit": 100000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.252,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": false,
+          "family": "general"
+        },
+        {
+          "id": "cache.m7g.2xlarge",
+          "label": "cache.m7g.2xlarge (8 vCPU, 26,04 GiB)",
+          "capPerUnit": 200000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.5032,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": false,
+          "family": "general"
+        },
+        {
+          "id": "cache.r7g.large",
+          "label": "cache.r7g.large (2 vCPU, 13,07 GiB)",
+          "capPerUnit": 50000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.1752,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": false,
+          "family": "memory"
+        },
+        {
+          "id": "cache.r7g.xlarge",
+          "label": "cache.r7g.xlarge (4 vCPU, 26,32 GiB)",
+          "capPerUnit": 100000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.3496,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": false,
+          "family": "memory"
+        },
+        {
+          "id": "cache.r7g.2xlarge",
+          "label": "cache.r7g.2xlarge (8 vCPU, 52,82 GiB)",
+          "capPerUnit": 200000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.6984,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": false,
+          "family": "memory"
         }
       ],
       "params": [
@@ -1473,6 +1634,78 @@
               "id": "hourly",
               "label": "Por task-hora (2 × 0,04048 + 4 × 0,004445)",
               "amountUsd": 0.09874,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/fargate/pricing/"
+            }
+          ],
+          "limits": []
+        },
+        {
+          "id": "0.25vcpu-0.5gb",
+          "label": "0,25 vCPU / 0,5 GB",
+          "capPerUnit": 50,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por task-hora (0,25 × 0,04048 + 0,5 × 0,004445)",
+              "amountUsd": 0.0123425,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/fargate/pricing/"
+            }
+          ],
+          "limits": []
+        },
+        {
+          "id": "4vcpu-8gb",
+          "label": "4 vCPU / 8 GB",
+          "capPerUnit": 1000,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por task-hora (4 × 0,04048 + 8 × 0,004445)",
+              "amountUsd": 0.19748,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/fargate/pricing/"
+            }
+          ],
+          "limits": []
+        },
+        {
+          "id": "8vcpu-16gb",
+          "label": "8 vCPU / 16 GB",
+          "capPerUnit": 2000,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por task-hora (8 × 0,04048 + 16 × 0,004445)",
+              "amountUsd": 0.39496,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/fargate/pricing/"
+            }
+          ],
+          "limits": []
+        },
+        {
+          "id": "16vcpu-32gb",
+          "label": "16 vCPU / 32 GB",
+          "capPerUnit": 4000,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por task-hora (16 × 0,04048 + 32 × 0,004445)",
+              "amountUsd": 0.78992,
               "per": "unit-hour",
               "priceDate": "2026-11-13",
               "sourceUrl": "https://aws.amazon.com/fargate/pricing/"
@@ -2419,7 +2652,8 @@
               "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
             }
           ],
-          "limits": []
+          "limits": [],
+          "family": "general"
         },
         {
           "id": "c6g.large.search",
@@ -2437,7 +2671,8 @@
               "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
             }
           ],
-          "limits": []
+          "limits": [],
+          "family": "compute"
         },
         {
           "id": "r6g.xlarge.search",
@@ -2455,7 +2690,142 @@
               "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
             }
           ],
-          "limits": []
+          "limits": [],
+          "family": "memory"
+        },
+        {
+          "id": "t3.small.search",
+          "label": "t3.small.search (2 vCPU, 2 GiB)",
+          "capPerUnit": 150,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.036,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": true,
+          "family": "burst"
+        },
+        {
+          "id": "m7g.large.search",
+          "label": "m7g.large.search (2 vCPU, 8 GiB)",
+          "capPerUnit": 400,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.135,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
+            }
+          ],
+          "limits": [],
+          "family": "general"
+        },
+        {
+          "id": "m7g.xlarge.search",
+          "label": "m7g.xlarge.search (4 vCPU, 16 GiB)",
+          "capPerUnit": 800,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.271,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
+            }
+          ],
+          "limits": [],
+          "family": "general"
+        },
+        {
+          "id": "c6g.xlarge.search",
+          "label": "c6g.xlarge.search (4 vCPU, 8 GiB)",
+          "capPerUnit": 800,
+          "capSource": "assumption",
+          "baseLatencyMs": 15,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.226,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
+            }
+          ],
+          "limits": [],
+          "family": "compute"
+        },
+        {
+          "id": "c6g.2xlarge.search",
+          "label": "c6g.2xlarge.search (8 vCPU, 16 GiB)",
+          "capPerUnit": 1600,
+          "capSource": "assumption",
+          "baseLatencyMs": 15,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.452,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
+            }
+          ],
+          "limits": [],
+          "family": "compute"
+        },
+        {
+          "id": "r6g.large.search",
+          "label": "r6g.large.search (2 vCPU, 16 GiB)",
+          "capPerUnit": 400,
+          "capSource": "assumption",
+          "baseLatencyMs": 15,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.167,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
+            }
+          ],
+          "limits": [],
+          "family": "memory"
+        },
+        {
+          "id": "r6g.2xlarge.search",
+          "label": "r6g.2xlarge.search (8 vCPU, 64 GiB)",
+          "capPerUnit": 1600,
+          "capSource": "assumption",
+          "baseLatencyMs": 15,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.669,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/opensearch-service/pricing/"
+            }
+          ],
+          "limits": [],
+          "family": "memory"
         }
       ],
       "params": [

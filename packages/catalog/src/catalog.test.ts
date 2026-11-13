@@ -195,6 +195,15 @@ function capacityRule(serviceId: string, v: Variant): number {
     case 'aws.rds-postgres':
     case 'aws.aurora-postgres':
       return v.family === 'burst' ? 300 * gibOf(v.label) : 1500 * cpu;
+    case 'aws.elasticache-valkey':
+      if (v.family === 'burst') {
+        return { 'cache.t4g.small': 30000, 'cache.t4g.medium': 40000 }[v.id] ?? Number.NaN;
+      }
+      return 25000 * cpu;
+    case 'aws.opensearch':
+      return v.family === 'burst' ? 150 : 200 * cpu;
+    case 'aws.fargate':
+      return cpu < 1 ? 200 * cpu : 250 * cpu;
     default:
       throw new Error(`sem regra para ${serviceId}`);
   }
@@ -213,35 +222,45 @@ function hourlyOf(v: Variant): number {
 const ids = (serviceId: string) => findService(catalog, serviceId)?.variants.map((v) => v.id);
 
 describe('instance types (aws-instance-types)', () => {
-  it.each(['aws.ec2', 'aws.eks', 'aws.rds-postgres', 'aws.aurora-postgres'])(
-    '%s: every new type follows the capacity rule',
-    (serviceId) => {
-      const added = newVariants(serviceId);
-      expect(added.length).toBeGreaterThan(0);
-      for (const v of added) {
-        expect(v.capPerUnit, `${serviceId}/${v.id}`).toBe(capacityRule(serviceId, v));
-        expect(v.capSource).toBe('assumption');
-        expect(v.family, `${serviceId}/${v.id}`).toBeDefined();
-      }
-    },
-  );
+  it.each([
+    'aws.ec2',
+    'aws.eks',
+    'aws.rds-postgres',
+    'aws.aurora-postgres',
+    'aws.elasticache-valkey',
+    'aws.opensearch',
+    'aws.fargate',
+  ])('%s: every new type follows the capacity rule', (serviceId) => {
+    const added = newVariants(serviceId);
+    expect(added.length).toBeGreaterThan(0);
+    for (const v of added) {
+      expect(v.capPerUnit, `${serviceId}/${v.id}`).toBe(capacityRule(serviceId, v));
+      expect(v.capSource).toBe('assumption');
+      if (serviceId !== 'aws.fargate') expect(v.family, `${serviceId}/${v.id}`).toBeDefined();
+    }
+  });
 
-  it.each(['aws.ec2', 'aws.eks', 'aws.rds-postgres', 'aws.aurora-postgres'])(
-    '%s: capacity grows with size within an instance family',
-    (serviceId) => {
-      const variants = findService(catalog, serviceId)?.variants ?? [];
-      for (const family of new Set(variants.map((v) => generationOf(v.id)))) {
-        const sorted = variants
-          .filter((v) => generationOf(v.id) === family)
-          .sort((a, b) => hourlyOf(a) - hourlyOf(b));
-        for (let i = 1; i < sorted.length; i += 1) {
-          expect(sorted[i]?.capPerUnit, `${serviceId}/${family}`).toBeGreaterThan(
-            sorted[i - 1]?.capPerUnit ?? 0,
-          );
-        }
+  it.each([
+    'aws.ec2',
+    'aws.eks',
+    'aws.rds-postgres',
+    'aws.aurora-postgres',
+    'aws.elasticache-valkey',
+    'aws.opensearch',
+    'aws.fargate',
+  ])('%s: capacity grows with size within an instance family', (serviceId) => {
+    const variants = findService(catalog, serviceId)?.variants ?? [];
+    for (const family of new Set(variants.map((v) => generationOf(v.id)))) {
+      const sorted = variants
+        .filter((v) => generationOf(v.id) === family)
+        .sort((a, b) => hourlyOf(a) - hourlyOf(b));
+      for (let i = 1; i < sorted.length; i += 1) {
+        expect(sorted[i]?.capPerUnit, `${serviceId}/${family}`).toBeGreaterThan(
+          sorted[i - 1]?.capPerUnit ?? 0,
+        );
       }
-    },
-  );
+    }
+  });
 
   it('EC2: compute beats general, which matches memory, and c5.xlarge is 10 × t3.micro', () => {
     const cap = (id: string) => variantOf('aws.ec2', id).capPerUnit;
@@ -304,7 +323,7 @@ describe('instance types (aws-instance-types)', () => {
     }
   });
 
-  it.each(['aws.ec2', 'aws.eks'])(
+  it.each(['aws.ec2', 'aws.eks', 'aws.rds-postgres', 'aws.aurora-postgres'])(
     '%s: new labels name the type, its vCPUs and its memory',
     (serviceId) => {
       for (const v of newVariants(serviceId)) {
@@ -356,5 +375,77 @@ describe('instance types (aws-instance-types)', () => {
     expect(priceOf('aws.aurora-postgres', 'db.t4g.medium', 'hourly')).toBe(0.073);
     expect(priceOf('aws.aurora-postgres', 'db.r5.4xlarge', 'hourly')).toBe(2.32);
     expect(priceOf('aws.aurora-postgres', 'db.r7g.large', 'hourly')).toBe(0.276);
+  });
+
+  it('ElastiCache Valkey: the 9 node types', () => {
+    expect(ids('aws.elasticache-valkey')).toEqual([
+      'cache.t4g.micro',
+      'cache.t4g.small',
+      'cache.t4g.medium',
+      'cache.m7g.large',
+      'cache.m7g.xlarge',
+      'cache.m7g.2xlarge',
+      'cache.r7g.large',
+      'cache.r7g.xlarge',
+      'cache.r7g.2xlarge',
+    ]);
+    expect(priceOf('aws.elasticache-valkey', 'cache.t4g.medium', 'hourly')).toBe(0.052);
+    expect(priceOf('aws.elasticache-valkey', 'cache.m7g.xlarge', 'hourly')).toBe(0.252);
+    expect(priceOf('aws.elasticache-valkey', 'cache.r7g.2xlarge', 'hourly')).toBe(0.6984);
+    for (const v of newVariants('aws.elasticache-valkey')) {
+      expect(v.label.startsWith(v.id), v.id).toBe(true);
+      expect(v.label, v.id).toMatch(/\d+ vCPU, [\d,]+ GiB/);
+    }
+  });
+
+  it('OpenSearch: the 10 instance types', () => {
+    expect(ids('aws.opensearch')).toEqual([
+      'm7g.medium.search',
+      'c6g.large.search',
+      'r6g.xlarge.search',
+      't3.small.search',
+      'm7g.large.search',
+      'm7g.xlarge.search',
+      'c6g.xlarge.search',
+      'c6g.2xlarge.search',
+      'r6g.large.search',
+      'r6g.2xlarge.search',
+    ]);
+    expect(priceOf('aws.opensearch', 't3.small.search', 'hourly')).toBe(0.036);
+    expect(priceOf('aws.opensearch', 'c6g.2xlarge.search', 'hourly')).toBe(0.452);
+    expect(priceOf('aws.opensearch', 'r6g.large.search', 'hourly')).toBe(0.167);
+    for (const v of newVariants('aws.opensearch')) {
+      expect(v.label.startsWith(v.id), v.id).toBe(true);
+      expect(v.label, v.id).toMatch(/\d+ vCPU, \d+ GiB/);
+    }
+  });
+
+  it('Fargate: the 7 task sizes, each priced as vCPU × rate + GB × rate', () => {
+    // us-east-1 Linux/x86, https://aws.amazon.com/fargate/pricing/ (2026-11-13)
+    const perVcpuHour = 0.04048;
+    const perGbHour = 0.004445;
+    expect(ids('aws.fargate')).toEqual([
+      '0.5vcpu-1gb',
+      '1vcpu-2gb',
+      '2vcpu-4gb',
+      '0.25vcpu-0.5gb',
+      '4vcpu-8gb',
+      '8vcpu-16gb',
+      '16vcpu-32gb',
+    ]);
+    for (const v of findService(catalog, 'aws.fargate')?.variants ?? []) {
+      const m = /^([\d.]+)vcpu-([\d.]+)gb$/.exec(v.id);
+      const cpu = Number(m?.[1]);
+      const gb = Number(m?.[2]);
+      expect(priceOf('aws.fargate', v.id, 'hourly'), v.id).toBeCloseTo(
+        cpu * perVcpuHour + gb * perGbHour,
+        7,
+      );
+      expect(v.label, v.id).toMatch(/vCPU \/ [\d,]+ GB$/);
+    }
+  });
+
+  it('bumps the catalog version for the new types (FR-14)', () => {
+    expect(catalog.catalogVersion).toBe('2026-11-13.2');
   });
 });

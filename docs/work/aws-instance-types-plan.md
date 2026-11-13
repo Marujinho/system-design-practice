@@ -122,6 +122,27 @@ Na UI:
 - **Check**: `pnpm test` → verde, sem regravar snapshot nem referência
 - **Depends on**: T3
 
+- **Preços pesquisados (2026-11-13)**: ElastiCache e OpenSearch pelos mapas `…/meteredUnitMaps/elasticache/USD/current/elasticache.json` (sets "Valkey") e `…/es/USD/current/es-ondemand.json`; Fargate pela Price List API (`https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECS/current/us-east-1/index.json`: `USE1-Fargate-vCPU-Hours:perCPU` US$ 0,04048 e `USE1-Fargate-GB-Hours` US$ 0,004445, os mesmos do catálogo). Os preços atuais (cache.t4g.micro 0,0128; m7g.medium/c6g.large/r6g.xlarge.search 0,068/0,113/0,335) batem.
+
+  | ElastiCache | vCPU / GiB | US$/h | | OpenSearch | vCPU / GiB | US$/h |
+  |---|---|---|---|---|---|---|
+  | cache.t4g.small | 2 / 1,37 | 0,0256 | | t3.small.search | 2 / 2 | 0,036 |
+  | cache.t4g.medium | 2 / 3,09 | 0,052 | | m7g.large.search | 2 / 8 | 0,135 |
+  | cache.m7g.large | 2 / 6,38 | 0,1264 | | m7g.xlarge.search | 4 / 16 | 0,271 |
+  | cache.m7g.xlarge | 4 / 12,93 | 0,252 | | c6g.xlarge.search | 4 / 8 | 0,226 |
+  | cache.m7g.2xlarge | 8 / 26,04 | 0,5032 | | c6g.2xlarge.search | 8 / 16 | 0,452 |
+  | cache.r7g.large | 2 / 13,07 | 0,1752 | | r6g.large.search | 2 / 16 | 0,167 |
+  | cache.r7g.xlarge | 4 / 26,32 | 0,3496 | | r6g.2xlarge.search | 8 / 64 | 0,669 |
+  | cache.r7g.2xlarge | 8 / 52,82 | 0,6984 | | | | |
+
+  Fargate (vCPU × 0,04048 + GB × 0,004445): 0,25/0,5 → 0,0123425; 4/8 → 0,19748; 8/16 → 0,39496; 16/32 → 0,78992.
+- **Deviations**:
+  - Rótulos: os atuais de ElastiCache ("cache.t4g.micro (0,5 GiB)"), OpenSearch (só o id) e Fargate ("1 vCPU / 2 GB") não podem mudar (FR-10). Os novos trazem vCPU e memória no padrão "id (N vCPU, N GiB)" para ElastiCache e OpenSearch, e "N vCPU / N GB" para o Fargate. O teste de rótulo do FR-11 vale por serviço com esses padrões.
+  - Fargate não tem `family` (uma família só); o seletor fica sem grupos, como hoje.
+  - FR-14: o teste de compatibilidade já existe. `packages/problems/src/bank.test.ts:52-54` carrega e pontua as referências gravadas com `2026-11-13.1`, então não acrescentei outro.
+  - No T3, o teste de rótulo ficou cobrindo só EC2/EKS porque a edição não casou com a linha reformatada pelo Prettier. Foi corrigido aqui: RDS e Aurora entraram no teste de rótulo.
+  - `catalog.json`: 50.708 → 87.599 bytes (+36,9 KB, NFR-1 < 60 KB).
+
 ### T5 — A troca de tipo muda o gargalo (simulação)
 - **Covers**: FR-9a, G1a
 - **Files**: `packages/sim-engine/src/step.test.ts` (edit)
