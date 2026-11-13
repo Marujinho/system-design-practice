@@ -21,16 +21,14 @@ function ServiceNodeView({ data, selected }: NodeProps<ServiceFlowNode>) {
       className={`service-node${selected ? ' selected' : ''}`}
       data-health={data.health ?? 'healthy'}
     >
-      {service?.kind !== 'entry' && (
-        <Handle type="target" position={Position.Left} aria-label={`Entrada de ${data.label}`} />
-      )}
+      {service?.kind !== 'entry' && <Handle type="target" position={Position.Left} />}
       <ServiceFigure serviceId={data.serviceId} label={name} className="service-figure" />
       <div className="service-node-text">
         <span className="service-node-label">{data.label}</span>
         {data.label !== name && <span className="service-node-kind">{name}</span>}
       </div>
       {data.status}
-      <Handle type="source" position={Position.Right} aria-label={`Saída de ${data.label}`} />
+      <Handle type="source" position={Position.Right} />
     </div>
   );
 }

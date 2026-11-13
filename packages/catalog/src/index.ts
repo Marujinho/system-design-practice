@@ -1,4 +1,4 @@
-import data from './catalog.json';
+import data from './catalog.json' with { type: 'json' };
 import { parseCatalog, type Catalog, type Service, type Variant } from './schema';
 
 export * from './schema';

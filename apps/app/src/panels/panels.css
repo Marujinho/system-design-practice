@@ -44,7 +44,8 @@
 
 .field input,
 .field select {
-  background: transparent;
+  background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   padding: 5px 8px;
@@ -187,7 +188,8 @@
 
 .load-class select,
 .load-field input {
-  background: transparent;
+  background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   padding: 3px 6px;

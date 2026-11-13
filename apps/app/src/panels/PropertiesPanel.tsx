@@ -8,14 +8,10 @@ import {
 } from '@archsim/sim-engine';
 import { useId } from 'react';
 import { formatRps, formatUsd } from '../format';
+import { useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
 import { LimitRow } from './LimitRow';
 import { ParamField } from './ParamField';
-
-export interface LiveNumbers {
-  capacity: number;
-  costMonth: number;
-}
 
 const PROTOCOL_LABEL: Record<Protocol, string> = {
   http: 'HTTP/HTTPS',
@@ -26,7 +22,7 @@ const PROTOCOL_LABEL: Record<Protocol, string> = {
   queue: 'Fila',
 };
 
-function NodePanel({ node, live }: { node: DiagramNode; live?: LiveNumbers | undefined }) {
+function NodePanel({ node }: { node: DiagramNode }) {
   const diagram = useDiagram((s) => s.diagram);
   const store = useDiagram.getState;
   const labelId = useId();
@@ -34,6 +30,8 @@ function NodePanel({ node, live }: { node: DiagramNode; live?: LiveNumbers | und
   const service = findService(catalog, node.serviceId);
   const variant = service ? findVariant(service, node.variantId) : undefined;
   if (!service || !variant) return <p className="muted">Serviço desconhecido.</p>;
+  // Subscribed, so the numbers follow each simulation result, not just diagram edits.
+  const live = useSim((s) => s.result?.nodes[node.id]);
   const statics = nodeStatics(node, catalog, diagram.load);
   const capacity = live?.capacity ?? statics?.capacity ?? 0;
   const cost = live?.costMonth ?? statics?.idleCostMonth ?? 0;
@@ -258,7 +256,7 @@ function EdgePanel({ edge }: { edge: DiagramEdge }) {
   );
 }
 
-export function PropertiesPanel({ live }: { live?: (nodeId: string) => LiveNumbers | undefined }) {
+export function PropertiesPanel() {
   const selection = useDiagram((s) => s.selection);
   const diagram = useDiagram((s) => s.diagram);
   if (selection.length !== 1) {
@@ -272,7 +270,7 @@ export function PropertiesPanel({ live }: { live?: (nodeId: string) => LiveNumbe
   }
   const id = selection[0] ?? '';
   const node = diagram.nodes.find((n) => n.id === id);
-  if (node) return <NodePanel node={node} live={live?.(node.id)} />;
+  if (node) return <NodePanel node={node} />;
   const edge = diagram.edges.find((e) => e.id === id);
   if (edge) return <EdgePanel edge={edge} />;
   return null;

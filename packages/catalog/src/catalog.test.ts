@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import data from './catalog.json';
+import data from './catalog.json' with { type: 'json' };
 import { catalog, findService, findVariant, parseCatalog } from './index';
 
 function variantOf(serviceId: string, variantId: string) {

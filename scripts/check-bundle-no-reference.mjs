@@ -13,7 +13,9 @@ const catalogText = readFileSync(join(root, 'packages/catalog/src/catalog.json')
 const shipped = (label) => catalogText.includes(label) || label === 'Usuários';
 
 const markers = new Map();
-for (const id of readdirSync(join(root, 'problems')).filter((d) => !d.startsWith('_') && !d.startsWith('.'))) {
+for (const id of readdirSync(join(root, 'problems')).filter(
+  (d) => !d.startsWith('_') && !d.startsWith('.'),
+)) {
   let ref;
   try {
     ref = JSON.parse(readFileSync(join(root, 'problems', id, 'reference.archsim.json'), 'utf8'));
@@ -42,5 +44,7 @@ for (const f of files) {
     }
   }
 }
-console.info(`${markers.size} marcadores de referência, ${files.length} arquivos JS, ${leaks} vazamentos`);
+console.info(
+  `${markers.size} marcadores de referência, ${files.length} arquivos JS, ${leaks} vazamentos`,
+);
 process.exit(leaks > 0 ? 1 : 0);

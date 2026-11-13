@@ -7,7 +7,6 @@ import './practice/practice.css';
 import './panels/panels.css';
 import { hrefOf, type Route } from './routes';
 import { ThemeToggle } from './theme/ThemeToggle';
-import { useSim } from './sim/sim-store';
 import { useRoute } from './useRoute';
 import { Workspace } from './workspace/Workspace';
 
@@ -42,12 +41,6 @@ function NotFound() {
   );
 }
 
-/** Capacity and cost of a node from the running simulation, when there is one. */
-function liveNumbers(nodeId: string) {
-  const m = useSim.getState().result?.nodes[nodeId];
-  return m ? { capacity: m.capacity, costMonth: m.costMonth } : undefined;
-}
-
 export function Screen({ route }: { route: Route }) {
   switch (route.screen) {
     case 'home':
@@ -57,13 +50,7 @@ export function Screen({ route }: { route: Route }) {
     case 'problem':
       return <ProblemView key={route.problemId} problemId={route.problemId} />;
     case 'free':
-      return (
-        <Workspace
-          mode={{ kind: 'free' }}
-          top={<LoadPanel />}
-          side={<PropertiesPanel live={liveNumbers} />}
-        />
-      );
+      return <Workspace mode={{ kind: 'free' }} top={<LoadPanel />} side={<PropertiesPanel />} />;
     default:
       return <NotFound />;
   }

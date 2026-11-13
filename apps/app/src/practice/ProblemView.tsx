@@ -5,7 +5,6 @@ import Markdown from 'react-markdown';
 import { LoadPanel } from '../panels/LoadPanel';
 import { PropertiesPanel } from '../panels/PropertiesPanel';
 import { hrefOf } from '../routes';
-import { useSim } from '../sim/sim-store';
 import { problemStart } from '../store/defaults';
 import { useDiagram } from '../store/diagram-store';
 import { Workspace } from '../workspace/Workspace';
@@ -17,11 +16,6 @@ import { SolutionView } from './SolutionView';
 
 /** Markdown without raw HTML, images or anything that loads (PRD §12 A05). */
 const ALLOWED = ['p', 'strong', 'em', 'code', 'ul', 'ol', 'li', 'br'];
-
-function liveNumbers(nodeId: string) {
-  const m = useSim.getState().result?.nodes[nodeId];
-  return m ? { capacity: m.capacity, costMonth: m.costMonth } : undefined;
-}
 
 function Brief({ problem }: { problem: PublicProblem }) {
   const [open, setOpen] = useState(true);
@@ -178,7 +172,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
                 )}
               </>
             ) : (
-              <PropertiesPanel live={liveNumbers} />
+              <PropertiesPanel />
             )}
           </>
         }

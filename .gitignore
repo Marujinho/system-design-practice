@@ -18,3 +18,8 @@ coverage/
 
 # Practice attempts are personal (PRD FR-54).
 practice/*.json
+
+# e2e output
+apps/app/test-results/
+apps/app/playwright-report/
+apps/app/e2e/perf-result.json

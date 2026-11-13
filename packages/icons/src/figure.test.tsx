@@ -118,24 +118,27 @@ describe('registry (FR-33)', () => {
   });
 });
 
-describe.each(catalog.services.map((s) => [s.id, s.label] as const))('figure of %s', (id, label) => {
-  beforeEach(() => {
-    stubBrowser(false);
-  });
-  afterEach(() => {
-    cleanup();
-    vi.unstubAllGlobals();
-  });
+describe.each(catalog.services.map((s) => [s.id, s.label] as const))(
+  'figure of %s',
+  (id, label) => {
+    beforeEach(() => {
+      stubBrowser(false);
+    });
+    afterEach(() => {
+      cleanup();
+      vi.unstubAllGlobals();
+    });
 
-  it('mounts, paints with classes only, and empties on unmount', () => {
-    const { container, unmount } = render(<ServiceFigure serviceId={id} label={label} />);
-    const svg = container.querySelector('svg');
-    expect(svg?.querySelectorAll('path').length).toBeGreaterThan(2);
-    for (const el of container.querySelectorAll('svg *:not(defs, defs *)')) {
-      expect(el.getAttribute('stroke')).toBeNull();
-      expect(el.getAttribute('fill')).toBeNull();
-    }
-    unmount();
-    expect(svg?.childNodes.length).toBe(0);
-  });
-});
+    it('mounts, paints with classes only, and empties on unmount', () => {
+      const { container, unmount } = render(<ServiceFigure serviceId={id} label={label} />);
+      const svg = container.querySelector('svg');
+      expect(svg?.querySelectorAll('path').length).toBeGreaterThan(2);
+      for (const el of container.querySelectorAll('svg *:not(defs, defs *)')) {
+        expect(el.getAttribute('stroke')).toBeNull();
+        expect(el.getAttribute('fill')).toBeNull();
+      }
+      unmount();
+      expect(svg?.childNodes.length).toBe(0);
+    });
+  },
+);
