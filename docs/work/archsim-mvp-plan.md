@@ -441,6 +441,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - O CSP do preview não tem `unsafe-eval` nem `unsafe-inline`.
 - **Check**: `pnpm --filter @archsim/app test && pnpm --filter @archsim/app build && pnpm --filter @archsim/app preview` → abre em `http://127.0.0.1:4173`
 - **Depends on**: T1
+- **Done**: `1200090`
+- **Deviation**: As rotas #/free e #/problems mostram 'Tela não encontrada' até o T19/T25 ligarem as telas. jest-dom 7 não tipa o Matchers do Vitest 5: registro os matchers com expect.extend em src/test-setup.ts e aumento Matchers<R,T> em src/jest-dom.d.ts; no ESLint, no-empty-object-type passou a aceitar interface vazia com um extends (é o padrão de declaration merging). O Vitest da raiz puxava vite@8.3.8 (2 dias de publicado) como peer: fixei vite@8.3.5 na raiz e em pnpm.overrides. As versões das dependências transitivas não foram checadas por idade, só as diretas e o vite.
 
 ### T17 — Ícones: figura piloto e wrapper (gate)
 - **Covers**: FR-33 (padrão), FR-31 (figuras paradas), A03 (licença)

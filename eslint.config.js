@@ -24,6 +24,7 @@ export default defineConfig(
       '**/.turbo/**',
       '**/vendor/**',
       '**/*.tmp.ts',
+      '**/*.tmp.mts',
       'packages/icons/figures/**',
       'apps/app/playwright-report/**',
       'apps/app/test-results/**',
