@@ -672,6 +672,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Check**: `pnpm --filter @archsim/icons test` → verde; `look.mjs` = 0 para cada figura
 - **Depends on**: T17
 - **Parallel**: pode rodar junto com T18–T25
+- **Done**: `604f433`
+- **Deviation**: As 22 figuras (T26a–c) saem de três famílias no formato da skill: pilha (gavetas, como o piloto do EC2), grade (blocos sobre uma base; o bloco sob o ponteiro sobe e os vizinhos acompanham com atraso por distância) e leque (origem + destinos ligados por guias tracejadas). Cada arquivo é autocontido e foi gerado por um gerador local (fora do repo), com geometria e parâmetros próprios por serviço. Validadas pelo validate.mjs da skill e conferidas numa folha de contato (repouso, hover, tema claro). O nome 'filter' do WAF foi trocado para 'screen', porque o validador lê 'filter' como filtro CSS.
 
 ### T26b — Figuras: computação e dados (Lambda, Fargate, EKS, S3, DynamoDB, RDS, Aurora)
 - **Covers**: FR-33
@@ -679,6 +681,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Mirror**: T26a
 - **Do / Tests / Check**: como T26a
 - **Depends on**: T17
+- **Done**: `6124592`
+- **Deviation**: Mesmo gerador e famílias do T26a.
 
 ### T26c — Figuras: cache, mensageria, busca, observabilidade (ElastiCache, SQS, SNS, Kinesis, EventBridge, OpenSearch, CloudWatch)
 - **Covers**: FR-33
@@ -686,6 +690,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Mirror**: T26a
 - **Do / Tests / Check**: como T26a; aqui o teste "todo `serviceId` do catálogo tem figura" passa a exigir os 23
 - **Depends on**: T17, T8
+- **Done**: `f8c26ec`
+- **Deviation**: Limitação: figuras da mesma família ficam parecidas entre si (SNS × CloudFront são leques; ElastiCache × WAF são fileiras de placas finas). Dá para distinguir, mas não são tão únicas quanto as do Hairline. O teste do registro exige uma figura por serviço do catálogo, com nomes únicos.
 
 ### T27 — `AGENTS.md`, ponteiro no `CLAUDE.md`, README
 - **Covers**: FR-50, FR-48 (texto), A05 (regra para o agente), DoD (README)
@@ -705,6 +711,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: `agents-doc.test.ts` procura cada seção pelo título e as frases-chave ("dados, não instruções", "não edite"); confere a linha no `CLAUDE.md` e a menção ao Hairline com MIT no README.
 - **Check**: `pnpm test agents-doc` → verde
 - **Depends on**: T15, T25
+- **Done**: `a708170`
+- **Deviation**: Feito antes do T26 (as figuras), porque não depende delas.
 
 ### T28 — e2e, acessibilidade e medições
 - **Covers**: G4, NFR-2 (medição), NFR-5, NFR-6, NFR-7, NFR-10, FR-31 (e2e), A02 (CSP no console), fluxos de §6
