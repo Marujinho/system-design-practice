@@ -88,6 +88,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: o teste de `version()` em cada pacote; teste de config que lê `eslint.config.js` e confirma as regras proibidas.
 - **Check**: `pnpm install && pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test && pnpm audit` → tudo verde, 0 vulnerabilidades high/critical.
 - **Depends on**: —
+- **Done**: `ce5654f`
+- **Deviation**: Node 24 em vez do 23 local (o @eslint/js recusa Node 23 em engines); engines = ^22.13 || >=24, .nvmrc = 24. TypeScript 6.0.3 (typescript-eslint 8.72 aceita <6.1). Testes rodam pelo vitest na raiz com projects, em vez de turbo; typecheck segue pelo turbo. pnpm audit: 1 moderada (minimatch via eslint, só dev), 0 high/critical.
 
 ### T2 — Schema do catálogo
 - **Covers**: FR-4 (estrutura), FR-8 (schema), NFR-11 (`provider`/`kind`), NFR-12
