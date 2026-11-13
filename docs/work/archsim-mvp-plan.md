@@ -489,6 +489,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Carga travada no modo problema.
 - **Check**: `pnpm --filter @archsim/app test store` → verde
 - **Depends on**: T4, T16
+- **Done**: `dac881f`
+- **Deviation**: Arquivos extras: store/defaults.ts (diagrama vazio e início de problema). No modo problema, o nó Usuários não pode ser apagado (era só a carga travada); é necessário para a carga do problema existir.
 
 ### T19 — Canvas, paleta e conexões
 - **Covers**: FR-1, FR-3, FR-5, FR-6, NFR-3 (UI), NFR-7 (paleta)

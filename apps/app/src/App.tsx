@@ -1,6 +1,8 @@
+import './canvas/canvas.css';
 import { hrefOf, type Route } from './routes';
 import { ThemeToggle } from './theme/ThemeToggle';
 import { useRoute } from './useRoute';
+import { Workspace } from './workspace/Workspace';
 
 function Home() {
   return (
@@ -37,6 +39,8 @@ export function Screen({ route }: { route: Route }) {
   switch (route.screen) {
     case 'home':
       return <Home />;
+    case 'free':
+      return <Workspace mode={{ kind: 'free' }} />;
     default:
       return <NotFound />;
   }
