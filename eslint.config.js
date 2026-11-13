@@ -41,6 +41,10 @@ export default defineConfig(
       'no-implied-eval': 'off',
       '@typescript-eslint/no-implied-eval': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { ignoreRestSiblings: true, varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'no-restricted-syntax': ['error', ...bannedSyntax],
     },

@@ -328,6 +328,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Determinismo: o mesmo score duas vezes.
 - **Check**: `pnpm --filter @archsim/sim-engine test score findings requirements` → verde
 - **Depends on**: T10
+- **Done**: `7d4b886`
+- **Deviation**: Os cenários de achados ficaram como diagramas montados no próprio score.test.ts, não como JSON em fixtures/findings/. Superdimensionado: com parâmetro de unidades (units/shards/prefixes), sugere reduzir até ρ ≈ 0,7; sem ele, sugere a variante mais barata que aguenta a carga. O Scoring (pesos sobrescrevíveis por problema) é um schema Zod exportado pelo motor.
 
 ### T12 — Schema e loader de problemas; JSON Schemas exportados
 - **Covers**: FR-41, FR-42 (schema), FR-49 (schema), NFR-12, A05 (YAML seguro), A08

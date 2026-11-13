@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 80
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "facil",
+        "medio",
+        "dificil"
+      ]
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 50,
+      "maxLength": 5000
+    },
+    "functional": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3
+      }
+    },
+    "quantitative": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "throughput",
+              "p99",
+              "errorRate",
+              "costMonth",
+              "queueAge",
+              "queueStable"
+            ]
+          },
+          "class": {
+            "type": "string"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "<=",
+              ">="
+            ]
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "metric",
+          "op",
+          "value",
+          "unit"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "load": {
+      "type": "object",
+      "properties": {
+        "classes": {
+          "minItems": 1,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,31}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "users",
+                  "rps",
+                  "rpm"
+                ]
+              },
+              "op": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "write"
+                ]
+              },
+              "users": {
+                "type": "number",
+                "minimum": 0
+              },
+              "reqPerUserPerMin": {
+                "type": "number",
+                "minimum": 0
+              },
+              "rps": {
+                "type": "number",
+                "minimum": 0
+              },
+              "rpm": {
+                "type": "number",
+                "minimum": 0
+              },
+              "payloadKB": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1048576
+              },
+              "cacheable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "label",
+              "mode",
+              "op",
+              "payloadKB",
+              "cacheable"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "classes"
+      ],
+      "additionalProperties": false
+    },
+    "qualitative": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3
+      }
+    },
+    "followups": {
+      "minItems": 6,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$"
+          },
+          "question": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 500
+          },
+          "when": {
+            "type": "object",
+            "properties": {
+              "hasService": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "missingService": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "metric": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "pattern": "^(global\\.(errorRate|costMonth|rpsIn|(p50ByClass|p99ByClass|throughputByClass)\\.[a-z][a-z0-9-]*)|kind:[a-z-]+\\.(utilization|errorRate|errorRps|p50|p99|queueAgeS|backlog|rpsIn|costMonth))$"
+                  },
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "<",
+                      "<=",
+                      ">",
+                      ">="
+                    ]
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "path",
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "requirementFails": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "loadMultiplier": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "lookFor": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3
+            }
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "qualitative"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "lookFor"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "properties": {
+        "failCap": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "base": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "cost": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "headroom15": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "headroom2": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "difficulty",
+    "statement",
+    "functional",
+    "quantitative",
+    "load",
+    "qualitative",
+    "followups"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,422 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "problemId": {
+      "type": "string"
+    },
+    "ticks": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "loadMultiplier": {
+      "type": "number"
+    },
+    "nodes": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rpsIn": {
+            "type": "number"
+          },
+          "rpsOut": {
+            "type": "number"
+          },
+          "errorRps": {
+            "type": "number"
+          },
+          "errorRate": {
+            "type": "number"
+          },
+          "utilization": {
+            "type": "number"
+          },
+          "capacity": {
+            "type": "number"
+          },
+          "p50": {
+            "type": "number"
+          },
+          "p99": {
+            "type": "number"
+          },
+          "costMonth": {
+            "type": "number"
+          },
+          "backlog": {
+            "type": "number"
+          },
+          "queueAgeS": {
+            "type": "number"
+          },
+          "health": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "serviceId",
+          "kind",
+          "rpsIn",
+          "rpsOut",
+          "errorRps",
+          "errorRate",
+          "utilization",
+          "capacity",
+          "p50",
+          "p99",
+          "costMonth",
+          "health"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "global": {
+      "type": "object",
+      "properties": {
+        "rpsIn": {
+          "type": "number"
+        },
+        "errorRps": {
+          "type": "number"
+        },
+        "errorRate": {
+          "type": "number"
+        },
+        "costMonth": {
+          "type": "number"
+        },
+        "p50ByClass": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "p99ByClass": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "throughputByClass": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "bottleneckId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "rpsIn",
+        "errorRps",
+        "errorRate",
+        "costMonth",
+        "p50ByClass",
+        "p99ByClass",
+        "throughputByClass",
+        "bottleneckId"
+      ],
+      "additionalProperties": false
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "throughput",
+              "p99",
+              "errorRate",
+              "costMonth",
+              "queueAge",
+              "queueStable"
+            ]
+          },
+          "class": {
+            "type": "string"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "<=",
+              ">="
+            ]
+          },
+          "measured": {
+            "type": "number"
+          },
+          "target": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "metric",
+          "op",
+          "measured",
+          "target",
+          "unit",
+          "pass"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "score": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "stars": {
+          "anyOf": [
+            {
+              "type": "number",
+              "const": 0
+            },
+            {
+              "type": "number",
+              "const": 1
+            },
+            {
+              "type": "number",
+              "const": 2
+            },
+            {
+              "type": "number",
+              "const": 3
+            }
+          ]
+        },
+        "parts": {
+          "type": "object",
+          "properties": {
+            "requirements": {
+              "type": "number"
+            },
+            "cost": {
+              "type": "number"
+            },
+            "headroom": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "requirements",
+            "cost",
+            "headroom"
+          ],
+          "additionalProperties": false
+        },
+        "allPass": {
+          "type": "boolean"
+        },
+        "passAt15": {
+          "type": "boolean"
+        },
+        "passAt2": {
+          "type": "boolean"
+        },
+        "userCost": {
+          "type": "number"
+        },
+        "referenceCost": {
+          "type": "number"
+        },
+        "belowReference": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "total",
+        "stars",
+        "parts",
+        "allPass",
+        "passAt15",
+        "passAt2",
+        "userCost",
+        "referenceCost",
+        "belowReference"
+      ],
+      "additionalProperties": false
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "bottleneck",
+              "requirement-failed",
+              "overprovisioned",
+              "no-traffic",
+              "invalid-connection",
+              "breaks-under-load"
+            ]
+          },
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "message": {
+            "type": "string"
+          },
+          "numbers": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "impact": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "nodeIds",
+          "message",
+          "numbers",
+          "impact"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "edgeId": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "applicableFollowups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "loadMultiplier": {
+            "type": "number"
+          },
+          "lookFor": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "topic": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "lookFor"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "userContent": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "diagramName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "labels"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "ticks",
+    "loadMultiplier",
+    "nodes",
+    "global",
+    "warnings",
+    "userContent"
+  ],
+  "additionalProperties": false
+}
