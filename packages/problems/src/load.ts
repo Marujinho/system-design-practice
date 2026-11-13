@@ -1,14 +1,28 @@
 import { catalog as bundledCatalog, type Catalog } from '@archsim/catalog';
 import { parseDiagram, type Diagram } from '@archsim/sim-engine';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
 import { z } from 'zod';
 import { Problem } from './schema';
 
-/** The repository's `problems/` directory. */
-export const PROBLEMS_DIR = resolve(fileURLToPath(new URL('../../../problems', import.meta.url)));
+/** The repository's `problems/` directory: next to this package, or up from the working directory. */
+function locateProblems(): string {
+  // A string, not a URL object: jsdom replaces the global URL, which Node's fileURLToPath rejects.
+  if (import.meta.url.startsWith('file:')) {
+    return resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'problems');
+  }
+  // Non-file module URLs (some test environments): find the workspace root instead.
+  let dir = process.cwd();
+  for (let i = 0; i < 5; i += 1) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return join(dir, 'problems');
+    dir = resolve(dir, '..');
+  }
+  return resolve(process.cwd(), 'problems');
+}
+
+export const PROBLEMS_DIR = locateProblems();
 
 export type LoadResult<T> = { ok: true; value: T } | { ok: false; message: string };
 

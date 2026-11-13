@@ -37,7 +37,7 @@ export function GlobalBar() {
             void flow.fitView({ nodes: [{ id: b.id }], duration: 300, maxZoom: 1.2 });
           }}
         >
-          gargalo: {b.label}
+          {result.nodes[b.id]?.health === 'bottleneck' ? 'gargalo' : 'mais carregado'}: {b.label}
         </button>
       )}
     </div>

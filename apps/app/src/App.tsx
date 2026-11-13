@@ -1,6 +1,9 @@
 import './canvas/canvas.css';
 import { LoadPanel } from './panels/LoadPanel';
 import { PropertiesPanel } from './panels/PropertiesPanel';
+import { ProblemList } from './practice/ProblemList';
+import { ProblemView } from './practice/ProblemView';
+import './practice/practice.css';
 import './panels/panels.css';
 import { hrefOf, type Route } from './routes';
 import { ThemeToggle } from './theme/ThemeToggle';
@@ -49,6 +52,10 @@ export function Screen({ route }: { route: Route }) {
   switch (route.screen) {
     case 'home':
       return <Home />;
+    case 'problems':
+      return <ProblemList />;
+    case 'problem':
+      return <ProblemView key={route.problemId} problemId={route.problemId} />;
     case 'free':
       return (
         <Workspace

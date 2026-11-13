@@ -630,6 +630,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - FR-54: `git check-ignore practice/session.json` → ignorado.
 - **Check**: `pnpm --filter @archsim/app test server` → verde
 - **Depends on**: T15, T16
+- **Done**: `493d7a8`
+- **Deviation**: Contratos novos no pacote problems: FinalizeResponse e ProblemSummary (a lista leva recorde, estrelas, tentativas e se a solução está liberada). Os scripts dev/build/preview do app usam vite --configLoader runner: o loader padrão (bundle) deixa os pacotes do workspace externos e o Node não carrega a fonte TS deles. Conferido com curl contra o preview: origem estranha 403, GET sem mesma origem 403, referência antes de finalizar 403, log sem corpo, nada gravado. Achado no caminho: um preview antigo do T16 ficou ouvindo na 4173 e meus smokes do T19 ao T22 falaram com ele. Ele servia o dist/ atual, então as capturas valem, mas sem o plugin; já foi encerrado.
 
 ### T25 — Telas de prática: lista, problema, avaliação, resultado, solução
 - **Covers**: FR-43, FR-44, FR-45, FR-46 (UI), FR-47 (UI), FR-48, FR-58, FR-59 (UI), A05 (markdown), A06 (referência fora do bundle)

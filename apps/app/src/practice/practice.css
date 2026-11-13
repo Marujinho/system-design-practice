@@ -1,0 +1,276 @@
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.problem-list h2 {
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+
+.problem-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.problem-card {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+.problem-card:hover {
+  border-color: var(--line-strong);
+}
+
+.problem-title {
+  font-weight: 500;
+}
+
+.problem-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.brief {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brief-head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.brief-head h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.brief-body {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  max-height: 30vh;
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+.brief-body h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 12px 0 6px;
+}
+
+.statement p {
+  margin: 8px 0;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+
+.tabs button {
+  flex: 1;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.tabs button[aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+
+.requirements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.requirements li {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 2px 6px;
+}
+
+.requirements .req-values {
+  grid-column: 2;
+}
+
+.requirements .pass .req-mark {
+  color: var(--text);
+}
+
+.requirements .fail .req-mark {
+  color: var(--state-critical);
+}
+
+.cost-now {
+  margin: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  padding: 24px;
+}
+
+.result,
+.solution {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.result {
+  width: min(720px, 100%);
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.result h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.result-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+}
+
+.result-head h2 {
+  margin: 0;
+  font-size: 15px;
+  flex-basis: 100%;
+}
+
+.score {
+  font-size: 56px;
+  line-height: 1;
+  margin: 0;
+}
+
+.score .muted {
+  font-size: 20px;
+}
+
+.stars {
+  font-size: 28px;
+  margin: 0;
+  letter-spacing: 4px;
+}
+
+.record {
+  margin: 0;
+  border: 1px solid var(--text);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.findings {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.agent-hint {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  font-size: 13px;
+}
+
+.agent-hint p {
+  margin: 6px 0;
+}
+
+.copy-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.copy-line code {
+  flex: 1;
+  font-family: var(--font-mono);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.result-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.solution {
+  width: min(1200px, 100%);
+  height: min(800px, 100%);
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.solution-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.solution-head h2 {
+  font-size: 15px;
+  margin: 0;
+  flex: 1;
+}
+
+.solution-canvas {
+  min-height: 0;
+}

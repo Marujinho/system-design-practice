@@ -145,10 +145,15 @@ function saving(
   };
 }
 
-function firstToSaturate(ctx: Ctx, result: SimResult): NodeMetrics | undefined {
+/** The node that gives out first under more load: saturated if any, else the most utilized. */
+function firstToSaturate(result: SimResult): NodeMetrics | undefined {
   return metricsList(result)
-    .filter((m) => m.kind !== 'entry' && (m.utilization > 1 || m.health === 'bottleneck'))
-    .sort((a, b) => b.utilization - a.utilization)[0];
+    .filter((m) => m.kind !== 'entry' && m.rpsIn > 0)
+    .sort((a, b) => {
+      const sa = a.utilization > 1 || a.health === 'bottleneck' ? 1 : 0;
+      const sb = b.utilization > 1 || b.health === 'bottleneck' ? 1 : 0;
+      return sb - sa || b.utilization - a.utilization;
+    })[0];
 }
 
 /** Explain a design: what breaks, why, and where money is wasted (FR-57). */
@@ -198,11 +203,11 @@ export function findings(ctx: Ctx): Finding[] {
         ? [ctx.at2, 2, IMPACT.breaks2]
         : [undefined, 0, 0];
     if (result) {
-      const first = firstToSaturate(ctx, result);
+      const first = firstToSaturate(result);
       out.push({
         type: 'breaks-under-load',
         nodeIds: first ? [first.nodeId] : [],
-        message: `Com ${n(multiplier, 1)}× a carga, o design deixa de atender aos requisitos${first ? `; o primeiro a saturar é ${nameOf(ctx, first.nodeId)}` : ''}.`,
+        message: `Com ${n(multiplier, 1)}× a carga, o design deixa de atender aos requisitos${first ? `; quem cede primeiro é ${nameOf(ctx, first.nodeId)} (${n(first.utilization * 100)}%)` : ''}.`,
         numbers: { multiplier },
         impact,
       });

@@ -65,7 +65,7 @@ export function Workspace({ mode, initial, side, top }: WorkspaceProps) {
 
   return (
     <div className="workspace">
-      {top}
+      <div className="workspace-top">{top}</div>
       <div className="workspace-body">
         <Palette
           onAdd={(serviceId) => {
