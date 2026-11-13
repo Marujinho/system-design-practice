@@ -300,6 +300,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - FR-25: WAF 900; NAT 100 × 100 KB → 10 MB/s, custo coerente.
 - **Check**: `pnpm --filter @archsim/sim-engine test` → verde
 - **Depends on**: T9
+- **Done**: `d76b61a`
+- **Deviation**: DynamoDB: só o tráfego da chave quente sofre throttle (o resto passa), o que bate com o critério de FR-22 (1.000 throttled). Leitura = 0,5 unidade por 4 KB (eventualmente consistente). API Gateway WebSocket: a cota de conexões novas/s não é aplicada, porque o modelo não simula churn de conexões; só o custo por minuto de conexão. O kind search usa o handler de compute. O sql-database com réplicas já tinha saído no T6.
 
 ### T11 — Motor: requisitos, score e achados
 - **Covers**: FR-42 (métricas avaliáveis), FR-55, FR-56, FR-57, NFR-9 (score)
