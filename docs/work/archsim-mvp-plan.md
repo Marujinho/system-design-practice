@@ -155,6 +155,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - `"__proto__": {"polluted": true}` não altera `Object.prototype`.
 - **Check**: `pnpm --filter @archsim/sim-engine test diagram` → verde
 - **Depends on**: T3
+- **Done**: `49fa232`
+- **Deviation**: A carga fica no diagrama (diagram.load), então só pode existir um nó de Usuários: validação TOO_MANY_ENTRIES. Classe de requisição usa rps/rpm/users conforme o modo. Helpers de teste em src/test-helpers.ts, fora das restrições de import do motor.
 
 ### T5 — Motor: grafo, ciclos e distribuição por classe
 - **Covers**: FR-10 (ordem), FR-11, FR-12, FR-37, A06 (ciclo não trava)
