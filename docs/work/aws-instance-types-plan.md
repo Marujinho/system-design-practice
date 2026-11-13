@@ -50,6 +50,7 @@ Na UI:
 ## Tasks
 
 ### T1 — Campo `family` no schema e snapshot das variantes atuais
+- **Done**: `9c08a67`
 - **Covers**: FR-10, FR-12 (contrato), A06, A08
 - **Files**: `packages/catalog/src/schema.ts` (edit), `packages/catalog/src/schema.test.ts` (edit), `packages/catalog/src/fixtures/variants-2026-11-13.1.json` (new), `packages/catalog/src/catalog.test.ts` (edit), `schemas/catalog.schema.json` (regenerated)
 - **Mirror**: `schema.ts:97` (`capSource: z.enum([...])`) para o enum; `schema.ts:101-102` (`burst` opcional com doc) para o campo opcional; `schema.test.ts` (o helper `variant(overrides)`) para os casos
@@ -59,6 +60,7 @@ Na UI:
 - **Depends on**: —
 
 ### T2 — EC2 e EKS: tipos novos, famílias, preços pesquisados
+- **Done**: `47058fc`
 - **Covers**: FR-1, FR-6, FR-8, FR-9, FR-11, G1, G2
 - **Files**: `packages/catalog/src/catalog.json` (edit), `packages/catalog/src/catalog.test.ts` (edit), `docs/work/aws-instance-types-plan.md` (tabela de preços na seção da tarefa)
 - **Mirror**: a variante `m5.large` do EC2 e a `m5.large-nodes` do EKS no `catalog.json` (forma, `prices[].id`, `label` "id (N vCPU, N GiB, …)"); `catalog.test.ts:44-48` (teste de preço por variante)
@@ -86,6 +88,7 @@ Na UI:
 - **Deviation**: os rótulos novos do EKS seguem o padrão do único tipo atual ("Nós m5.large", que não pode mudar pelo FR-10): "Nós c5.xlarge (4 vCPU, 8 GiB)". O teste do FR-11 confere que o rótulo nomeia o tipo e traz vCPU e GiB; o "começa pelo id" vale só para o EC2.
 
 ### T3 — RDS PostgreSQL e Aurora PostgreSQL
+- **Done**: `f315cd9`
 - **Covers**: FR-2, FR-3, FR-8, FR-9, FR-11, G1, G2
 - **Files**: `packages/catalog/src/catalog.json` (edit), `packages/catalog/src/catalog.test.ts` (edit), plano (tabela de preços)
 - **Mirror**: a variante `db.m7g.large` do RDS e a `db.r5.large` do Aurora; os testes do T2
@@ -110,6 +113,7 @@ Na UI:
 - **Deviation**: o teste "a capacidade cresce" agrupa por família de instância da AWS (`db.r5`, `db.r7g`, `c5`…), não pelo campo `family`. No Aurora, `db.r5.large` e `db.r7g.large` têm a mesma capacidade (mesmos vCPUs) com preços diferentes, então a ordem por preço misturando as duas gerações não é estritamente crescente. O mapa do Aurora não traz vCPU/GiB; usei as specs das famílias r5/r7g e t4g, as mesmas do RDS e do EC2.
 
 ### T4 — ElastiCache Valkey, OpenSearch, Fargate e `catalogVersion`
+- **Done**: `e6caa7c`
 - **Covers**: FR-4, FR-5, FR-7, FR-8, FR-9, FR-11, FR-14, G1, G2, A08
 - **Files**: `packages/catalog/src/catalog.json` (edit), `packages/catalog/src/catalog.test.ts` (edit), `apps/app/src/store/defaults.ts` (sem mudança: lê `catalog.catalogVersion`), `packages/problems/src/bank.test.ts` (edit, se não houver teste de compatibilidade), plano (tabela de preços)
 - **Mirror**: `cache.t4g.micro`, `m7g.medium.search` e `1vcpu-2gb` no `catalog.json`; os testes do T2
@@ -144,6 +148,7 @@ Na UI:
   - `catalog.json`: 50.708 → 87.599 bytes (+36,9 KB, NFR-1 < 60 KB).
 
 ### T5 — A troca de tipo muda o gargalo (simulação)
+- **Done**: `09c9735`
 - **Covers**: FR-9a, G1a
 - **Files**: `packages/sim-engine/src/step.test.ts` (edit)
 - **Mirror**: `step.test.ts:19-38` (cenário dourado com `node`, `edge` e `diagram` de `test-helpers.ts:17-40`) e `step.test.ts:51-64` (gargalo)
@@ -153,6 +158,7 @@ Na UI:
 - **Depends on**: T2
 
 ### T6 — Seletor agrupado por família, com req/s e US$/mês
+- **Done**: `1e71225`, `1db7965`, `6f7bf07`
 - **Covers**: FR-12, FR-9b, NFR-2, NFR-3, A05
 - **Files**: `apps/app/src/panels/PropertiesPanel.tsx` (edit), `apps/app/src/panels/variant-options.ts` (new), `apps/app/src/panels/panels.test.tsx` (edit)
 - **Mirror**: `PropertiesPanel.tsx:59-75` (o `<select>` atual); `formatRps` e `formatUsd` de `apps/app/src/format.ts`; `HOURS_PER_MONTH` de `@archsim/sim-engine`; `panels.test.tsx` (render do `PropertiesPanel` com um nó selecionado)
@@ -166,6 +172,7 @@ Na UI:
 - **Depends on**: T1 (o tipo `Family`), T2 (dados reais no teste)
 
 ### T7 — Tipo no card do nó
+- **Done**: `abe9848`
 - **Covers**: FR-13, NFR-2, A05, A10
 - **Files**: `apps/app/src/canvas/flow-model.ts` (edit), `apps/app/src/canvas/ServiceNode.tsx` (edit), `apps/app/src/canvas/canvas.css` (edit), `apps/app/src/canvas/canvas.test.tsx` (edit)
 - **Mirror**: `ServiceNode.tsx:26-29` (`service-node-kind` em linha muted); `flow-model.ts:18` (`data`)
@@ -175,6 +182,7 @@ Na UI:
 - **Depends on**: T2
 
 ### T8 — e2e: trocar o tipo pelo painel
+- **Done**: `e62ed90`
 - **Covers**: FR-13, FR-9b, FR-12, NFR-1, NFR-2
 - **Files**: `apps/app/e2e/instance-types.spec.ts` (new)
 - **Mirror**: `apps/app/e2e/free-flow.spec.ts:36-44` (adicionar pela paleta); `free-flow.spec.ts:17-23` (selecionar um nó com `toPass`)
@@ -230,3 +238,48 @@ pnpm schemas && git diff --exit-code schemas/
 pnpm test:e2e
 ```
 Ponta a ponta: `pnpm dev` → Canvas livre → Usuários + EC2 → o card mostra o tipo → Propriedades → "Tipo" com 4 grupos e "· req/s · US$/mês" em cada opção → `c5.xlarge` → o card e o custo mudam. Com a carga em 1.500 req/s e 1 réplica, o EC2 deixa de ser gargalo ao trocar `t3.micro` por `c5.xlarge`. Abrir `/#/problems/url-shortener` → as soluções e os scores de antes iguais (a suite de problemas confirma).
+
+## Implementation
+
+**Branch**: `feat/aws-instance-types` · **Base**: `master` · **Date**: 2026-11-13
+
+Toolchain: Node 24 (`/opt/homebrew/opt/node@24/bin` na frente do PATH; o `node` padrão do sistema é o 23).
+
+| Task | Commit | Check | Lint / Types / Tests |
+|---|---|---|---|
+| T1 | `9c08a67` | ✅ | ✅ ✅ ✅ (528 passed) |
+| T2 | `47058fc` | ✅ | ✅ ✅ ✅ (538 passed) |
+| T3 | `f315cd9` | ✅ | ✅ ✅ ✅ (544 passed) |
+| T4 | `e6caa7c` | ✅ | ✅ ✅ ✅ (556 passed) |
+| T5 | `09c9735` | ✅ | ✅ ✅ ✅ (557 passed) |
+| T6 | `1e71225`, `1db7965`, `6f7bf07` | ✅ | ✅ ✅ ✅ (566 passed; e2e 43/43 depois das correções) |
+| T7 | `abe9848` | ✅ | ✅ ✅ ✅ (570 passed) |
+| T8 | `e62ed90` | ✅ e2e chromium + webkit | ✅ ✅ ✅ (570 passed; e2e 43/43) |
+
+Final: lint ✅, typecheck ✅, `pnpm test` 570 passed (39 arquivos), `pnpm test:e2e` 43 passed (chromium + webkit, com `perf.spec.ts`), `pnpm schemas` sem diff.
+
+### Deviations
+- **T2–T4 — fonte dos preços**: as páginas de preço da AWS montam a tabela por JavaScript. Os números saíram dos mapas JSON públicos que essas páginas carregam (`b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/…`) e, no Fargate, da Price List API. O `sourceUrl` cita a página humana. Em todos os serviços, os preços que já estavam no catálogo batem com essas fontes.
+- **T2–T4 — rótulos**: cada serviço segue o padrão do seu rótulo atual (EKS "Nós c5.xlarge (…)"; Fargate "4 vCPU / 8 GB"); ElastiCache e OpenSearch ganharam "(N vCPU, N GiB)" nos novos, embora os antigos não tenham. Detalhes nas tarefas.
+- **T3 — monotonia**: a checagem de capacidade crescente agrupa pela família de instância da AWS (`db.r5`, `db.r7g`, `c5`…), não pelo campo `family`, porque `db.r5.large` e `db.r7g.large` têm a mesma capacidade com preços diferentes.
+- **T4 — FR-14**: coberto pelo teste que já existia em `packages/problems/src/bank.test.ts:52-54`, que carrega e pontua as referências gravadas com `2026-11-13.1`.
+- **T4 — OpenSearch**: as âncoras atuais já dão 200 req/s por vCPU nas três famílias (m7g, c6g, r6g), então lá computação não rende mais que uso geral. O critério "c > m ≥ r" do FR-9 é testado no EC2, como o PRD escreve.
+- **T6 — duas regressões encontradas depois do commit**: (1) o texto das opções passou a conter "req/s", e o `getByText('400 req/s')` de `keyboard.spec.ts:47` (substring) começou a casar com uma opção; corrigido com `exact: true` (`1db7965`). (2) As opções longas alargavam o painel lateral 224 px além da coluna; corrigido em `panels.css` com `minmax(0, 1fr)` no `.panel` e no `.field` e `width: 100%` no `<select>`, com checagem de regressão no e2e (`6f7bf07`). Não rodei o e2e logo depois do T6; as duas só apareceram no T7 e na verificação visual.
+- **T7 — A05 do card**: o card mostra o `id` do tipo, não o rótulo, e o schema só aceita ids `^[a-z0-9][a-z0-9.-]*$`; não há como entrar marcação ali. O teste de A05 ficou no rótulo das opções (`variant-options.test.tsx`).
+- **T8**: o e2e não clica no nó para selecioná-lo; `addNode` já seleciona o nó novo (`diagram-store.ts:106`), e o clique num nó que re-renderiza 10×/s não estabilizava no WebKit.
+
+### Definition of Done
+- [x] Todos os Must atendem os critérios — FR-1–FR-7 (ids exatos por serviço), FR-8 (fonte e data), FR-9 (regra por serviço reproduz todo valor novo), FR-9a (`step.test.ts`), FR-10 (snapshot de 37 variantes antigas + tipo padrão), FR-13 (card), FR-14 (versão nova; referências antigas pontuam)
+- [x] Mínimos da G1 — EC2 19, RDS 12, Aurora 9, ElastiCache 9, OpenSearch 10, EKS 9, Fargate 7
+- [~] Preços com fonte e data, 3 por serviço conferidos — todos têm `sourceUrl` e `priceDate`; os testes fixam 3 preços por serviço, conferidos contra os dados que a página carrega. **Não conferi visualmente na página HTML de cada serviço.**
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, `pnpm schemas` verdes; `schemas/catalog.schema.json` regravado no T1
+- [x] Soluções de referência e scores iguais — o snapshot das variantes antigas passa e a suite de problemas passa sem regravar nada
+
+### Verification
+- `pnpm schemas && git diff --exit-code schemas/` → sem diff.
+- Captura (1280×800): EC2 trocado para `c5.xlarge` → card com "c5.xlarge", painel com 2.000 req/s e US$ 124,10/mês, e o seletor cabe na coluna de 320 px.
+- `catalog.json`: 50.708 → 87.599 bytes (+36,9 KB < 60 KB).
+
+### Inherited failures
+- `apps/app/src/practice/practice.test.tsx`: intermitente (1 em 5 execuções da suite completa, sempre verde rodando o arquivo sozinho) — `ReferenceError: ResizeObserver is not defined` vindo de um efeito do React Flow, nos testes "shows the title on the collapsed top strip…" (que veio da feature anterior, PR #2) e "offers the solution from the start…". Já estava na `master`; não corrigido aqui, porque não está no plano.
+
