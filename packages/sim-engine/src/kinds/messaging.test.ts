@@ -106,9 +106,9 @@ describe('pub/sub (FR-19)', () => {
 
   it('EventBridge fans out the same way', () => {
     const h = handlers.pubsub;
-    const out = h?.process({ default: 50 }, ctxFor('aws.eventbridge', 'classic', { outDegree: 2 }));
-    expect(out?.fanout).toBe(true);
-    expect(out?.forward.default).toBe(50);
+    const out = h.process({ default: 50 }, ctxFor('aws.eventbridge', 'classic', { outDegree: 2 }));
+    expect(out.fanout).toBe(true);
+    expect(out.forward.default).toBe(50);
   });
 });
 
@@ -120,8 +120,8 @@ describe('stream (FR-20)', () => {
       props: { shards: 2 },
       classes: [{ ...READ, payloadKB: 1 }],
     });
-    const out = handlers.stream?.process({ read: 3000 }, ctx);
-    expect(out?.errors.read).toBeCloseTo(1000, 9);
+    const out = handlers.stream.process({ read: 3000 }, ctx);
+    expect(out.errors.read).toBeCloseTo(1000, 9);
   });
 
   it('2 shards, 1,500 records/s of 2 KB (3 MB/s) → 500 throttled by the 2 MB/s limit', () => {
@@ -129,17 +129,17 @@ describe('stream (FR-20)', () => {
       props: { shards: 2 },
       classes: [{ ...READ, payloadKB: 2 }],
     });
-    const out = handlers.stream?.process({ read: 1500 }, ctx);
-    expect(out?.processed.read).toBeCloseTo(1000, 9);
-    expect(out?.errors.read).toBeCloseTo(500, 9);
+    const out = handlers.stream.process({ read: 1500 }, ctx);
+    expect(out.processed.read).toBeCloseTo(1000, 9);
+    expect(out.errors.read).toBeCloseTo(500, 9);
   });
 
   it('4 shards take 4,000 records/s', () => {
-    expect(handlers.stream?.capacity(kinesis(4))).toBe(4000);
+    expect(handlers.stream.capacity(kinesis(4))).toBe(4000);
   });
 
   it('bills shard-hours', () => {
-    const out = handlers.stream?.process({}, kinesis(2));
-    expect(out?.costMonth).toBeCloseTo(2 * 0.015 * 730, 9);
+    const out = handlers.stream.process({}, kinesis(2));
+    expect(out.costMonth).toBeCloseTo(2 * 0.015 * 730, 9);
   });
 });

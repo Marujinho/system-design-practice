@@ -158,8 +158,8 @@ export function step(
       outDegree: graph.outEdges.get(id)?.length ?? 0,
       downstreamCapacity: (graph.outEdges.get(id) ?? []).reduce((total, e) => {
         const target = resolved.get(e.target);
-        const h = target ? handlers[target.service.kind] : undefined;
-        if (!target || !h || graph.cyclic.has(e.target)) return total;
+        if (!target || graph.cyclic.has(e.target)) return total;
+        const h = handlers[target.service.kind];
         const targetCtx = makeContext({
           node: target.node,
           service: target.service,
@@ -189,8 +189,8 @@ export function step(
   const run = (id: string, input: ClassRates): NodeOutput => {
     const r = resolved.get(id);
     const ctx = contextOf(id);
-    const h = r ? handlers[r.service.kind] : undefined;
-    if (!r || !ctx || !h) return emptyOutput();
+    if (!r || !ctx) return emptyOutput();
+    const h = handlers[r.service.kind];
     const out = h.process(input, ctx);
     warnings.push(...out.warnings);
     const next: NodeState = { ...out.nextState };

@@ -276,6 +276,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Fila sem consumidor → backlog cresce, sem NaN.
 - **Check**: `pnpm --filter @archsim/sim-engine test kinds` → verde
 - **Depends on**: T7, T8
+- **Done**: `300a1f7`
+- **Deviation**: A utilização da fila é entrada / vazão dos consumidores, então uma fila que acumula aparece como gargalo também por ρ. Fila, pub/sub e stream marcam asyncBoundary: a latência ponta a ponta para neles.
 
 ### T10 — Motor: S3, DynamoDB, Aurora, API Gateway, WAF, NAT, CloudWatch, EKS
 - **Covers**: FR-21, FR-22, FR-23, FR-24, FR-25

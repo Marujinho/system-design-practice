@@ -5,9 +5,7 @@ import { handlers } from './index';
 import type { KindHandler } from './types';
 
 function handler(kind: keyof typeof handlers): KindHandler {
-  const h = handlers[kind];
-  if (!h) throw new Error(`no handler ${kind}`);
-  return h;
+  return handlers[kind];
 }
 
 describe('latency (FR-16)', () => {
