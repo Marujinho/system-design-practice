@@ -592,6 +592,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - O arquivo com `__proto__` não polui.
 - **Check**: `pnpm --filter @archsim/app test files` → verde
 - **Depends on**: T22
+- **Done**: `e37b8de`
+- **Deviation**: O arquivo de 5 MB+ é simulado no teste (size), não guardado como fixture. O menu de arquivo fica na faixa de carga. Abrir um arquivo dentro de um problema mantém a carga do problema.
 
 ### T24 — Plugin de prática: rotas locais, finalização, histórico, referência
 - **Covers**: FR-46 (liberação), FR-47, FR-54, FR-59 (arquivo), A01, A02, A05, A06, A08, A09, A10

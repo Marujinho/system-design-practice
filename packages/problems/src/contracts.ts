@@ -171,3 +171,29 @@ export const CliOutput = z
   })
   .strict();
 export type CliOutput = z.infer<typeof CliOutput>;
+
+/** What POST /__archsim/finalize answers: the reference only as a number (FR-58). */
+export const FinalizeResponse = z
+  .object({
+    problemId: z.string(),
+    score: ScoreSummary,
+    requirements: z.array(RequirementResultSchema),
+    findings: z.array(FindingSchema),
+    isRecord: z.boolean(),
+    previousRecord: z.number().int().nullable(),
+  })
+  .strict();
+export type FinalizeResponse = z.infer<typeof FinalizeResponse>;
+
+export const ProblemSummary = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    difficulty: z.enum(['facil', 'medio', 'dificil']),
+    record: z.number().int().nullable(),
+    stars: z.number().int().min(0).max(3).nullable(),
+    attempts: z.number().int().nonnegative(),
+    solutionAvailable: z.boolean(),
+  })
+  .strict();
+export type ProblemSummary = z.infer<typeof ProblemSummary>;
