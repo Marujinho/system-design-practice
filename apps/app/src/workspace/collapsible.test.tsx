@@ -110,4 +110,21 @@ describe('collapsible panels (edge-hover FR-8–FR-10, FR-14, FR-15)', () => {
     expect(useDiagram.getState().selection).toBe(selection);
     expect(useDiagram.getState().history).toBe(history);
   });
+
+  it('focuses the canvas, then restores the panels as they were (edge-hover FR-12)', async () => {
+    renderWorkspace();
+    await userEvent.click(button('Recolher painel lateral'));
+    await userEvent.click(button('Focar no canvas'));
+    expect(useLayout.getState().collapsed).toEqual({
+      palette: true,
+      side: true,
+      top: true,
+      metrics: true,
+    });
+    const restore = button('Restaurar painéis');
+    expect(restore.getAttribute('aria-pressed')).toBe('true');
+    await userEvent.click(restore);
+    expect(useLayout.getState().collapsed).toEqual({ ...EXPANDED, side: true });
+    expect(button('Focar no canvas').getAttribute('aria-pressed')).toBe('false');
+  });
 });

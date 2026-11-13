@@ -330,6 +330,14 @@
   font-size: 12px;
 }
 
+.focus-canvas {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  background: var(--surface);
+}
+
 .global-bar-toggle {
   position: absolute;
   left: 56px;

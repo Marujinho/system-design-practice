@@ -39,6 +39,23 @@ export interface WorkspaceProps {
   topSummary?: ReactNode;
 }
 
+/** Collapse every panel around the canvas, then put them back as they were (edge-hover FR-12). */
+function FocusButton() {
+  const active = useLayout((s) => s.before !== null);
+  return (
+    <button
+      type="button"
+      className="button focus-canvas"
+      aria-pressed={active}
+      onClick={() => {
+        useLayout.getState().focusCanvas();
+      }}
+    >
+      {active ? 'Restaurar painéis' : 'Focar no canvas'}
+    </button>
+  );
+}
+
 /** On the collapsed side strip: something is selected, its properties are one click away (FR-15). */
 function SelectionBadge() {
   const n = useDiagram((s) => s.selection.length);
@@ -124,6 +141,7 @@ export function Workspace({ mode, initial, side, top, topSummary }: WorkspacePro
             <>
               <ParticleLayer enabled={!reduced} />
               <GlobalBar />
+              <FocusButton />
             </>
           }
         />
