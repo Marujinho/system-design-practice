@@ -20,7 +20,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { z } from 'zod';
 import { parseArgs, type Args } from './args';
-import { summarize } from './output';
+import { neutralIds, summarize } from './output';
 
 export interface Io {
   cwd: string;
@@ -41,7 +41,10 @@ export function practiceDir(env: Record<string, string | undefined>): string {
 
 function readText(path: string, what: string): string {
   if (!existsSync(path)) throw new CliError(`${what} não encontrado: ${path}`);
-  if (statSync(path).size > MAX_BYTES) throw new CliError(`${what} passa de 5 MB: ${path}`);
+  const st = statSync(path);
+  // a FIFO or a device reports size 0 and could stream forever
+  if (!st.isFile()) throw new CliError(`${what} não é um arquivo comum: ${path}`);
+  if (st.size > MAX_BYTES) throw new CliError(`${what} passa de 5 MB: ${path}`);
   return readFileSync(path, 'utf8');
 }
 
@@ -106,7 +109,9 @@ function resolveTarget(args: Args, io: Io, catalog: Catalog): Target {
 }
 
 function execute(args: Args, io: Io, catalog: Catalog): CliOutput {
-  const target = resolveTarget(args, io, catalog);
+  const resolved = resolveTarget(args, io, catalog);
+  const neutral = neutralIds(resolved.diagram);
+  const target: Target = { ...resolved, diagram: neutral.diagram };
   if (!target.problem) {
     const sim = simulateSteady(target.diagram, catalog, {
       ticks: args.ticks,
@@ -142,6 +147,7 @@ function execute(args: Args, io: Io, catalog: Catalog): CliOutput {
     requirements,
     score: scored,
     findings: scored.findings,
+    ids: neutral.ids,
   });
   if (args.command === 'followups') {
     out.applicableFollowups = problem.followups

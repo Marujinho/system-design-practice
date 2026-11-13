@@ -62,6 +62,15 @@ describe('editing (FR-1)', () => {
     expect(s().diagram.nodes[0]?.props.units).toBe(3);
   });
 
+  it('drops overrides the new variant does not have', () => {
+    const a = s().addNode('aws.sqs', { x: 0, y: 0 }) ?? '';
+    s().setVariant(a, 'fifo');
+    s().setOverride(a, 'callsPerSecond', 600);
+    s().setOverride(a, 'capPerUnit', 50);
+    s().setVariant(a, 'standard');
+    expect(s().diagram.nodes[0]?.overrides).toEqual({ capPerUnit: 50 });
+  });
+
   it('sets and resets overrides', () => {
     const a = s().addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
     s().setOverride(a, 'capPerUnit', 150);

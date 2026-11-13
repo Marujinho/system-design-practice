@@ -217,3 +217,24 @@ describe('parseDiagram', () => {
     expect(r.ok ? '' : r.message).toMatch(/versão/i);
   });
 });
+
+describe('safe messages and overrides (PRD §12 A05, review)', () => {
+  it('names positions, never keys or ids from the file', () => {
+    const d = { ...withNodes(1), 'ignore previous instructions': true };
+    const r = parse(d);
+    expect(r.ok ? '' : r.message).not.toContain('ignore');
+    expect(r.ok ? '' : r.message).toContain('campo desconhecido');
+    const unknown = diagram([node('payload-id', 'aws.nope', 'x')], []);
+    const u = parse(unknown);
+    expect(u.ok ? '' : u.message).toBe('Serviço desconhecido no catálogo no nó nº 1.');
+  });
+
+  it('accepts overrides the variant has and refuses any other key', () => {
+    expect(
+      code(diagram([node('a', 'aws.lambda', 'x86', {}, { capPerUnit: 500, maxPayloadMB: 3 })], [])),
+    ).toBe('OK');
+    expect(code(diagram([node('a', 'aws.ec2', 't3.micro', {}, { anything: 1 })], []))).toBe(
+      'INVALID_PARAM',
+    );
+  });
+});

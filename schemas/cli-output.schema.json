@@ -402,6 +402,15 @@
         },
         "diagramName": {
           "type": "string"
+        },
+        "ids": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "required": [

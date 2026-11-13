@@ -27,4 +27,10 @@ describe('server configuration (PRD §12 A02)', () => {
   it('ships no public source maps', () => {
     expect(config.build?.sourcemap).toBe(false);
   });
+
+  it('keeps the reference solutions and the attempts off /@fs', () => {
+    expect(config.server?.fs?.deny).toEqual(
+      expect.arrayContaining(['**/reference.archsim.json', '**/practice/**']),
+    );
+  });
 });

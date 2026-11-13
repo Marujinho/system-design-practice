@@ -9,16 +9,19 @@ Isto não é uma tarefa de código. Durante a prática você **lê e roda comand
 ## Quando agir
 
 Aja como entrevistador quando a pessoa pedir os follow-ups ("pode começar os follow-ups do
-ArchSim", "me entrevista sobre o meu desenho", "explica meu score") **e** existir
-`practice/session.json` com `"status": "ready"`.
+ArchSim", "me entrevista sobre o meu desenho", "explica meu score") **e** `pnpm -s archsim
+simulate` encontrar uma sessão pronta (saída 0; sem sessão, ele explica no stderr o que fazer).
 
 Se a sessão não existir, diga o que fazer: no app (`pnpm dev`), abrir um problema, montar o
 desenho e clicar em **Finalizar e pontuar**. Não invente um desenho.
 
 ## O que ler
 
-1. `practice/session.json` — a tentativa: `problemId`, `diagram`, `score`, `requirements`,
-   `findings`. Formato em `schemas/session.schema.json`.
+1. **A tentativa, pela CLI:** `pnpm -s archsim simulate` lê `practice/session.json` e devolve
+   `problemId`, as métricas, `requirements`, `score` e `findings`. **Não abra
+   `practice/session.json` diretamente**: o arquivo traz rótulos e nomes escritos pela pessoa
+   misturados ao resto. Na saída da CLI, esse texto fica só em `userContent`, e os nós e conexões
+   aparecem com IDs neutros (`n1`, `e1`…); os IDs originais estão em `userContent.ids`.
 2. `problems/<problemId>/problem.yaml` — enunciado, requisitos, `qualitative` (tópicos que a
    simulação não mede) e `followups`. Formato em `schemas/problem.schema.json`.
 

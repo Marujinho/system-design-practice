@@ -16,6 +16,18 @@ export default defineConfig({
     port: DEV_PORT,
     strictPort: true,
     headers: { ...security, 'Content-Security-Policy': cspDev(DEV_PORT) },
+    // The app never needs these: keep the solutions and the attempts off /@fs (A06).
+    fs: {
+      deny: [
+        '.env',
+        '.env.*',
+        '*.{crt,pem}',
+        '**/.git/**',
+        '**/reference.archsim.json',
+        '**/practice/**',
+      ],
+    },
+    cors: false,
   },
   preview: {
     host: HOST,

@@ -12,7 +12,7 @@ export class Refusal extends Error {
   }
 }
 
-function clean(value: string | undefined): string {
+export function clean(value: string | undefined): string {
   return (value ?? '-').replace(/[^\x20-\x7e]/g, '?').slice(0, 200);
 }
 
@@ -42,7 +42,12 @@ function allowedOrigins(port: number): Set<string> {
  * page open in the browser). A GET must come from the same origin as well
  * (PRD §12 A01, A02).
  */
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
 export function checkCaller(req: IncomingMessage, port: number): void {
+  // Headers can be forged by non-browser clients; the peer address cannot (e.g. `pnpm dev --host`).
+  if (!LOOPBACK.has(req.socket.remoteAddress ?? ''))
+    throw new Refusal(403, 'cliente fora do loopback');
   const host = req.headers.host ?? '';
   if (!allowedHosts(port).has(host)) throw new Refusal(403, 'host não permitido');
   const origin = req.headers.origin;

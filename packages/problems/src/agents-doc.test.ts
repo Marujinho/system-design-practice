@@ -21,6 +21,11 @@ describe('AGENTS.md (FR-50)', () => {
     expect(doc).toContain(heading);
   });
 
+  it('sends the agent through the CLI, never to session.json directly (review M2)', () => {
+    expect(doc).toContain('Não abra\n   `practice/session.json` diretamente');
+    expect(doc).toContain('userContent.ids');
+  });
+
   it('points at the session, the problem and the CLI with -s', () => {
     expect(doc).toContain('practice/session.json');
     expect(doc).toContain('problems/<problemId>/problem.yaml');

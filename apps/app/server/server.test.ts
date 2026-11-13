@@ -3,7 +3,14 @@ import { catalog } from '@archsim/catalog';
 import { FinalizeResponse, History, ProblemSummary, Session } from '@archsim/problems';
 import { PROBLEMS_DIR } from '@archsim/problems/load';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer, request, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -124,6 +131,20 @@ describe('A01: only the app may call', () => {
   });
 });
 
+describe('A01: loopback peers only', () => {
+  it('refuses a client outside loopback even with forged headers', async () => {
+    const { checkCaller } = await import('./guard');
+    const req = {
+      socket: { remoteAddress: '192.168.1.20' },
+      headers: { host: `127.0.0.1:${String(port)}`, origin: `http://127.0.0.1:${String(port)}` },
+      method: 'POST',
+    } as unknown as Parameters<typeof checkCaller>[0];
+    expect(() => {
+      checkCaller(req, port);
+    }).toThrow('cliente fora do loopback');
+  });
+});
+
 describe('A02: method and content type', () => {
   it('GET /finalize → 405', async () => {
     expect((await call('GET', '/__archsim/finalize')).status).toBe(405);
@@ -215,6 +236,15 @@ describe('A08: validated before anything is written', () => {
     const r = await call('GET', '/__archsim/history');
     expect(r.status).toBe(200);
     expect(readdirSync(dir).some((f) => f.startsWith('history.corrupt-'))).toBe(true);
+  });
+});
+
+describe('A10: I/O errors are not mistaken for corruption', () => {
+  it('a history path that cannot be read answers 500 and is not moved aside', async () => {
+    mkdirSync(join(dir, 'history.json'));
+    const r = await call('GET', '/__archsim/history');
+    expect(r.status).toBe(500);
+    expect(readdirSync(dir).some((f) => f.startsWith('history.corrupt-'))).toBe(false);
   });
 });
 

@@ -166,7 +166,12 @@ export const CliOutput = z
     ),
     applicableFollowups: z.array(ApplicableFollowup).optional(),
     userContent: z
-      .object({ labels: z.record(z.string(), z.string()), diagramName: z.string().optional() })
+      .object({
+        labels: z.record(z.string(), z.string()),
+        diagramName: z.string().optional(),
+        /** The ids the person wrote, keyed by the neutral ids used everywhere else. */
+        ids: z.record(z.string(), z.string()).optional(),
+      })
       .strict(),
   })
   .strict();

@@ -148,17 +148,70 @@ function arrayLength(obj: unknown, key: string): number {
   return Array.isArray(value) ? value.length : 0;
 }
 
-/** Validate an untrusted value as a diagram against the catalog. */
+/** Field names the schema defines; anything else in an error path is the file's own text. */
+const KNOWN_FIELDS = new Set([
+  'schemaVersion',
+  'catalogVersion',
+  'name',
+  'nodes',
+  'edges',
+  'load',
+  'classes',
+  'id',
+  'serviceId',
+  'variantId',
+  'position',
+  'x',
+  'y',
+  'label',
+  'props',
+  'overrides',
+  'source',
+  'target',
+  'protocol',
+  'weight',
+  'mode',
+  'op',
+  'users',
+  'reqPerUserPerMin',
+  'rps',
+  'rpm',
+  'payloadKB',
+  'cacheable',
+]);
+
+/** Where a schema issue is, without echoing any key or value written in the file (PRD §12 A05). */
+function safePath(path: readonly PropertyKey[]): string {
+  if (path.length === 0) return 'raiz';
+  return path
+    .map((part) =>
+      typeof part === 'number'
+        ? `[${String(part)}]`
+        : KNOWN_FIELDS.has(String(part))
+          ? String(part)
+          : '?',
+    )
+    .join('.')
+    .replace(/\.\[/g, '[');
+}
+
+/** The numbers a node may override: capacity, latency and its variant's limits. */
+export function overridableKeys(variant: { limits: readonly { id: string }[] }): Set<string> {
+  return new Set(['capPerUnit', 'baseLatencyMs', ...variant.limits.map((l) => l.id)]);
+}
+
+/**
+ * Validate an untrusted value as a diagram against the catalog. Messages never
+ * repeat text from the file (keys, ids, labels, values): they name positions
+ * and catalog labels only, because they can reach a coding agent (PRD §12 A05).
+ */
 export function validateDiagram(input: unknown, catalog: Catalog): DiagramResult {
   const version =
     typeof input === 'object' && input !== null
       ? (input as Record<string, unknown>).schemaVersion
       : undefined;
   if (version !== 1) {
-    return fail(
-      'UNSUPPORTED_VERSION',
-      `Versão de arquivo não suportada (${version === undefined ? 'ausente' : JSON.stringify(version)}); este app lê a versão 1.`,
-    );
+    return fail('UNSUPPORTED_VERSION', 'Versão de arquivo não suportada; este app lê a versão 1.');
   }
   if (arrayLength(input, 'nodes') > LIMITS.maxNodes) {
     return fail('TOO_MANY_NODES', `O diagrama passa de ${LIMITS.maxNodes} nós.`);
@@ -179,49 +232,55 @@ export function validateDiagram(input: unknown, catalog: Catalog): DiagramResult
     if (tooLong) {
       return fail('LABEL_TOO_LONG', `Um rótulo passa de ${LIMITS.maxLabel} caracteres.`);
     }
+    const issues = parsed.error.issues;
+    const first = issues[0];
+    const where = first ? safePath(first.path) : 'raiz';
+    const kind = first?.code === 'unrecognized_keys' ? 'campo desconhecido' : 'valor inválido';
     return fail(
       'INVALID_SCHEMA',
-      `Arquivo fora do formato esperado:\n${z.prettifyError(parsed.error)}`,
+      `Arquivo fora do formato esperado: ${String(issues.length)} problema(s); o primeiro é ${kind} em ${where}.`,
     );
   }
   const diagram = parsed.data;
 
   const ids = new Set<string>();
   for (const item of [...diagram.nodes, ...diagram.edges]) {
-    if (ids.has(item.id)) return fail('DUPLICATE_ID', `ID repetido: ${item.id}.`);
+    if (ids.has(item.id)) return fail('DUPLICATE_ID', 'Há dois nós ou conexões com o mesmo ID.');
     ids.add(item.id);
   }
   const nodeIds = new Set(diagram.nodes.map((n) => n.id));
-  for (const e of diagram.edges) {
+  for (const [i, e] of diagram.edges.entries()) {
     if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) {
-      return fail('DANGLING_EDGE', `A conexão ${e.id} aponta para um nó que não existe.`);
+      return fail(
+        'DANGLING_EDGE',
+        `A conexão nº ${String(i + 1)} aponta para um nó que não existe.`,
+      );
     }
   }
 
   let entries = 0;
-  for (const node of diagram.nodes) {
+  for (const [i, node] of diagram.nodes.entries()) {
+    const at = `no nó nº ${String(i + 1)}`;
     const service = findService(catalog, node.serviceId);
-    if (!service) {
-      return fail('UNKNOWN_SERVICE', `Serviço desconhecido no catálogo: ${node.serviceId}.`);
-    }
+    if (!service) return fail('UNKNOWN_SERVICE', `Serviço desconhecido no catálogo ${at}.`);
     if (service.kind === 'entry') entries += 1;
-    if (!findVariant(service, node.variantId)) {
-      return fail(
-        'UNKNOWN_VARIANT',
-        `Variante desconhecida de ${service.label}: ${node.variantId}.`,
-      );
-    }
+    const variant = findVariant(service, node.variantId);
+    if (!variant)
+      return fail('UNKNOWN_VARIANT', `Variante desconhecida de ${service.label} ${at}.`);
     for (const [key, value] of Object.entries(node.props)) {
       const param = service.params.find((p) => p.key === key);
-      if (!param) {
-        return fail('INVALID_PARAM', `${service.label} não tem a propriedade "${key}".`);
-      }
+      if (!param)
+        return fail('INVALID_PARAM', `${service.label} ${at} tem uma propriedade que não existe.`);
       if (value < param.min || value > param.max) {
         return fail(
           'INVALID_PARAM',
-          `${param.label} de ${node.label || service.label} fora do intervalo ${param.min}–${param.max}.`,
+          `${param.label} de ${service.label} ${at} fora do intervalo ${String(param.min)}–${String(param.max)}.`,
         );
       }
+    }
+    const allowed = overridableKeys(variant);
+    if (Object.keys(node.overrides).some((k) => !allowed.has(k))) {
+      return fail('INVALID_PARAM', `${service.label} ${at} altera um número que não existe.`);
     }
   }
   if (entries > 1) return fail('TOO_MANY_ENTRIES', 'Só pode haver um nó de Usuários.');
@@ -230,12 +289,12 @@ export function validateDiagram(input: unknown, catalog: Catalog): DiagramResult
   if (classNames.size !== diagram.load.classes.length) {
     return fail('DUPLICATE_ID', 'Há classes de requisição com o mesmo nome.');
   }
-  for (const e of diagram.edges) {
+  for (const [i, e] of diagram.edges.entries()) {
     for (const c of e.classes ?? []) {
       if (!classNames.has(c)) {
         return fail(
           'UNKNOWN_CLASS',
-          `A conexão ${e.id} usa a classe "${c}", que não está na carga.`,
+          `A conexão nº ${String(i + 1)} usa uma classe que não está na carga.`,
         );
       }
     }

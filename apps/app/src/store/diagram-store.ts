@@ -1,6 +1,7 @@
 import { catalog, findService, findVariant } from '@archsim/catalog';
 import {
   LIMITS,
+  overridableKeys,
   type Diagram,
   type DiagramEdge,
   type Load,
@@ -178,7 +179,14 @@ export const useDiagram = create<DiagramState>()((set, get) => {
       commit((d) => {
         const n = d.nodes.find((x) => x.id === nodeId);
         const service = n ? findService(catalog, n.serviceId) : undefined;
-        if (n && service && findVariant(service, variantId)) n.variantId = variantId;
+        const variant = service ? findVariant(service, variantId) : undefined;
+        if (!n || !variant) return;
+        n.variantId = variantId;
+        // limits differ between variants: keep only overrides the new one has
+        const allowed = overridableKeys(variant);
+        n.overrides = Object.fromEntries(
+          Object.entries(n.overrides).filter(([k]) => allowed.has(k)),
+        );
       });
     },
 

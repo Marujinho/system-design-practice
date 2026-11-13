@@ -6,6 +6,7 @@ import {
   toPublic,
   withProblemLoad,
   type FinalizeResponse,
+  type History,
   type ProblemSummary,
 } from '@archsim/problems';
 import { loadAllProblems, type LoadedProblem } from '@archsim/problems/load';
@@ -14,6 +15,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   checkCaller,
   checkMethod,
+  clean,
   logRefusal,
   PREFIX,
   readJsonBody,
@@ -52,8 +54,8 @@ export function createPracticeHandler(options: PracticeOptions) {
     return p;
   };
 
-  const summary = (p: LoadedProblem): ProblemSummary => {
-    const h = store.readHistory();
+  /** One history read per request, shared by every row. */
+  const summary = (p: LoadedProblem, h: History): ProblemSummary => {
     const best = recordOf(h, p.problem.id);
     return {
       id: p.problem.id,
@@ -151,7 +153,12 @@ export function createPracticeHandler(options: PracticeOptions) {
         case 'problems':
           checkMethod(req, 'GET');
           if (parts.length === 1) {
-            sendJson(res, 200, [...problems().values()].map(summary));
+            const h = store.readHistory();
+            sendJson(
+              res,
+              200,
+              [...problems().values()].map((p) => summary(p, h)),
+            );
           } else {
             sendJson(res, 200, toPublic(problemOf(parts[1]).problem));
           }
@@ -176,7 +183,7 @@ export function createPracticeHandler(options: PracticeOptions) {
         return;
       }
       log(
-        `[archsim] erro interno em ${req.method ?? '?'} ${url}: ${error instanceof Error ? error.message : 'desconhecido'}`,
+        `[archsim] erro interno em ${clean(req.method)} ${clean(url)}: ${error instanceof Error ? error.message : 'desconhecido'}`,
       );
       sendJson(res, 500, { error: 'não consegui gravar a sessão' });
     }

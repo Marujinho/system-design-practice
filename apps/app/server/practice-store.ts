@@ -23,10 +23,12 @@ export function practiceStore(
 
   const readHistory = (): History => {
     if (!existsSync(historyPath)) return emptyHistory();
+    // I/O errors (EACCES, EISDIR…) propagate as a 500; only bad content is set aside (A10).
+    const text = readFileSync(historyPath, 'utf8');
     try {
-      return History.parse(safeJsonParse(readFileSync(historyPath, 'utf8')));
+      return History.parse(safeJsonParse(text));
     } catch {
-      const aside = join(dir, `history.corrupt-${Date.now()}.json`);
+      const aside = join(dir, `history.corrupt-${String(Date.now())}.json`);
       renameSync(historyPath, aside);
       warn(
         `[archsim] practice/history.json estava inválido; movido para ${aside} e recomeçado vazio`,
