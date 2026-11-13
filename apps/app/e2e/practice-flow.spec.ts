@@ -52,9 +52,13 @@ test('practice: statement only, finalize, score, record, session, solution', asy
   await first.getByRole('button', { name: 'Continuar ajustando' }).click();
 
   // second attempt: scale the main fleet in the properties panel
-  await page.getByText(plan.label, { exact: true }).first().click();
   await page.getByRole('tab', { name: 'Propriedades' }).click();
   const units = page.getByLabel('Réplicas');
+  // The node re-renders with every result (10/s); retry the click until it is selected.
+  await expect(async () => {
+    await page.locator('.service-node-label', { hasText: plan.label }).first().click();
+    await expect(units).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
   await units.fill(String(plan.strong));
   await units.press('Enter');
   await page.getByRole('tab', { name: 'Requisitos' }).click();
