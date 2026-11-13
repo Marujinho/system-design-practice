@@ -2,6 +2,7 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
+  useStore,
   type Edge,
   type EdgeProps,
 } from '@xyflow/react';
@@ -22,6 +23,9 @@ export type FlowFlowEdge = Edge<FlowEdgeData, 'flow'>;
 /** How long the remove button outlives the pointer, so it can travel from the line to it. */
 export const HOVER_GRACE_MS = 120;
 
+/** On-screen size of the remove button, whatever the zoom (NFR-2: at least 16×16 px). */
+export const REMOVE_PX = 16;
+
 /**
  * A connection; an unusual one carries a warning mark with the reason (FR-6).
  * Hovered or selected, it offers a button that removes just this edge (edge-hover FR-1, FR-2).
@@ -31,6 +35,8 @@ export function FlowEdge(props: EdgeProps<FlowFlowEdge>) {
   const warning = props.data?.warning ?? null;
   const caption = props.data?.caption ?? '';
   const [hovered, setHovered] = useState(false);
+  // labels live inside the zoomed viewport: undo the zoom so the button stays clickable
+  const zoom = useStore((s) => s.transform[2]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -81,6 +87,12 @@ export function FlowEdge(props: EdgeProps<FlowFlowEdge>) {
               <button
                 type="button"
                 className="edge-remove nodrag nopan nokey"
+                style={{
+                  width: REMOVE_PX / zoom,
+                  height: REMOVE_PX / zoom,
+                  fontSize: 12 / zoom,
+                  borderWidth: 1 / zoom,
+                }}
                 aria-label="Remover conexão"
                 title="Remover conexão"
                 onPointerDown={(e) => {

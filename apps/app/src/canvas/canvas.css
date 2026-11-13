@@ -285,17 +285,16 @@
   font-weight: 600;
 }
 
+/* size, font and border come from FlowEdge, scaled against the zoom */
 .edge-remove {
   display: inline-grid;
   place-content: center;
-  width: 16px;
-  height: 16px;
+  flex: none;
   padding: 0;
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   background: var(--surface);
   color: var(--text);
-  font-size: 12px;
   line-height: 1;
   cursor: pointer;
 }

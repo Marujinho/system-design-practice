@@ -81,6 +81,8 @@ test('hover an edge, click its ×: only that edge goes, and Cmd+Z brings it back
     // travel from the line to the button, which sits at the middle of the curve
     const box = await remove.boundingBox();
     if (!box) throw new Error('no button box');
+    // whatever the zoom, a 16 px target (edge-hover NFR-2)
+    expect(box.width).toBeGreaterThanOrEqual(15.5);
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 8 });
     await page.mouse.down();
     await page.mouse.up();
