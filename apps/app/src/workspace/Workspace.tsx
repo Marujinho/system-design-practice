@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { Canvas, type CanvasProps } from '../canvas/Canvas';
 import { Palette } from '../canvas/Palette';
+import { useSimulation } from '../sim/useSimulation';
 import { createAutosave, loadSaved } from '../store/autosave';
 import { emptyDiagram } from '../store/defaults';
 import { useDiagram, type Mode } from '../store/diagram-store';
 
-const STEP = 40;
+const STEP_X = 170;
+const STEP_Y = 30;
 
-/** The first spot near `at` that no node already occupies, stepping down and right. */
+/** The first spot near `at` that no node already occupies, stepping right (and a little down). */
 export function freeSpot(
   at: { x: number; y: number },
   taken: { x: number; y: number }[],
 ): { x: number; y: number } {
   for (let k = 0; k < 50; k += 1) {
-    const p = { x: at.x + k * STEP, y: at.y + k * STEP };
-    if (!taken.some((t) => Math.abs(t.x - p.x) < STEP / 2 && Math.abs(t.y - p.y) < STEP / 2))
-      return p;
+    const p = { x: at.x + k * STEP_X, y: at.y + k * STEP_Y };
+    const near = (t: { x: number; y: number }) =>
+      Math.abs(t.x - p.x) < STEP_X / 2 && Math.abs(t.y - p.y) < STEP_X / 2;
+    if (!taken.some(near)) return p;
   }
   return at;
 }
@@ -46,6 +49,8 @@ export function Workspace({ mode, initial, side, top, canvas }: WorkspaceProps) 
     };
     // The mode's identity is its key; `initial` only matters on the first start.
   }, [modeKey]);
+
+  useSimulation();
 
   const onReady = useCallback((api: { centre: () => { x: number; y: number } }) => {
     centre.current = api.centre;

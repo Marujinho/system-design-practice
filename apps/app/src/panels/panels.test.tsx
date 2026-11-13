@@ -68,7 +68,8 @@ describe('PropertiesPanel (FR-7, FR-8, FR-39)', () => {
     await userEvent.type(input, '150{Enter}');
     expect(s().diagram.nodes.find((n) => n.id === id)?.overrides.capPerUnit).toBe(150);
     expect(within(row).getByText('valor alterado')).toBeTruthy();
-    expect(screen.getByText('150 req/s')).toBeTruthy();
+    // the capacity and the edited premise both read 150 req/s
+    expect(screen.getAllByText('150 req/s')).toHaveLength(2);
     await userEvent.click(within(row).getByRole('button', { name: 'restaurar padrão' }));
     expect(s().diagram.nodes.find((n) => n.id === id)?.overrides).toEqual({});
   });

@@ -532,6 +532,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Nota de burst no t3.
 - **Check**: `pnpm --filter @archsim/app test panels` → verde
 - **Depends on**: T19, T8
+- **Done**: `ec757b6`
+- **Deviation**: Inclui o painel da conexão (protocolo, peso, classes), que o plano não listava aqui. Sem ele não dá para usar FR-5, FR-11 e FR-12 pela interface. O motor ganhou nodeStatics (capacidade e custo ocioso de um nó) e exporta readValue/readParam. O test-setup passou a chamar cleanup do Testing Library, porque o Vitest roda sem globals.
 
 ### T21 — Carga, worker e ciclo de simulação
 - **Covers**: FR-9 (UI), FR-10 (thread separada), FR-38, NFR-5, A10

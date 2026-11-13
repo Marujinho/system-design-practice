@@ -160,3 +160,73 @@
   grid-column: 1 / -1;
   font-size: 11px;
 }
+
+.load-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.load-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: center;
+}
+
+.load-class {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.load-class select,
+.load-field input {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+}
+
+.load-field {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.load-field input {
+  width: 90px;
+  color: var(--text);
+}
+
+.load-class input[type='range'] {
+  width: 140px;
+  accent-color: var(--hairline-hi);
+}
+
+.load-total {
+  color: var(--text-muted);
+}
+
+.load-status {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.banner {
+  flex-basis: 100%;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--state-critical);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+}

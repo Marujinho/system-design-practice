@@ -16,6 +16,7 @@
     "@archsim/problems": "workspace:*",
     "@archsim/sim-engine": "workspace:*",
     "@xyflow/react": "12.12.0",
+    "comlink": "4.4.2",
     "immer": "11.2.9",
     "react": "19.3.1",
     "react-dom": "19.3.1",

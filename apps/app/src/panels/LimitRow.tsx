@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatNumber } from '../format';
+import { formatCompact } from '../format';
 
 export interface LimitRowProps {
   label: string;
@@ -67,13 +67,13 @@ export function LimitRow({
           <button
             type="button"
             className="link-button num"
-            aria-label={`Editar ${label}: ${formatNumber(value, 4)} ${unit}`}
+            aria-label={`Editar ${label}: ${formatCompact(value, 4)} ${unit}`}
             onClick={() => {
               setText(String(value));
               setEditing(true);
             }}
           >
-            {formatNumber(value, 4)} {unit}
+            {formatCompact(value, 4)} {unit}
           </button>
         )}
         {changed && (

@@ -10,8 +10,8 @@ describe('freeSpot', () => {
     expect(
       freeSpot({ x: 0, y: 0 }, [
         { x: 0, y: 0 },
-        { x: 40, y: 40 },
+        { x: 170, y: 30 },
       ]),
-    ).toEqual({ x: 80, y: 80 });
+    ).toEqual({ x: 340, y: 60 });
   });
 });
