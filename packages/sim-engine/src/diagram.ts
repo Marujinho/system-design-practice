@@ -19,6 +19,8 @@ export const RequestClass = z
     name: ClassName,
     label: z.string().min(1).max(LIMITS.maxLabel),
     mode: z.enum(['users', 'rps', 'rpm']),
+    /** Writes skip caches, go to the database writer and count as S3 PUTs. */
+    op: z.enum(['read', 'write']),
     users: Finite.nonnegative().optional(),
     reqPerUserPerMin: Finite.nonnegative().optional(),
     rps: Finite.nonnegative().optional(),

@@ -51,6 +51,7 @@
         "name": "default",
         "label": "Requisições",
         "mode": "users",
+        "op": "read",
         "users": 100000,
         "reqPerUserPerMin": 10,
         "payloadKB": 10,

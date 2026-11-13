@@ -180,6 +180,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Nó isolado e grafo desconexo.
 - **Check**: `pnpm --filter @archsim/sim-engine test graph` → verde
 - **Depends on**: T4
+- **Done**: `2195220`
+- **Deviation**: analyze já recebe o predicado isFlowNode, que o T10 usa para o CloudWatch.
 
 ### T6 — Motor: handlers dos kinds base
 - **Covers**: FR-13, FR-14, FR-15, FR-16, FR-17, FR-28 (parte por nó), NFR-11

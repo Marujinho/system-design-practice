@@ -29,6 +29,7 @@ function withClasses(count: number): Diagram {
     name: `c${i}`,
     label: `c${i}`,
     mode: 'rps' as const,
+    op: 'read' as const,
     rps: 1,
     payloadKB: 1,
     cacheable: false,
@@ -43,6 +44,7 @@ describe('rpsOf', () => {
         name: 'r',
         label: 'r',
         mode: 'users',
+        op: 'read' as const,
         users: 100_000,
         reqPerUserPerMin: 10,
         payloadKB: 1,
@@ -53,13 +55,29 @@ describe('rpsOf', () => {
 
   it('converts req/min', () => {
     expect(
-      rpsOf({ name: 'r', label: 'r', mode: 'rpm', rpm: 1_000_000, payloadKB: 1, cacheable: true }),
+      rpsOf({
+        name: 'r',
+        label: 'r',
+        mode: 'rpm',
+        op: 'read' as const,
+        rpm: 1_000_000,
+        payloadKB: 1,
+        cacheable: true,
+      }),
     ).toBeCloseTo(16_666.67, 2);
   });
 
   it('keeps req/s', () => {
     expect(
-      rpsOf({ name: 'r', label: 'r', mode: 'rps', rps: 42, payloadKB: 1, cacheable: true }),
+      rpsOf({
+        name: 'r',
+        label: 'r',
+        mode: 'rps',
+        op: 'read' as const,
+        rps: 42,
+        payloadKB: 1,
+        cacheable: true,
+      }),
     ).toBe(42);
   });
 });
@@ -96,6 +114,7 @@ describe('parseDiagram', () => {
       name: 'c',
       label: 'c',
       mode: 'rpm',
+      op: 'read' as const,
       rpm: 10_000_000,
       payloadKB: 1,
       cacheable: false,
