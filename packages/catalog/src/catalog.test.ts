@@ -21,6 +21,11 @@ describe('catalog.json', () => {
     expect(parseCatalog(data).ok).toBe(true);
   });
 
+  it('has 23 entries: Users + 22 AWS services', () => {
+    expect(catalog.services).toHaveLength(23);
+    expect(catalog.services.filter((s) => s.provider === 'aws')).toHaveLength(22);
+  });
+
   it('has the 8 base services', () => {
     expect(catalog.services.map((s) => s.id)).toEqual(
       expect.arrayContaining([
@@ -84,5 +89,45 @@ describe('catalog.json', () => {
         }
       }
     }
+  });
+
+  it('keeps the source-document numbers for the other services', () => {
+    expect(priceOf('aws.sqs', 'standard', 'requests')).toBe(0.4);
+    expect(priceOf('aws.sqs', 'fifo', 'requests')).toBe(0.5);
+    expect(priceOf('aws.kinesis', 'provisioned', 'shardHours')).toBe(0.015);
+    expect(priceOf('aws.api-gateway', 'rest', 'requests')).toBe(3.5);
+    expect(priceOf('aws.api-gateway', 'http', 'requests')).toBe(1);
+    expect(priceOf('aws.nat-gateway', 'nat', 'hourly')).toBe(0.045);
+    expect(priceOf('aws.dynamodb', 'on-demand', 'writeRequests')).toBe(0.625);
+    expect(priceOf('aws.dynamodb', 'on-demand', 'readRequests')).toBe(0.125);
+    expect(priceOf('aws.aurora-postgres', 'db.r5.large', 'hourly')).toBe(0.29);
+  });
+
+  it('enforces the documented quotas', () => {
+    const limit = (s: string, v: string, id: string) =>
+      variantOf(s, v).limits.find((l) => l.id === id);
+    expect(limit('aws.s3', 'standard', 'putPerPrefix')?.value).toBe(3500);
+    expect(limit('aws.s3', 'standard', 'getPerPrefix')?.value).toBe(5500);
+    expect(limit('aws.dynamodb', 'on-demand', 'partitionRcu')?.value).toBe(3000);
+    expect(limit('aws.dynamodb', 'on-demand', 'partitionWcu')?.value).toBe(1000);
+    expect(limit('aws.api-gateway', 'rest', 'accountRps')?.value).toBe(10000);
+    expect(limit('aws.api-gateway', 'rest', 'burst')?.value).toBe(5000);
+    expect(limit('aws.kinesis', 'provisioned', 'writeRecordsPerShard')?.value).toBe(1000);
+    expect(limit('aws.sqs', 'fifo', 'callsPerSecond')?.value).toBe(300);
+    for (const [s, v, id] of [
+      ['aws.s3', 'standard', 'putPerPrefix'],
+      ['aws.dynamodb', 'provisioned', 'partitionWcu'],
+      ['aws.kinesis', 'provisioned', 'writeMBPerShard'],
+    ] as const) {
+      expect(limit(s, v, id)?.source).toBe('aws-quota');
+    }
+  });
+
+  it('marks numbers without an official page as assumptions', () => {
+    const ws = variantOf('aws.api-gateway', 'websocket').limits.find(
+      (l) => l.id === 'newConnectionsPerSecond',
+    );
+    expect(ws?.source).toBe('assumption');
+    expect(variantOf('aws.sns', 'standard').capSource).toBe('assumption');
   });
 });

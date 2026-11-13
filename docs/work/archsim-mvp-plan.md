@@ -237,6 +237,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - NFR-1: bench com 50 nós e 60 conexões, p95 ≤ 10 ms.
 - **Check**: `pnpm --filter @archsim/sim-engine test && pnpm --filter @archsim/sim-engine test:bench` → verde, p95 registrado no commit
 - **Depends on**: T6
+- **Done**: `71f3b2b`
+- **Deviation**: O Vitest 5 mudou a API de bench: step.bench.ts foi trocado por src/perf.test.ts (p95 em 1.000 ticks, assertado ≤ 10 ms; medido 0,49 ms), e pnpm test:bench roda esse teste. O grafo de referência de 50 nós foi para fixtures/perf-diagram.ts, porque cita IDs da AWS e o teste do NFR-11 proíbe isso em src/.
 
 ### T8 — Catálogo: os outros 14 serviços
 - **Covers**: FR-4 (completo), FR-8
