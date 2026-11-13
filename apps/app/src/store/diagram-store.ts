@@ -28,6 +28,8 @@ export interface DiagramState {
   moveNodes(positions: Record<string, { x: number; y: number }>, done: boolean): void;
   select(ids: string[]): void;
   removeSelection(): void;
+  /** Remove one connection, leaving nodes and the rest of the selection alone. */
+  removeEdge(id: string): void;
   connect(source: string, target: string, protocol: Protocol): string | null;
   setEdge(id: string, patch: Partial<Pick<DiagramEdge, 'protocol' | 'weight' | 'classes'>>): void;
   setLabel(nodeId: string, label: string): void;
@@ -135,6 +137,16 @@ export const useDiagram = create<DiagramState>()((set, get) => {
         );
       });
       set({ selection: [] });
+    },
+
+    removeEdge: (id) => {
+      const { diagram, selection } = get();
+      // filter always builds a new array: check first, so a missing id records no step
+      if (!diagram.edges.some((e) => e.id === id)) return;
+      commit((d) => {
+        d.edges = d.edges.filter((e) => e.id !== id);
+      });
+      if (selection.includes(id)) set({ selection: selection.filter((x) => x !== id) });
     },
 
     connect: (source, target, protocol) => {

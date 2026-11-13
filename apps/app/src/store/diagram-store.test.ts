@@ -1,4 +1,5 @@
-import { LIMITS, serializeDiagram } from '@archsim/sim-engine';
+import { catalog } from '@archsim/catalog';
+import { LIMITS, parseDiagram, serializeDiagram } from '@archsim/sim-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAutosave, keyOf, loadSaved, save } from './autosave';
 import { emptyDiagram, problemStart } from './defaults';
@@ -110,6 +111,60 @@ describe('undo / redo (FR-2)', () => {
     expect(s().history.past.length).toBe(steps + 1);
     s().undo();
     expect(s().diagram.nodes[0]?.position).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('removeEdge (edge-hover FR-2, FR-3, FR-6)', () => {
+  const three = () => {
+    const a = s().addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
+    const b = s().addNode('aws.rds-postgres', { x: 100, y: 0 }) ?? '';
+    const c = s().addNode('aws.elasticache-valkey', { x: 200, y: 0 }) ?? '';
+    const ab = s().connect(a, b, 'tcp') ?? '';
+    const ac = s().connect(a, c, 'tcp') ?? '';
+    return { a, b, c, ab, ac };
+  };
+
+  it('removes only that edge and keeps nodes and the selection', () => {
+    const { c, ab, ac } = three();
+    s().select([c]);
+    s().removeEdge(ab);
+    expect(s().diagram.edges.map((e) => e.id)).toEqual([ac]);
+    expect(s().diagram.nodes).toHaveLength(3);
+    expect(s().selection).toEqual([c]);
+  });
+
+  it('drops the removed edge from the selection, and only it', () => {
+    const { c, ab } = three();
+    s().select([ab, c]);
+    s().removeEdge(ab);
+    expect(s().selection).toEqual([c]);
+  });
+
+  it('undoes to the identical edge and redoes the removal', () => {
+    const { ab } = three();
+    s().setEdge(ab, { protocol: 'grpc', weight: 0.3, classes: ['leitura'] });
+    const before = structuredClone(s().diagram);
+    s().removeEdge(ab);
+    s().undo();
+    expect(s().diagram).toEqual(before);
+    s().redo();
+    expect(s().diagram.edges.some((e) => e.id === ab)).toBe(false);
+  });
+
+  it('does nothing for an id that is not there (A10)', () => {
+    three();
+    const diagram = s().diagram;
+    const steps = s().history.past.length;
+    s().removeEdge('e-missing');
+    expect(s().diagram).toBe(diagram);
+    expect(s().history.past.length).toBe(steps);
+  });
+
+  it('leaves a diagram that saves and reopens unchanged (A08)', () => {
+    const { ab } = three();
+    s().removeEdge(ab);
+    const reopened = parseDiagram(serializeDiagram(s().diagram), catalog);
+    expect(reopened.ok && reopened.diagram).toEqual(s().diagram);
   });
 });
 
