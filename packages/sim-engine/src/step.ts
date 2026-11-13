@@ -156,6 +156,10 @@ export function step(
       dtMs,
       state: state.nodes[id] ?? {},
       outDegree: graph.outEdges.get(id)?.length ?? 0,
+      outKinds: (graph.outEdges.get(id) ?? []).flatMap((e) => {
+        const kind = resolved.get(e.target)?.service.kind;
+        return kind === undefined ? [] : [kind];
+      }),
       downstreamCapacity: (graph.outEdges.get(id) ?? []).reduce((total, e) => {
         const target = resolved.get(e.target);
         if (!target || graph.cyclic.has(e.target)) return total;

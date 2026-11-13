@@ -1,4 +1,4 @@
-import type { Service, Variant } from '@archsim/catalog';
+import type { Kind, Service, Variant } from '@archsim/catalog';
 import type { DiagramNode, RequestClass } from '../diagram';
 import type { NodeContext, NodeState } from './types';
 
@@ -25,6 +25,7 @@ export function makeContext(args: {
   state: NodeState;
   downstreamCapacity?: number;
   outDegree?: number;
+  outKinds?: readonly Kind[];
 }): NodeContext {
   const { node, service, variant } = args;
   return {
@@ -36,6 +37,7 @@ export function makeContext(args: {
     state: args.state,
     downstreamCapacity: args.downstreamCapacity ?? 0,
     outDegree: args.outDegree ?? 0,
+    outKinds: args.outKinds ?? [],
     param: (key) => readParam(node, service, key),
     value: (key) => readValue(node, variant, key),
   };

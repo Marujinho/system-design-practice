@@ -90,9 +90,8 @@ describe.each(problemDirs().map((dir) => [basename(dir), dir] as const))(
 );
 
 describe('the problem bank', () => {
-  it('only holds problems from the PRD list', () => {
+  it('holds exactly the 10 problems of FR-40', () => {
     const ids = problemDirs().map((d) => basename(d));
-    for (const id of ids) expect(EXPECTED_PROBLEMS).toContain(id);
-    expect(ids.length).toBeGreaterThanOrEqual(5);
+    expect(ids).toEqual(EXPECTED_PROBLEMS);
   });
 });

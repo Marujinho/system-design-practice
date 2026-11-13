@@ -1,0 +1,125 @@
+id: video-on-demand
+title: Streaming de vídeo sob demanda
+difficulty: medio
+statement: |
+  Projete uma plataforma de vídeo sob demanda para cursos online.
+
+  Criadores enviam vídeos (cerca de 100 MB cada). Cada vídeo é transcodificado em segmentos
+  HLS, o que leva cerca de **1 minuto** de processamento por vídeo. Quem assiste baixa
+  segmentos de 512 KB, um após o outro, enquanto o vídeo toca. Um vídeo novo pode levar
+  alguns minutos para ficar disponível.
+
+  No pico há **500 segmentos baixados/s** e **0,2 envios de vídeo/s** (cerca de 17 mil vídeos
+  por dia). A maior parte do custo deste sistema é banda: faça as contas.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Receber vídeos dos criadores
+  - Transcodificar em segmentos HLS
+  - Entregar os segmentos para quem assiste
+quantitative:
+  - id: watch-throughput
+    label: Segmentos entregues
+    metric: throughput
+    class: watch
+    op: '>='
+    value: 500
+    unit: req/s
+  - id: upload-throughput
+    label: Envios aceitos
+    metric: throughput
+    class: upload
+    op: '>='
+    value: 0.2
+    unit: req/s
+  - id: watch-p99
+    label: p99 do segmento
+    metric: p99
+    class: watch
+    op: '<='
+    value: 100
+    unit: ms
+  - id: transcode-age
+    label: Atraso máximo para começar a transcodificar
+    metric: queueAge
+    op: '<='
+    value: 120
+    unit: s
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: watch
+      label: Assistir (segmento de vídeo)
+      mode: rps
+      op: read
+      rps: 500
+      payloadKB: 512
+      cacheable: true
+    - name: upload
+      label: Enviar vídeo
+      mode: rps
+      op: write
+      rps: 0.2
+      payloadKB: 102400
+      cacheable: false
+qualitative:
+  - Bitrate adaptativo e as várias resoluções de cada vídeo
+  - Proteção do conteúdo (URLs assinadas, DRM)
+  - Vídeos populares × cauda longa no cache do CDN
+followups:
+  - id: video-on-demand.no-cdn
+    question: Os segmentos saem direto do armazenamento. Quanto você paga de transferência por mês, e quanto o CDN mudaria?
+    when:
+      missingService:
+        - aws.cloudfront
+    lookFor:
+      - custo por GB transferido é o maior custo
+      - CDN reduz latência e carga na origem
+  - id: video-on-demand.bandwidth
+    question: Faça a conta da banda do seu desenho. Qual nó custa mais, e por quê?
+    when:
+      hasService:
+        - aws.cloudfront
+    lookFor:
+      - 500 segmentos/s × 512 KB ≈ 256 MB/s
+      - custo por GB domina o custo total
+  - id: video-on-demand.backlog
+    question: Os vídeos estão demorando para começar a ser transcodificados. O que limita?
+    when:
+      metric:
+        path: kind:queue.queueAgeS
+        op: '>'
+        value: 120
+    lookFor:
+      - concorrência da transcodificação
+      - ler a idade da fila
+  - id: video-on-demand.p99
+    question: Os segmentos chegam devagar e o vídeo trava. Onde está o tempo?
+    when:
+      requirementFails: watch-p99
+    lookFor:
+      - servir da borda, perto de quem assiste
+      - não passar segmentos pelo servidor da aplicação
+  - id: video-on-demand.abr
+    question: Quem assiste no celular com 3G e quem assiste numa TV 4K recebem os mesmos segmentos?
+    topic: qualitative
+    lookFor:
+      - várias resoluções por vídeo
+      - o player escolhe o bitrate conforme a banda
+  - id: video-on-demand.launch
+    question: Um curso famoso vai lançar e as visualizações vão decuplicar. O que muda no custo e no que satura?
+    loadMultiplier: 10
+    lookFor:
+      - identificar o primeiro nó a saturar
+      - banda cresce linearmente com as visualizações
+  - id: video-on-demand.protection
+    question: Como você impede que alguém compartilhe o link de um segmento de um curso pago?
+    topic: qualitative
+    lookFor:
+      - URLs ou cookies assinados com expiração
+      - DRM para conteúdo de alto valor

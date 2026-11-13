@@ -1443,7 +1443,7 @@
             },
             {
               "id": "deliveries",
-              "label": "Entregas HTTP/S (premissa conservadora: SQS e Lambda não pagam entrega)",
+              "label": "Entregas HTTP/S (para SQS e Lambda não há cobrança de entrega)",
               "amountUsd": 0.6,
               "per": "million-requests",
               "priceDate": "2026-11-13",

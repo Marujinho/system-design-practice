@@ -95,7 +95,7 @@ describe('queue (FR-18)', () => {
 });
 
 describe('pub/sub (FR-19)', () => {
-  it('delivers 100 msg/s to each of 3 subscribers and bills 100 publishes + 300 deliveries', () => {
+  it('delivers 100 msg/s to each of 3 subscribers: 100 publishes, 300 deliveries, SQS ones free', () => {
     const d = diagram(
       [
         users,
@@ -109,9 +109,18 @@ describe('pub/sub (FR-19)', () => {
     );
     const r = step(initialState(), d, catalog, 100).result;
     for (const id of ['a', 'b', 'c']) expect(r.nodes[id]?.rpsIn).toBe(100);
-    const expected =
-      0.5 * ((100 * SECONDS_PER_MONTH) / 1e6) + 0.6 * ((300 * SECONDS_PER_MONTH) / 1e6);
-    expect(r.nodes.topic?.costMonth).toBeCloseTo(expected, 6);
+    expect(r.nodes.topic?.rpsOut).toBe(100);
+    expect(r.nodes.topic?.costMonth).toBeCloseTo(0.5 * ((100 * SECONDS_PER_MONTH) / 1e6), 6);
+  });
+
+  it('bills deliveries to HTTP/S subscribers', () => {
+    const ctx = ctxFor('aws.sns', 'standard', {
+      outDegree: 3,
+      outKinds: ['compute', 'compute', 'queue'],
+    });
+    const out = handlers.pubsub.process({ default: 100 }, ctx);
+    const m = (rps: number) => (rps * SECONDS_PER_MONTH) / 1e6;
+    expect(out.costMonth).toBeCloseTo(0.5 * m(100) + 0.6 * m(200), 6);
   });
 
   it('EventBridge fans out the same way', () => {

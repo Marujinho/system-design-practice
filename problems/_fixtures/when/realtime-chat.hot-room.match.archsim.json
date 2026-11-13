@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Fixture: realtime-chat.hot-room",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 160
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "nlb",
+      "serviceId": "aws.nlb",
+      "variantId": "nlb",
+      "position": {
+        "x": 220,
+        "y": 160
+      },
+      "label": "NLB (WebSocket)",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "chat",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 440,
+        "y": 160
+      },
+      "label": "Servidores de chat",
+      "props": {
+        "units": 12
+      },
+      "overrides": {}
+    },
+    {
+      "id": "bus",
+      "serviceId": "aws.elasticache-valkey",
+      "variantId": "cache.t4g.micro",
+      "position": {
+        "x": 680,
+        "y": 160
+      },
+      "label": "Pub/sub e histórico recente (Redis)",
+      "props": {
+        "units": 1,
+        "hitRatio": 0.8
+      },
+      "overrides": {}
+    },
+    {
+      "id": "messages",
+      "serviceId": "aws.dynamodb",
+      "variantId": "provisioned",
+      "position": {
+        "x": 900,
+        "y": 160
+      },
+      "label": "Mensagens",
+      "props": {
+        "wcu": 3000,
+        "rcu": 300,
+        "hotKeyShare": 0.01
+      },
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-nlb",
+      "source": "users",
+      "target": "nlb",
+      "protocol": "websocket"
+    },
+    {
+      "id": "nlb-chat",
+      "source": "nlb",
+      "target": "chat",
+      "protocol": "websocket"
+    },
+    {
+      "id": "chat-bus",
+      "source": "chat",
+      "target": "bus",
+      "protocol": "tcp"
+    },
+    {
+      "id": "bus-messages",
+      "source": "bus",
+      "target": "messages",
+      "protocol": "tcp"
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "message",
+        "label": "Enviar mensagem",
+        "mode": "rps",
+        "op": "write",
+        "rps": 3000,
+        "payloadKB": 0.5,
+        "cacheable": false
+      },
+      {
+        "name": "history",
+        "label": "Carregar histórico",
+        "mode": "rps",
+        "op": "read",
+        "rps": 1000,
+        "payloadKB": 4,
+        "cacheable": true
+      }
+    ]
+  }
+}

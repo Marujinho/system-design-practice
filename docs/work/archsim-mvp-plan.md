@@ -379,6 +379,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Cada `when` avalia certo nos dois fixtures.
 - **Check**: `pnpm --filter @archsim/problems test bank` → 5 problemas verdes
 - **Depends on**: T12
+- **Done**: `296daf3`
+- **Deviation**: evaluateWhen e scoreAttempt ficaram no pacote problems (e não na CLI, como dizia o T15), para o teste do banco e a CLI usarem a mesma regra desde já. Fixtures de when: o teste usa referência e ingênua como candidatos e só pede fixture (problems/_fixtures/when/<id>.match.archsim.json) quando nenhuma das duas separa a condição; foram necessários 4. Alvos de p99 em 400 ms, calibrados à curva de fila do modelo (p99 até ~6,6× p50) e não aos 50 ms do documento de origem. Corrigido no motor (T9): o custo do SQS divide as chamadas por batchSize. Limitação observada: instâncias T em burst saem mais baratas por req/s que m5.large (créditos de CPU não modelados); as referências usam m5.large.
 
 ### T14 — Problemas 6–10: feed, chat, imagens, notificações, vídeo
 - **Covers**: FR-40 (completo), FR-49, FR-60, G1, G2, G7

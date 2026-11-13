@@ -1,0 +1,124 @@
+id: image-pipeline
+title: Upload e processamento de imagens
+difficulty: medio
+statement: |
+  Projete o envio de fotos de um app de classificados.
+
+  A pessoa envia uma foto (cerca de 2 MB). O sistema gera uma miniatura de 20 KB, que é a
+  versão exibida nas listas de anúncios. Processar uma foto leva cerca de **1 segundo** de
+  CPU com 1 GB de memória. A miniatura pode demorar alguns segundos para ficar pronta, mas
+  o envio não pode falhar.
+
+  No pico há **50 envios/s** e **500 visualizações de miniatura/s**.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Receber fotos de até alguns MB
+  - Gerar uma miniatura de cada foto
+  - Servir as miniaturas nas listas de anúncios
+quantitative:
+  - id: upload-throughput
+    label: Envios aceitos
+    metric: throughput
+    class: upload
+    op: '>='
+    value: 50
+    unit: req/s
+  - id: view-throughput
+    label: Visualizações atendidas
+    metric: throughput
+    class: view
+    op: '>='
+    value: 500
+    unit: req/s
+  - id: view-p99
+    label: p99 da visualização
+    metric: p99
+    class: view
+    op: '<='
+    value: 400
+    unit: ms
+  - id: processing-age
+    label: Atraso máximo para a miniatura
+    metric: queueAge
+    op: '<='
+    value: 60
+    unit: s
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: upload
+      label: Enviar foto
+      mode: rps
+      op: write
+      rps: 50
+      payloadKB: 2048
+      cacheable: false
+    - name: view
+      label: Ver miniatura
+      mode: rps
+      op: read
+      rps: 500
+      payloadKB: 20
+      cacheable: true
+qualitative:
+  - Upload direto para o armazenamento com URL pré-assinada
+  - Reprocessamento quando o processamento falha (DLQ, retries idempotentes)
+  - Validação do arquivo enviado
+followups:
+  - id: image-pipeline.presigned
+    question: A foto passa pelos seus servidores ou vai direto para o armazenamento? Por quê?
+    topic: qualitative
+    lookFor:
+      - URL pré-assinada do S3
+      - servidores não carregam 2 MB por envio
+  - id: image-pipeline.sync-processing
+    question: Você processa a imagem no caminho do envio. O que acontece com quem está enviando quando a fila de trabalho cresce?
+    when:
+      missingService:
+        - aws.sqs
+    lookFor:
+      - fila entre o upload e o processamento
+      - o envio responde antes do processamento
+  - id: image-pipeline.backlog
+    question: As miniaturas estão demorando mais de um minuto. O que limita a vazão do processamento?
+    when:
+      metric:
+        path: kind:queue.queueAgeS
+        op: '>'
+        value: 60
+    lookFor:
+      - concorrência dos workers
+      - ler a idade da fila
+  - id: image-pipeline.lambda-cost
+    question: Você usou Lambda para processar. Quanto custa um segundo de 1 GB, 50 vezes por segundo, o mês inteiro? Compare com instâncias.
+    when:
+      hasService:
+        - aws.lambda
+    lookFor:
+      - custo por GB-segundo em uso contínuo
+      - instâncias ficam mais baratas com carga constante
+  - id: image-pipeline.failures
+    question: O processamento de uma foto falhou no meio. O que acontece com ela?
+    topic: qualitative
+    lookFor:
+      - retry com fila de mensagens mortas
+      - processamento idempotente
+  - id: image-pipeline.view-p99
+    question: As miniaturas carregam devagar. Onde está o tempo?
+    when:
+      requirementFails: view-p99
+    lookFor:
+      - servir direto do armazenamento ou de um CDN
+      - não passar visualizações pelo servidor da aplicação
+  - id: image-pipeline.holiday
+    question: Na semana do Natal os envios vão triplicar. O que precisa crescer?
+    loadMultiplier: 3
+    lookFor:
+      - concorrência do processamento
+      - a fila absorve o pico

@@ -1,0 +1,112 @@
+id: notifications
+title: Sistema de notificações
+difficulty: medio
+statement: |
+  Projete o serviço que envia notificações de um marketplace.
+
+  Outros serviços (pedidos, pagamentos, entregas) publicam eventos. Para cada evento, a
+  pessoa recebe a notificação em até três canais: push, e-mail e SMS. Um canal lento ou fora
+  do ar não pode atrasar os outros, e nenhum evento pode se perder.
+
+  No pico há **2.000 eventos/s**, e cada evento sai pelos três canais.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Receber eventos de outros serviços
+  - Enviar cada notificação por push, e-mail e SMS
+  - Isolar um canal lento dos outros
+  - Não perder eventos
+quantitative:
+  - id: event-throughput
+    label: Eventos aceitos
+    metric: throughput
+    class: event
+    op: '>='
+    value: 2000
+    unit: req/s
+  - id: event-p99
+    label: p99 para aceitar o evento
+    metric: p99
+    class: event
+    op: '<='
+    value: 400
+    unit: ms
+  - id: delivery-age
+    label: Atraso máximo de envio
+    metric: queueAge
+    op: '<='
+    value: 30
+    unit: s
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: event
+      label: Evento a notificar
+      mode: rps
+      op: write
+      rps: 2000
+      payloadKB: 1
+      cacheable: false
+qualitative:
+  - Isolamento por canal (uma fila por canal)
+  - Entrega pelo menos uma vez e deduplicação
+  - Preferências do usuário e horários de silêncio
+  - Limites de envio dos provedores externos
+followups:
+  - id: notifications.no-fanout
+    question: Como o mesmo evento chega aos três canais no seu desenho?
+    when:
+      missingService:
+        - aws.sns
+        - aws.eventbridge
+    lookFor:
+      - publicação única com fan-out (SNS → filas)
+      - o produtor não chama cada canal
+  - id: notifications.isolation
+    question: O provedor de SMS ficou lento. O que acontece com push e e-mail?
+    when:
+      hasService:
+        - aws.sns
+    lookFor:
+      - uma fila por canal isola o atraso
+      - workers por canal escalam separadamente
+  - id: notifications.backlog
+    question: Um dos canais está acumulando fila. Quanto tempo a pessoa espera pela notificação?
+    when:
+      metric:
+        path: kind:queue.queueAgeS
+        op: '>'
+        value: 30
+    lookFor:
+      - ler a idade de cada fila
+      - mais consumidores no canal atrasado
+  - id: notifications.dedup
+    question: A fila entrega pelo menos uma vez. Como você evita mandar o mesmo SMS duas vezes?
+    topic: qualitative
+    lookFor:
+      - chave de idempotência por evento e canal
+      - registro de envios já feitos
+  - id: notifications.p99
+    question: Os serviços que publicam eventos estão esperando demais. Por quê?
+    when:
+      requirementFails: event-p99
+    lookFor:
+      - aceitar o evento e responder antes de enviar
+      - o caminho síncrono termina na publicação
+  - id: notifications.black-friday
+    question: Na Black Friday os eventos vão quintuplicar. O que satura, e o que os provedores externos aguentam?
+    loadMultiplier: 5
+    lookFor:
+      - identificar o primeiro nó a saturar
+      - limites de envio dos provedores
+  - id: notifications.preferences
+    question: Uma pessoa desligou SMS e não quer notificações de madrugada. Onde essa regra entra?
+    topic: qualitative
+    lookFor:
+      - filtro antes de enfileirar por canal
+      - agendamento para depois do horário de silêncio

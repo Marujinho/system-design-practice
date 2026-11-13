@@ -1,4 +1,4 @@
-import type { Service, Variant } from '@archsim/catalog';
+import type { Kind, Service, Variant } from '@archsim/catalog';
 import type { DiagramNode, RequestClass } from '../diagram';
 import type { ClassRates } from '../graph';
 import type { SimWarning } from '../warnings';
@@ -24,6 +24,8 @@ export interface NodeContext {
   /** Sum of the capacity of the nodes this one feeds (queue consumers). */
   downstreamCapacity: number;
   outDegree: number;
+  /** Kinds of the nodes this one feeds, one per outgoing edge. */
+  outKinds: readonly Kind[];
 }
 
 export interface NodeOutput {

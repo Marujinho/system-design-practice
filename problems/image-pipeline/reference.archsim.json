@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Upload e processamento de imagens — referência",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 160
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "uploads",
+      "serviceId": "aws.s3",
+      "variantId": "standard",
+      "position": {
+        "x": 240,
+        "y": 60
+      },
+      "label": "Bucket de originais",
+      "props": {
+        "prefixes": 1
+      },
+      "overrides": {}
+    },
+    {
+      "id": "jobs",
+      "serviceId": "aws.sqs",
+      "variantId": "standard",
+      "position": {
+        "x": 480,
+        "y": 60
+      },
+      "label": "Fila de processamento",
+      "props": {
+        "batchSize": 10
+      },
+      "overrides": {}
+    },
+    {
+      "id": "resize",
+      "serviceId": "aws.lambda",
+      "variantId": "x86",
+      "position": {
+        "x": 720,
+        "y": 60
+      },
+      "label": "Redimensionar",
+      "props": {
+        "memoryMB": 1024,
+        "durationMs": 1000
+      },
+      "overrides": {}
+    },
+    {
+      "id": "thumbs",
+      "serviceId": "aws.s3",
+      "variantId": "standard",
+      "position": {
+        "x": 960,
+        "y": 200
+      },
+      "label": "Bucket de miniaturas",
+      "props": {
+        "prefixes": 1
+      },
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-uploads",
+      "source": "users",
+      "target": "uploads",
+      "protocol": "http",
+      "classes": [
+        "upload"
+      ]
+    },
+    {
+      "id": "uploads-jobs",
+      "source": "uploads",
+      "target": "jobs",
+      "protocol": "queue"
+    },
+    {
+      "id": "jobs-resize",
+      "source": "jobs",
+      "target": "resize",
+      "protocol": "queue"
+    },
+    {
+      "id": "resize-thumbs",
+      "source": "resize",
+      "target": "thumbs",
+      "protocol": "http"
+    },
+    {
+      "id": "users-thumbs",
+      "source": "users",
+      "target": "thumbs",
+      "protocol": "http",
+      "classes": [
+        "view"
+      ]
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "upload",
+        "label": "Enviar foto",
+        "mode": "rps",
+        "op": "write",
+        "rps": 50,
+        "payloadKB": 2048,
+        "cacheable": false
+      },
+      {
+        "name": "view",
+        "label": "Ver miniatura",
+        "mode": "rps",
+        "op": "read",
+        "rps": 500,
+        "payloadKB": 20,
+        "cacheable": true
+      }
+    ]
+  }
+}

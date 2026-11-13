@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Fixture: news-feed.backlog",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 160
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "alb",
+      "serviceId": "aws.alb",
+      "variantId": "alb",
+      "position": {
+        "x": 220,
+        "y": 160
+      },
+      "label": "ALB",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "app",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 440,
+        "y": 160
+      },
+      "label": "API do feed",
+      "props": {
+        "units": 22
+      },
+      "overrides": {}
+    },
+    {
+      "id": "posts",
+      "serviceId": "aws.dynamodb",
+      "variantId": "on-demand",
+      "position": {
+        "x": 680,
+        "y": 40
+      },
+      "label": "Posts",
+      "props": {
+        "hotKeyShare": 0.01
+      },
+      "overrides": {}
+    },
+    {
+      "id": "fanout",
+      "serviceId": "aws.sqs",
+      "variantId": "standard",
+      "position": {
+        "x": 680,
+        "y": 280
+      },
+      "label": "Fila de fan-out",
+      "props": {
+        "batchSize": 10
+      },
+      "overrides": {}
+    },
+    {
+      "id": "workers",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 900,
+        "y": 280
+      },
+      "label": "Workers de fan-out",
+      "props": {
+        "units": 2
+      },
+      "overrides": {}
+    },
+    {
+      "id": "timelines",
+      "serviceId": "aws.elasticache-valkey",
+      "variantId": "cache.t4g.micro",
+      "position": {
+        "x": 1120,
+        "y": 160
+      },
+      "label": "Timelines (Redis)",
+      "props": {
+        "units": 1,
+        "hitRatio": 1
+      },
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-alb",
+      "source": "users",
+      "target": "alb",
+      "protocol": "http"
+    },
+    {
+      "id": "alb-app",
+      "source": "alb",
+      "target": "app",
+      "protocol": "http"
+    },
+    {
+      "id": "app-timelines",
+      "source": "app",
+      "target": "timelines",
+      "protocol": "tcp",
+      "classes": [
+        "feed"
+      ]
+    },
+    {
+      "id": "app-posts",
+      "source": "app",
+      "target": "posts",
+      "protocol": "tcp",
+      "classes": [
+        "post"
+      ]
+    },
+    {
+      "id": "app-fanout",
+      "source": "app",
+      "target": "fanout",
+      "protocol": "queue",
+      "classes": [
+        "fanout"
+      ]
+    },
+    {
+      "id": "fanout-workers",
+      "source": "fanout",
+      "target": "workers",
+      "protocol": "queue"
+    },
+    {
+      "id": "workers-timelines",
+      "source": "workers",
+      "target": "timelines",
+      "protocol": "tcp"
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "feed",
+        "label": "Abrir o feed",
+        "mode": "rps",
+        "op": "read",
+        "rps": 5000,
+        "payloadKB": 4,
+        "cacheable": true
+      },
+      {
+        "name": "post",
+        "label": "Publicar post",
+        "mode": "rps",
+        "op": "write",
+        "rps": 50,
+        "payloadKB": 2,
+        "cacheable": false
+      },
+      {
+        "name": "fanout",
+        "label": "Entrega nas timelines",
+        "mode": "rps",
+        "op": "write",
+        "rps": 2500,
+        "payloadKB": 0.1,
+        "cacheable": false
+      }
+    ]
+  }
+}

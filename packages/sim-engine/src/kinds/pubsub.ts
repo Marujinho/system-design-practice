@@ -1,6 +1,9 @@
 import { monthlyCost, requestsMillionsPerMonth, saturate, sum } from '../queueing';
 import type { KindHandler } from './types';
 
+/** Subscribers that pay per delivery (HTTP/S endpoints); queues and functions receive for free. */
+const PAID_DELIVERY = new Set(['compute']);
+
 /** Pub/sub (FR-19): every subscriber receives the full publish rate. */
 export const pubsub: KindHandler = {
   capacity: (ctx) => ctx.value('capPerUnit'),
@@ -23,7 +26,9 @@ export const pubsub: KindHandler = {
         {},
         {
           publishes: requestsMillionsPerMonth(published),
-          deliveries: requestsMillionsPerMonth(published * ctx.outDegree),
+          deliveries: requestsMillionsPerMonth(
+            published * ctx.outKinds.filter((k) => PAID_DELIVERY.has(k)).length,
+          ),
         },
       ),
       nextState: {},

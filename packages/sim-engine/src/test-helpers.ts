@@ -1,4 +1,4 @@
-import { catalog, findService, findVariant } from '@archsim/catalog';
+import { catalog, findService, findVariant, type Kind } from '@archsim/catalog';
 import type { RequestClass } from './diagram';
 import { makeContext } from './kinds/context';
 import type { NodeContext, NodeState } from './kinds/types';
@@ -78,6 +78,7 @@ export function ctxFor(
     dtMs?: number;
     downstreamCapacity?: number;
     outDegree?: number;
+    outKinds?: Kind[];
   } = {},
 ): NodeContext {
   const service = findService(catalog, serviceId);
@@ -94,5 +95,6 @@ export function ctxFor(
     state: options.state ?? {},
     downstreamCapacity: options.downstreamCapacity ?? 0,
     outDegree: options.outDegree ?? 1,
+    outKinds: options.outKinds ?? [],
   });
 }

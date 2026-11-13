@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Vídeo sob demanda — referência",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 160
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "cdn",
+      "serviceId": "aws.cloudfront",
+      "variantId": "distribution",
+      "position": {
+        "x": 240,
+        "y": 60
+      },
+      "label": "CDN de segmentos",
+      "props": {
+        "hitRatio": 0.95
+      },
+      "overrides": {}
+    },
+    {
+      "id": "segments",
+      "serviceId": "aws.s3",
+      "variantId": "standard",
+      "position": {
+        "x": 480,
+        "y": 60
+      },
+      "label": "Segmentos HLS",
+      "props": {
+        "prefixes": 1
+      },
+      "overrides": {}
+    },
+    {
+      "id": "raw",
+      "serviceId": "aws.s3",
+      "variantId": "standard",
+      "position": {
+        "x": 240,
+        "y": 280
+      },
+      "label": "Vídeos enviados",
+      "props": {
+        "prefixes": 1
+      },
+      "overrides": {}
+    },
+    {
+      "id": "jobs",
+      "serviceId": "aws.sqs",
+      "variantId": "standard",
+      "position": {
+        "x": 480,
+        "y": 280
+      },
+      "label": "Fila de transcodificação",
+      "props": {
+        "batchSize": 1
+      },
+      "overrides": {}
+    },
+    {
+      "id": "transcode",
+      "serviceId": "aws.lambda",
+      "variantId": "x86",
+      "position": {
+        "x": 720,
+        "y": 280
+      },
+      "label": "Transcodificar",
+      "props": {
+        "memoryMB": 3008,
+        "durationMs": 60000
+      },
+      "overrides": {}
+    },
+    {
+      "id": "encoded",
+      "serviceId": "aws.s3",
+      "variantId": "standard",
+      "position": {
+        "x": 960,
+        "y": 280
+      },
+      "label": "Vídeos codificados",
+      "props": {
+        "prefixes": 1
+      },
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-cdn",
+      "source": "users",
+      "target": "cdn",
+      "protocol": "http",
+      "classes": [
+        "watch"
+      ]
+    },
+    {
+      "id": "cdn-segments",
+      "source": "cdn",
+      "target": "segments",
+      "protocol": "http"
+    },
+    {
+      "id": "users-raw",
+      "source": "users",
+      "target": "raw",
+      "protocol": "http",
+      "classes": [
+        "upload"
+      ]
+    },
+    {
+      "id": "raw-jobs",
+      "source": "raw",
+      "target": "jobs",
+      "protocol": "queue"
+    },
+    {
+      "id": "jobs-transcode",
+      "source": "jobs",
+      "target": "transcode",
+      "protocol": "queue"
+    },
+    {
+      "id": "transcode-encoded",
+      "source": "transcode",
+      "target": "encoded",
+      "protocol": "http"
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "watch",
+        "label": "Assistir (segmento de vídeo)",
+        "mode": "rps",
+        "op": "read",
+        "rps": 500,
+        "payloadKB": 512,
+        "cacheable": true
+      },
+      {
+        "name": "upload",
+        "label": "Enviar vídeo",
+        "mode": "rps",
+        "op": "write",
+        "rps": 0.2,
+        "payloadKB": 102400,
+        "cacheable": false
+      }
+    ]
+  }
+}
