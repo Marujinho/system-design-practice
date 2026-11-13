@@ -4,10 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/run.ts"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@archsim/catalog": "workspace:*",
+    "@archsim/problems": "workspace:*",
+    "@archsim/sim-engine": "workspace:*",
+    "zod": "4.6.7"
   }
 }

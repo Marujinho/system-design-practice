@@ -62,7 +62,20 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
 
-  packages/cli: {}
+  packages/cli:
+    dependencies:
+      '@archsim/catalog':
+        specifier: workspace:*
+        version: link:../catalog
+      '@archsim/problems':
+        specifier: workspace:*
+        version: link:../problems
+      '@archsim/sim-engine':
+        specifier: workspace:*
+        version: link:../sim-engine
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/icons: {}
 

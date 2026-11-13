@@ -396,6 +396,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: o mesmo `bank.test.ts` passa a cobrir 10 diretórios; um teste confere que são exatamente os 10 IDs de FR-40.
 - **Check**: `pnpm --filter @archsim/problems test` → 10 verdes
 - **Depends on**: T13
+- **Done**: `384f060`
+- **Deviation**: Mudança no motor (T9): o pub/sub agora conhece os kinds dos alvos (NodeContext.outKinds) e só cobra entrega para alvos compute (HTTP/S). Antes eu cobrava todas as entregas, como premissa conservadora; na AWS, SQS e Lambda não pagam entrega. Mais 6 fixtures de when (backlog e WebSocket). No feed, as inserções de timeline são uma classe de carga própria (2.500/s), porque o motor não multiplica uma requisição por N seguidores; o enunciado explica isso.
 
 ### T15 — CLI `archsim`
 - **Covers**: FR-51, FR-52, FR-53, A05 (`userContent`), A06 (limites de flags), A08, A10

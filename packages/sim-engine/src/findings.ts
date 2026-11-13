@@ -59,12 +59,15 @@ interface Ctx {
   req2: RequirementResult[];
 }
 
+/**
+ * Catalog label plus node id. Never the user's free-text label: findings reach
+ * the agent, and user text must stay under `userContent` (PRD §12 A05).
+ */
 function nameOf(ctx: Ctx, nodeId: string): string {
   const node = ctx.diagram.nodes.find((x) => x.id === nodeId);
   if (!node) return nodeId;
   const service = findService(ctx.catalog, node.serviceId);
-  const label = node.label.trim();
-  return label.length > 0 ? label : (service?.label ?? nodeId);
+  return `${service?.label ?? node.serviceId} (${nodeId})`;
 }
 
 function metricsList(result: SimResult): NodeMetrics[] {
