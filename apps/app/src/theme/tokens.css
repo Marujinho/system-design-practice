@@ -1,0 +1,154 @@
+/*
+ * Hairline palette (README of @lucasmarkes/hairline): plate, hi, edge, mid, lo
+ * and a 0.9 px stroke. Colour appears only for state: amber and red.
+ */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --hairline-plate: #101014;
+  --hairline-hi: #fafafa;
+  --hairline-edge: #a1a1aa;
+  --hairline-mid: #52525b;
+  --hairline-lo: #27272a;
+  --hairline-stroke: 0.9;
+
+  --bg: #08090a;
+  --surface: var(--hairline-plate);
+  --text: var(--hairline-hi);
+  --text-muted: var(--hairline-edge);
+  --line: var(--hairline-lo);
+  --line-strong: var(--hairline-mid);
+  --focus: var(--hairline-hi);
+
+  --state-pressured: #f59e0b;
+  --state-critical: #ef4444;
+  --state-ok: var(--hairline-edge);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --radius: 6px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --hairline-plate: #fafafa;
+  --hairline-hi: #09090b;
+  --hairline-edge: #52525b;
+  --hairline-mid: #a1a1aa;
+  --hairline-lo: #e4e4e7;
+
+  --bg: #ffffff;
+  --state-pressured: #b45309;
+  --state-critical: #dc2626;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 1px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.app-header h1 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.button {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--text-muted);
+}
+
+.button.primary {
+  border-color: var(--text);
+}
+
+.home {
+  display: grid;
+  place-content: center;
+  gap: 24px;
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.home h2 {
+  font-size: 28px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.home p {
+  color: var(--text-muted);
+  max-width: 52ch;
+  margin: 0 auto;
+}
+
+.home nav {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.home nav a {
+  text-decoration: none;
+}

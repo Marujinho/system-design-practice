@@ -42,6 +42,11 @@ export default defineConfig(
       'no-implied-eval': 'off',
       '@typescript-eslint/no-implied-eval': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
+      // Module augmentation (declaration merging) needs an empty interface with one extends.
+      '@typescript-eslint/no-empty-object-type': [
+        'error',
+        { allowInterfaces: 'with-single-extends' },
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         { ignoreRestSiblings: true, varsIgnorePattern: '^_', argsIgnorePattern: '^_' },

@@ -418,6 +418,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - A saída passa no `schemas/cli-output.schema.json`.
 - **Check**: `pnpm archsim simulate --diagram problems/url-shortener/reference.archsim.json --problem url-shortener` → JSON com `requirements` todos `pass: true`; `pnpm --filter @archsim/cli test` → verde
 - **Depends on**: T14
+- **Done**: `aa0cb0c`
+- **Deviation**: Sem --json: a saída é sempre JSON. O agente deve chamar pnpm -s archsim, porque sem -s o pnpm imprime um cabeçalho no stdout. O ARCHSIM_PRACTICE_DIR sobrescreve o diretório practice/ (testes e e2e). buildSession foi para o pacote problems, para o plugin (T24) e os testes da CLI usarem o mesmo construtor. Mudança no motor (T11): as mensagens dos achados citam 'Serviço (id)' em vez do rótulo do usuário, para nenhum texto livre do usuário sair fora de userContent. Os fixtures de sessão são criados em diretório temporário pelos testes, não em packages/cli/fixtures/.
 
 ### T16 — Shell do app: Vite, tema, formatação, CSP, telas
 - **Covers**: FR-32, NFR-8, A02 (host e CSP), base de NFR-10

@@ -34,7 +34,13 @@
     "turbo": "2.11.10",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
     "vitest": "5.0.5",
     "zod": "4.6.7"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "8.3.5"
+    }
   }
 }
