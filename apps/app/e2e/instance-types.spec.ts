@@ -18,6 +18,11 @@ test('pick a bigger EC2 type in the panel: the card and the cost follow (aws-ins
   await expect(picker).toBeVisible();
 
   await expect(picker.locator('optgroup')).toHaveCount(4);
+  // long options must not push the side panel past its column
+  const overflow = await page
+    .locator('.collapsible-right .collapsible-body')
+    .evaluate((e) => e.scrollWidth - e.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
   await expect(picker.locator('optgroup[label="Computação"] option')).toHaveCount(4);
   await expect(picker.locator('option[value="c5.xlarge"]')).toContainText('2.000 req/s');
 
