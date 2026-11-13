@@ -71,6 +71,20 @@ Na UI:
 - **Check**: `pnpm vitest run packages/catalog` → verde; `pnpm test` → verde (problemas e motor sem regravar nada)
 - **Depends on**: T1
 
+- **Preços pesquisados (2026-11-13)**: origem `https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/US%20East%20(N.%20Virginia)/Linux/index.json`, o mapa que a página `https://aws.amazon.com/ec2/pricing/on-demand/` carrega (citada no `sourceUrl`). Os preços que já estavam no catálogo (t3.micro 0,0104, m5.large 0,096) batem com essa origem.
+
+  | Tipo | vCPU | GiB | US$/h | | Tipo | vCPU | GiB | US$/h |
+  |---|---|---|---|---|---|---|---|---|
+  | t3.large | 2 | 8 | 0,0832 | | c5.large | 2 | 4 | 0,085 |
+  | t3.xlarge | 4 | 16 | 0,1664 | | c5.xlarge | 4 | 8 | 0,17 |
+  | t3.2xlarge | 8 | 32 | 0,3328 | | c5.2xlarge | 8 | 16 | 0,34 |
+  | m5.xlarge | 4 | 16 | 0,192 | | c5.4xlarge | 16 | 32 | 0,68 |
+  | m5.2xlarge | 8 | 32 | 0,384 | | r5.large | 2 | 16 | 0,126 |
+  | m5.4xlarge | 16 | 64 | 0,768 | | r5.xlarge | 4 | 32 | 0,252 |
+  | | | | | | r5.2xlarge | 8 | 64 | 0,504 |
+  | | | | | | r5.4xlarge | 16 | 128 | 1,008 |
+- **Deviation**: os rótulos novos do EKS seguem o padrão do único tipo atual ("Nós m5.large", que não pode mudar pelo FR-10): "Nós c5.xlarge (4 vCPU, 8 GiB)". O teste do FR-11 confere que o rótulo nomeia o tipo e traz vCPU e GiB; o "começa pelo id" vale só para o EC2.
+
 ### T3 — RDS PostgreSQL e Aurora PostgreSQL
 - **Covers**: FR-2, FR-3, FR-8, FR-9, FR-11, G1, G2
 - **Files**: `packages/catalog/src/catalog.json` (edit), `packages/catalog/src/catalog.test.ts` (edit), plano (tabela de preços)
