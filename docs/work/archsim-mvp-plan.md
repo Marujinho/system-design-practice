@@ -255,6 +255,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Toda cota tem fonte.
 - **Check**: `pnpm --filter @archsim/catalog test` → verde
 - **Depends on**: T3
+- **Done**: `15208d4`
+- **Deviation**: Pesquisa nas páginas oficiais (2026-11-13): WAF US$ 5/Web ACL-mês, US$ 1/regra-mês, US$ 0,60/milhão; EventBridge classic US$ 1,00/milhão (blocos de 64 KB), PutEvents 10.000 TPS em us-east-1 (cota); CloudWatch logs US$ 0,50/GB, métrica custom US$ 0,30/mês; WebSocket US$ 1,00/milhão de mensagens e US$ 0,25/milhão de minutos de conexão. A maioria desses valores veio dos exemplos das páginas, porque as tabelas não vieram no texto lido. Não encontrei: preço de t3.small/m6g.large/r6g.large.search (usei m7g.medium US$ 0,068, c6g.large US$ 0,113 e r6g.xlarge US$ 0,335, que a página cita), cotas de conexão do WebSocket (premissa: 500 conexões novas/s) e TPS de Publish do SNS (premissa: 30.000/s). A entrega do SNS foi precificada a US$ 0,60/milhão (HTTP/S), premissa conservadora. Os preços do Fargate por task foram derivados de vCPU-h e GB-h.
 
 ### T9 — Motor: filas, fan-out e streams
 - **Covers**: FR-18, FR-19, FR-20, A10 (fila sem consumidor)
