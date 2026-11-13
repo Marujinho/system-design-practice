@@ -12,6 +12,7 @@ import { useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
 import { LimitRow } from './LimitRow';
 import { ParamField } from './ParamField';
+import { groupVariants, optionText } from './variant-options';
 
 const PROTOCOL_LABEL: Record<Protocol, string> = {
   http: 'HTTP/HTTPS',
@@ -36,6 +37,7 @@ function NodePanel({ node }: { node: DiagramNode }) {
   const capacity = live?.capacity ?? statics?.capacity ?? 0;
   const cost = live?.costMonth ?? statics?.idleCostMonth ?? 0;
   const value = (key: string) => readValue(node, variant, key);
+  const groups = groupVariants(service.variants);
 
   return (
     <div className="panel" aria-label={`Propriedades de ${node.label}`}>
@@ -66,11 +68,21 @@ function NodePanel({ node }: { node: DiagramNode }) {
               store().setVariant(node.id, e.target.value);
             }}
           >
-            {service.variants.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.label}
-              </option>
-            ))}
+            {groups.length > 1
+              ? groups.map((g) => (
+                  <optgroup key={g.label} label={g.label}>
+                    {g.variants.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {optionText(v)}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              : service.variants.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {optionText(v)}
+                  </option>
+                ))}
           </select>
         </div>
       )}

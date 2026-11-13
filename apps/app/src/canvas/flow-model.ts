@@ -28,7 +28,7 @@ export function toFlow(
       type: 'service',
       position: n.position,
       selected: selected.has(n.id),
-      data: { serviceId: n.serviceId, label: n.label },
+      data: { serviceId: n.serviceId, variantId: n.variantId, label: n.label },
     })),
     edges: diagram.edges.map((e) => {
       const parts: string[] = [];
