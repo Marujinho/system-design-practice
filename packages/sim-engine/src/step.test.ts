@@ -37,6 +37,32 @@ describe('step: golden scenarios', () => {
     expect(app?.health).toBe('bottleneck');
   });
 
+  it('aws-instance-types FR-9a: a bigger type clears the bottleneck at the same load', () => {
+    const at = (variantId: string) =>
+      run(
+        diagram(
+          [users, node('app', 'aws.ec2', variantId, { units: 1 })],
+          [edge('users', 'app')],
+          load(1500),
+        ),
+      );
+    const small = at('t3.micro');
+    expect(small.global.bottleneckId).toBe('app');
+    expect(small.nodes.app?.health).toBe('bottleneck');
+    expect(small.nodes.app?.utilization).toBeCloseTo(1500 / 200, 6);
+    expect(small.nodes.app?.errorRps).toBeGreaterThan(0);
+
+    const big = at('c5.xlarge');
+    expect(big.nodes.app?.utilization).toBeCloseTo(1500 / 2000, 6);
+    expect(big.nodes.app?.errorRps).toBe(0);
+    expect(big.nodes.app?.health).not.toBe('bottleneck');
+    // the same load, divided by each type's capacity
+    expect((small.nodes.app?.utilization ?? 0) / (big.nodes.app?.utilization ?? 1)).toBeCloseTo(
+      2000 / 200,
+      6,
+    );
+  });
+
   it('FR-10: a 100 req/s chain reaches every node in one tick', () => {
     const d = diagram(
       [users, node('alb', 'aws.alb', 'alb'), node('app', 'aws.ec2', 'm5.large')],
