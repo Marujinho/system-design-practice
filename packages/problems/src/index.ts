@@ -3,3 +3,4 @@ export * from './contracts';
 export * from './schema';
 export * from './session';
 export * from './when';
+export * from './achievements';

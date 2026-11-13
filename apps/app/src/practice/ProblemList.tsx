@@ -1,7 +1,8 @@
-import type { ProblemSummary } from '@archsim/problems';
+import type { History, ProblemSummary } from '@archsim/problems';
 import { useEffect, useState } from 'react';
 import { hrefOf } from '../routes';
 import { loadSaved } from '../store/autosave';
+import { Achievements } from './Achievements';
 import { api, ApiError } from './api';
 import { DIFFICULTY, starsText } from './format-req';
 
@@ -15,10 +16,14 @@ export function statusOf(p: ProblemSummary, hasDraft: boolean): ProblemStatus {
 export function ProblemList() {
   const [problems, setProblems] = useState<ProblemSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<History | null>(null);
 
   useEffect(() => {
     api.problems().then(setProblems, (e: unknown) => {
       setError(e instanceof ApiError ? e.message : 'não consegui carregar os problemas');
+    });
+    api.history().then(setHistory, () => {
+      setHistory(null);
     });
   }, []);
 
@@ -53,6 +58,7 @@ export function ProblemList() {
           );
         })}
       </ul>
+      {history && <Achievements history={history} />}
     </section>
   );
 }

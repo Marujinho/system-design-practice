@@ -274,3 +274,35 @@
 .solution-canvas {
   min-height: 0;
 }
+
+.achievements {
+  margin-top: 32px;
+}
+
+.achievements h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.achievements ul {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.achievements li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 12px;
+}
+
+.achievements li.earned {
+  border-color: var(--text-muted);
+}
+
+.achievements li.locked strong {
+  color: var(--text-muted);
+}

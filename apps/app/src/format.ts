@@ -33,3 +33,9 @@ export function formatNumber(value: number, digits = 0): string {
 export function formatCompact(value: number, digits = 2): string {
   return value.toLocaleString(pt, { maximumFractionDigits: digits });
 }
+
+/** 13/11/2026 */
+export function formatDate(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  return `${d ?? ''}/${m ?? ''}/${y ?? ''}`;
+}

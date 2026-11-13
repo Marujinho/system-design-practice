@@ -1,4 +1,4 @@
-import { FinalizeResponse, ProblemSummary, PublicProblem } from '@archsim/problems';
+import { FinalizeResponse, History, ProblemSummary, PublicProblem } from '@archsim/problems';
 import { Diagram } from '@archsim/sim-engine';
 import { z } from 'zod';
 
@@ -28,6 +28,7 @@ async function call<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): 
 
 export const api = {
   problems: () => call(z.array(ProblemSummary), 'problems'),
+  history: () => call(History, 'history'),
   problem: (id: string) => call(PublicProblem, `problems/${encodeURIComponent(id)}`),
   finalize: (problemId: string, diagram: Diagram) =>
     call(FinalizeResponse, 'finalize', {
