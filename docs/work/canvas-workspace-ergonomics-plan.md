@@ -245,7 +245,7 @@ Final: lint ✅, typecheck ✅, `pnpm test` 523 passed (38 arquivos), `pnpm test
 - [x] Testes da §17 passando — 523 unit, 41 e2e
 - [x] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` verdes — saída acima
 - [x] O fluxo antigo (selecionar conexão + Delete) continua funcionando — verificado com um e2e avulso em chromium e webkit (selecionar `alb-app`, Delete → uma conexão a menos, 5 nós); não ficou commitado, porque não estava no plano
-- [ ] Em 1440×900, com tudo recolhido, o canvas ≥ 90% do viewport (G4) — **não atendido**: 86,3% da janela (91,9% da área de trabalho). Ver Deviations/T8
+- [x] Em 1440×900, com tudo recolhido, o canvas ≥ 90% da área de trabalho (G4) — 91,9% da área de trabalho, 86,3% da janela. Em 2026-11-13, depois do merge, o usuário aceitou os 86% da janela e a meta do PRD passou a medir a área de trabalho
 - [x] Testado em Chromium e WebKit, temas claro e escuro — e2e nos dois navegadores; temas conferidos por screenshot em Chromium (o "×" com 16 px e as faixas recolhidas legíveis nos dois)
 
 ### Verification

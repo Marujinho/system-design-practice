@@ -18,7 +18,7 @@ Duas melhorias no espaço de trabalho do ArchSim. **A** — passar o mouse sobre
 | G1 (A): Remover uma conexão sem atalho escondido | Gestos para remover uma conexão | 2 (hover + clique), sem teclado | e2e: hover na conexão, clicar no "×", contar as conexões |
 | G2 (A): Remover só o que a pessoa apontou | Nós, outras conexões e seleção afetados | 0 | Teste do store e e2e |
 | G3 (A): A remoção pode ser desfeita | Cmd/Ctrl+Z traz a conexão de volta | 100%, com o mesmo protocolo, peso e classes | Teste do store |
-| G4 (B): Dar ao canvas a tela quase inteira | Área do `.canvas` ÷ viewport, com tudo recolhido, em 1440×900 | ≥ 90% | e2e mede `getBoundingClientRect()` do `.canvas` antes e depois |
+| G4 (B): Dar ao canvas a tela quase inteira | Área do `.canvas` ÷ área de trabalho (abaixo do cabeçalho do app), com tudo recolhido, em 1440×900 | ≥ 90% (atingido: 91,9%; 86,3% da janela, aceito pelo usuário em 2026-11-13) | e2e mede `boundingBox()` do `.canvas` e do `.workspace` |
 | G5 (B): O layout escolhido continua ao recarregar | Estado de cada painel depois de recarregar | igual ao de antes | e2e: recolher, recarregar, conferir |
 
 **Non-goals**: redimensionar painéis arrastando a borda; mudar o conteúdo de qualquer painel; layout para celular; mudar o fluxo atual de seleção + Delete; pedir confirmação ao remover.
@@ -99,7 +99,7 @@ Quem desenha no ArchSim, no canvas livre (`apps/app/src/App.tsx:53`) ou num prob
 - [ ] Testes da §17 passando
 - [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test` e `pnpm test:e2e` verdes
 - [ ] O fluxo antigo (selecionar conexão + Delete) continua funcionando
-- [ ] Em 1440×900, com tudo recolhido, o canvas ocupa ≥ 90% do viewport (G4)
+- [ ] Em 1440×900, com tudo recolhido, o canvas ocupa ≥ 90% da área de trabalho (G4; meta original de 90% da janela trocada pelo usuário em 2026-11-13, porque o cabeçalho do app não recolhe)
 - [ ] Testado em Chromium e WebKit, nos temas claro e escuro
 
 ## 11. Technical Context
