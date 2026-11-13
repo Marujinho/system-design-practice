@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+.vite/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+*.sqlite
+*.db
+.claude/.stage
+.claude/STOP
+.claude/audit/
+.claude/settings.local.json
