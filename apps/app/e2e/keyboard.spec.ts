@@ -44,7 +44,7 @@ test('keyboard only: open the free canvas, add a service, edit it, read the resu
   for (let i = 0; i < 6; i += 1) await page.keyboard.press('Backspace');
   await page.keyboard.type('4');
   await page.keyboard.press('Enter');
-  await expect(page.getByText('400 req/s').first()).toBeVisible();
+  await expect(page.getByText('400 req/s', { exact: true }).first()).toBeVisible();
 });
 
 test('keyboard only: collapse and expand the palette (edge-hover NFR-2)', async ({
