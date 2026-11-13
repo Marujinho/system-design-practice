@@ -660,6 +660,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - A06: o teste do build procura em `dist/assets/*.js` um ID de nó exclusivo de cada `reference.archsim.json` e não encontra.
 - **Check**: `pnpm --filter @archsim/app test practice && pnpm --filter @archsim/app build && node scripts/check-bundle-no-reference.mjs` → verde
 - **Depends on**: T24, T23
+- **Done**: `bbfb7f6`
+- **Deviation**: A solução de referência é simulada uma vez com simulateSteady na thread principal (diagrama pequeno, ~ms), não num segundo worker. A contagem do score usa requestAnimationFrame (sem a lib motion). O check do bundle ignora rótulos que o app já embarca (texto do catálogo e 'Usuários'). Mudanças fora dos arquivos da tarefa, todas pequenas: PROBLEMS_DIR resolve o caminho sem objeto URL (o jsdom troca o URL global); o achado 'quebra com mais carga' sempre aponta o nó mais carregado; a barra global diz 'mais carregado' quando nada está em gargalo; o topo do workspace virou um bloco só (a faixa de carga invadia a paleta). Conferido no preview real: lista, problema, finalizar (85 pontos, 2 estrelas, abaixo da referência), sessão e histórico gravados, solução aberta, sem erros no console.
 
 ### T26a — Figuras: rede e borda (Route 53, CloudFront, API Gateway, ALB, NLB, NAT, WAF, Usuários)
 - **Covers**: FR-33
