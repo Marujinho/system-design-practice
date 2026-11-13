@@ -745,6 +745,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Check**: `pnpm test achievements` → verde
 - **Depends on**: T25
 - **Opcional**: corta-se sem afetar nenhum Must.
+- **Done**: `527c7fe`
+- **Deviation**: A função achievements() fica no pacote problems, não no sim-engine: ela lê o History, e o motor não deve depender desse formato. O painel aparece sob a lista de problemas, lendo GET /__archsim/history.
 
 ## Coverage
 
