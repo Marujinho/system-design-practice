@@ -2,12 +2,14 @@ import { catalog } from '@archsim/catalog';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { initialState, step, type NodeHealth } from '@archsim/sim-engine';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ReactFlowProvider } from '@xyflow/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSim } from '../sim/sim-store';
 import { emptyDiagram } from '../store/defaults';
 import { useDiagram } from '../store/diagram-store';
+import { EXPANDED, useLayout } from '../workspace/layout-store';
 import { GlobalBar } from './GlobalBar';
 import { HEALTH_LABEL, NodeStatus } from './NodeStatus';
 import { ParticleLayer } from './ParticleLayer';
@@ -105,6 +107,42 @@ describe('GlobalBar (FR-27)', () => {
     );
     expect(screen.getByRole('button', { name: 'gargalo: EC2' })).toBeTruthy();
     expect(screen.getByText(/erro 75,0%/)).toBeTruthy();
+  });
+
+  it('folds into a button and shows the current numbers when expanded (edge-hover FR-11)', async () => {
+    useLayout.setState({ collapsed: { ...EXPANDED }, before: null });
+    scenario();
+    render(
+      <ReactFlowProvider>
+        <GlobalBar />
+      </ReactFlowProvider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Recolher métricas' }));
+    expect(screen.queryByRole('status', { name: 'Resultado global' })).toBeNull();
+    const expand = screen.getByRole('button', { name: 'Expandir métricas' });
+    expect(expand.getAttribute('aria-expanded')).toBe('false');
+    // a newer result arrives while collapsed
+    act(() => {
+      useDiagram.getState().setLoad({
+        classes: [
+          {
+            name: 'default',
+            label: 'Requisições',
+            mode: 'rps',
+            op: 'read',
+            rps: 100,
+            payloadKB: 1,
+            cacheable: true,
+          },
+        ],
+      });
+      const result = step(initialState(), useDiagram.getState().diagram, catalog, 100).result;
+      useSim.setState({ result });
+    });
+    await userEvent.click(expand);
+    expect(screen.getByRole('status', { name: 'Resultado global' })).toBeTruthy();
+    expect(screen.getByText(/erro 0,0%/)).toBeTruthy();
+    useLayout.setState({ collapsed: { ...EXPANDED }, before: null });
   });
 });
 
