@@ -47,7 +47,11 @@ export default defineConfig(
   },
   {
     files: ['packages/sim-engine/src/**/*.ts'],
-    ignores: ['packages/sim-engine/src/**/*.test.ts', 'packages/sim-engine/src/**/*.bench.ts'],
+    ignores: [
+      'packages/sim-engine/src/**/*.test.ts',
+      'packages/sim-engine/src/**/*.bench.ts',
+      'packages/sim-engine/src/test-helpers.ts',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',

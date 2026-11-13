@@ -128,6 +128,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Toda cota tem `sourceUrl`.
 - **Check**: `pnpm --filter @archsim/catalog test` → verde
 - **Depends on**: T2
+- **Done**: `0d08c9f`
+- **Deviation**: Os preços e as cotas vêm do documento de origem (conferidos pelo autor em 2026-11-13); o sourceUrl aponta para a página oficial de preços/cotas da AWS de cada serviço, que não reli nesta execução. Adicionei a unidade de preço unit-month (zona do Route 53). Novas premissas: queryShare 1% no Route 53 (cache de DNS), newConnectionShare 10% no ALB (keep-alive), capacidade de 250.000 req/s por distribuição CloudFront como cota.
 
 ### T4 — Schema do diagrama e parse seguro
 - **Covers**: FR-9 (classes), FR-34/FR-35 (núcleo), NFR-3, A05 (limite de rótulo), A06, A08
