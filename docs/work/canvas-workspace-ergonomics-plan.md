@@ -42,6 +42,7 @@
 ## Tasks
 
 ### T1 — Ação `removeEdge` no store
+- **Done**: `beabfcd`
 - **Covers**: FR-2, FR-3, FR-6, A06, A08, A10
 - **Files**: `apps/app/src/store/diagram-store.ts` (edit), `apps/app/src/store/diagram-store.test.ts` (edit)
 - **Mirror**: `diagram-store.ts:155-158` (`setEdge`: procura por id, retorna se não achar, dentro de `commit`); `diagram-store.ts:123-137` (filtra `d.edges`)
@@ -51,6 +52,7 @@
 - **Depends on**: —
 
 ### T2 — Botão "×" no `FlowEdge`
+- **Done**: `893d297`, `81a76fd` (tamanho do botão contra o zoom)
 - **Covers**: FR-1, FR-4, FR-5, FR-7, NFR-1, NFR-2, NFR-3, NFR-4, A02, A05
 - **Files**: `apps/app/src/canvas/FlowEdge.tsx` (edit), `apps/app/src/canvas/canvas.css` (edit), `apps/app/src/canvas/canvas.test.tsx` (edit)
 - **Mirror**: `FlowEdge.tsx:32-45` (label no `EdgeLabelRenderer` com `transform` e `nodrag nopan`); `GlobalBar.tsx:32-37` (botão que chama `useDiagram.getState()` no `onClick`); `.edge-warning` em `canvas.css:165-175` para o estilo do círculo
@@ -66,6 +68,7 @@
 - **Depends on**: T1
 
 ### T2a — Preservar o tamanho medido dos nós (adicionada na implementação, aprovada pelo usuário em 2026-11-13)
+- **Done**: `49b22a6`
 - **Covers**: FR-1, FR-2, FR-5 (estabilidade), NFR-1
 - **Why**: no e2e do T3, o "×" sumia e o clique se perdia. A causa: a cada tick da simulação o `decorate` cria nós novos sem `measured`, porque `onNodesChange` ignorava `dimensions` (`Canvas.tsx:76`). O React Flow então zera os handles (`@xyflow/system` `parseHandles`, `index.mjs:1639-1641`; `adoptUserNodes`, `1692-1699`), e todas as conexões ficam um frame sem posição e são desmontadas e remontadas a cada 100 ms. Esse bug já existia antes desta mudança.
 - **Files**: `apps/app/src/canvas/flow-model.ts` (edit), `apps/app/src/canvas/Canvas.tsx` (edit), `apps/app/src/canvas/canvas.test.tsx` (edit)
@@ -75,6 +78,7 @@
 - **Depends on**: T1
 
 ### T3 — e2e da Parte A
+- **Done**: `db94a10`
 - **Covers**: G1, G2, G3, FR-1, FR-2, FR-3, FR-5, risco de z-index, NFR-2
 - **Files**: `apps/app/e2e/edge-remove.spec.ts` (new)
 - **Mirror**: `apps/app/e2e/free-flow.spec.ts:1-33` (`seed` + `watchConsole`, clique com `toPass` porque o nó re-renderiza 10×/s); `keyboard.spec.ts:3-26` (`tabTo`, `Alt+Tab` no WebKit)
@@ -84,6 +88,7 @@
 - **Depends on**: T2
 
 ### T4 — Store `useLayout` com persistência validada
+- **Done**: `ae4529c`
 - **Covers**: FR-12 (lógica), FR-13, FR-14 (fora do diagrama), NFR-5, A06, A10
 - **Files**: `apps/app/src/workspace/layout-store.ts` (new), `apps/app/src/workspace/layout-store.test.ts` (new)
 - **Mirror**: `theme/theme.ts:3-31` (chave `archsim:`, `browserStorage()`, try/catch, retorno padrão); `theme/theme.test.tsx:37-50` (storage que lança); `store/diagram-store.ts:51` (`create<…>()((set, get) => …)`)
@@ -98,6 +103,7 @@
 - **Depends on**: —
 
 ### T5 — `Collapsible` e a paleta, a lateral e a barra de cima recolhíveis
+- **Done**: `8c6d660`
 - **Covers**: FR-8, FR-9, FR-10, FR-14, FR-15, FR-16 (por construção), NFR-2, NFR-3, NFR-4, A05
 - **Files**: `apps/app/src/workspace/Collapsible.tsx` (new), `apps/app/src/workspace/Workspace.tsx` (edit), `apps/app/src/practice/ProblemView.tsx` (edit), `apps/app/src/canvas/canvas.css` (edit), `apps/app/src/workspace/collapsible.test.tsx` (new)
 - **Mirror**: `ProblemView.tsx:30-39` (botão `link-button` com `aria-expanded` e texto em pt); `canvas.css:8-12, 79-83` (grade e `.side-panel`); `canvas.test.tsx:12-31` (stubs de ResizeObserver/matchMedia para renderizar o `Workspace`)
@@ -112,6 +118,7 @@
 - **Depends on**: T4
 
 ### T6 — `GlobalBar` recolhível
+- **Done**: `03e1c9d`
 - **Covers**: FR-11, NFR-2
 - **Files**: `apps/app/src/viz/GlobalBar.tsx` (edit), `apps/app/src/canvas/canvas.css` (edit), `apps/app/src/viz/viz.test.tsx` (edit)
 - **Mirror**: `GlobalBar.tsx:32-41` (botão dentro da barra); `.collapse-toggle` do T5
@@ -121,6 +128,7 @@
 - **Depends on**: T4
 
 ### T7 — "Focar no canvas"
+- **Done**: `02b40f2`
 - **Covers**: FR-12
 - **Files**: `apps/app/src/workspace/Workspace.tsx` (edit), `apps/app/src/canvas/canvas.css` (edit), `apps/app/src/workspace/collapsible.test.tsx` (edit)
 - **Mirror**: o `overlay` do `Workspace.tsx:86-91` (elementos absolutos dentro do `.canvas`)
@@ -130,6 +138,7 @@
 - **Depends on**: T5, T6
 
 ### T8 — e2e da Parte B, teclado e acessibilidade
+- **Done**: `aef8fdb`
 - **Covers**: G4, G5, FR-13, FR-16, NFR-2, A08, risco "e2e esperam painéis visíveis"
 - **Files**: `apps/app/e2e/panels.spec.ts` (new), `apps/app/e2e/keyboard.spec.ts` (edit), `apps/app/e2e/a11y.spec.ts` (edit)
 - **Mirror**: `free-flow.spec.ts:1-10` (`seed`, `watchConsole`); `keyboard.spec.ts:28-50` (fluxo só com teclado); `a11y.spec.ts:12-30` (axe por página)
@@ -201,3 +210,50 @@ Depois, à mão (`pnpm dev`):
 2. Recolher a paleta, a lateral, a barra de cima e as métricas → o canvas ocupa a tela, sem pulo de zoom → recarregar → continua recolhido → "Restaurar painéis" volta ao estado anterior.
 3. `/#/problems/url-shortener` → recolher a barra de cima → o título na faixa → aba Propriedades → recolher a lateral → clicar num nó → o badge "1" → expandir → a aba Propriedades com o nó.
 4. Repetir 1–3 com a simulação rodando e nos temas claro e escuro (NFR-3).
+
+## Implementation
+
+**Branch**: `feat/canvas-workspace-ergonomics` · **Base**: `master` · **Date**: 2026-11-13
+
+Toolchain: o `node` do PATH é o 23.11 e o `engines` pede `^22.13 || >=24`, então todos os comandos rodaram com `/opt/homebrew/opt/node@24/bin` (v24.21.0) na frente do PATH.
+
+| Task | Commit | Check | Lint / Types / Tests |
+|---|---|---|---|
+| T1 | `beabfcd` | ✅ | ✅ ✅ ✅ (486 passed) |
+| T2 | `893d297`, `81a76fd` | ✅ | ✅ ✅ ✅ (523 passed) |
+| T2a | `49b22a6` | ✅ | ✅ ✅ ✅ (497 passed; e2e 25/25) |
+| T3 | `db94a10` | ✅ e2e chromium + webkit | ✅ ✅ ✅ (497 passed; e2e 27/27) |
+| T4 | `ae4529c` | ✅ | ✅ ✅ ✅ (511 passed) |
+| T5 | `8c6d660` | ✅ | ✅ ✅ ✅ (517 passed; e2e 27/27) |
+| T6 | `03e1c9d` | ✅ | ✅ ✅ ✅ (518 passed) |
+| T7 | `02b40f2` | ✅ | ✅ ✅ ✅ (519 passed) |
+| T8 | `aef8fdb` | ✅ e2e chromium + webkit | ✅ ✅ ✅ (519 passed; e2e 41/41) |
+
+Final: lint ✅, typecheck ✅, `pnpm test` 523 passed (38 arquivos), `pnpm test:e2e` 41 passed (chromium + webkit, incluindo `perf.spec.ts`).
+
+### Deviations
+- **T2a (nova, aprovada pelo usuário)**: o e2e do T3 mostrou que, desde antes desta mudança, todas as conexões eram desmontadas e remontadas a cada tick da simulação. A causa: os nós vinham sem `measured` e o React Flow zerava os handles. Isso derrubava o hover e o clique do "×". O Canvas passou a guardar as `dimensions` medidas. Detalhes na seção T2a.
+- **T2 — testes**: o jsdom não desenha conexões (nós sem medidas), então os testes de componente ficaram em `canvas/flow-edge.test.tsx` (arquivo novo), com `EdgeLabelRenderer` e `useStore` mockados, em vez de `canvas.test.tsx`. O comportamento real é coberto pelo e2e do T3.
+- **T2 — tamanho contra o zoom (`81a76fd`)**: o label fica dentro do viewport com zoom. No zoom padrão (~0,5) o botão media 8×8 px na tela, abaixo dos 16 px do NFR-2. Largura, altura, fonte e borda agora são `16 / zoom` (lidos de `useStore`). Há um teste de unidade nos zooms 0,2/0,5/1/2 e uma checagem de tamanho no e2e.
+- **T3**: o hover espera o primeiro resultado da simulação (`Resultado global`), porque ele aumenta os nós e move as conexões. Há também um teste novo de regressão: nenhuma conexão é desmontada em 1 s de simulação. A folga continua em 120 ms; com a T2a, não foi preciso aumentar.
+- **T5**: o resumo da faixa de cima no modo livre é `<span class="collapsible-summary">Carga</span>` (o plano dizia `muted`). Os testes de `Workspace` usam o `inlineBackend` real da simulação, como `practice.test.tsx`, em vez de `vi.mock('../sim/useSimulation')`.
+- **T6**: o `toggle` é chamado via `useLayout.getState()` (regra de lint `unbound-method`), igual ao `Collapsible`.
+- **T8 / G4**: medido em 1440×900 com tudo recolhido, o canvas ocupa **91,9% da área de trabalho** e **86,3% da janela**. O cabeçalho do app (55 px) não é um painel e não recolhe, e as faixas de 32 px ocupam o resto. O e2e afirma ≥ 90% sobre a área de trabalho e anota as duas medidas. **G4 como escrita no PRD (≥ 90% da janela) não é atingida.**
+
+### Definition of Done
+- [x] Todos os Must atendem os critérios — FR-1/2/3/4/6 (store + `flow-edge.test.tsx` + `edge-remove.spec.ts`), FR-8/9/10/14 (`collapsible.test.tsx`, `panels.spec.ts`)
+- [x] Testes da §17 passando — 523 unit, 41 e2e
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` verdes — saída acima
+- [x] O fluxo antigo (selecionar conexão + Delete) continua funcionando — verificado com um e2e avulso em chromium e webkit (selecionar `alb-app`, Delete → uma conexão a menos, 5 nós); não ficou commitado, porque não estava no plano
+- [ ] Em 1440×900, com tudo recolhido, o canvas ≥ 90% do viewport (G4) — **não atendido**: 86,3% da janela (91,9% da área de trabalho). Ver Deviations/T8
+- [x] Testado em Chromium e WebKit, temas claro e escuro — e2e nos dois navegadores; temas conferidos por screenshot em Chromium (o "×" com 16 px e as faixas recolhidas legíveis nos dois)
+
+### Verification
+- `pnpm lint` → 0 problemas; `pnpm typecheck` → ok; `pnpm test` → 38 arquivos, 523 testes passando; `pnpm test:e2e` → 41 passed (chromium + webkit).
+- Repetição (`--repeat-each 4`) do e2e de hover: 8/8, de 0,6 a 1,1 s cada, sem novas tentativas.
+- Screenshots (1440×900, problema `url-shortener`): expandido e com tudo recolhido; título na faixa de cima e badge "1" na lateral com um nó selecionado. Temas claro e escuro com o "×" visível.
+- Item 3 da verificação manual (aba Propriedades preservada ao expandir) coberto pelo teste de componente que mantém o texto digitado na lateral; não foi refeito à mão no navegador.
+
+### Inherited failures
+Nenhuma: com Node 24, o ponto de partida tinha lint/types verdes, 481 testes de unidade e 21 e2e passando.
+
