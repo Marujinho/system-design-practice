@@ -575,6 +575,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - O gargalo da barra global bate com o resultado.
 - **Check**: `pnpm --filter @archsim/app test viz` → verde
 - **Depends on**: T21
+- **Done**: `950b42d`
+- **Deviation**: Pulso e piscada em CSS (@keyframes, desligados por prefers-reduced-motion), não com a lib motion. Não instalei o motion: uma dependência a menos para o mesmo efeito; o T25 anima a contagem do score com requestAnimationFrame. Arquivo extra viz/decorate.tsx, que injeta o status nos nós e arestas a cada resultado. Conferido no preview com o encurtador subdimensionado: EC2 como gargalo, partículas de erro voltando, barra global com o gargalo; corrigida a grade do workspace, que empurrava a barra para fora da tela.
 
 ### T23 — Salvar e abrir arquivo
 - **Covers**: FR-34, FR-35, A05 (rótulos como texto), A08

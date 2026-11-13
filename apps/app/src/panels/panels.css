@@ -230,3 +230,10 @@
   border-radius: var(--radius);
   padding: 6px 10px;
 }
+
+.file-menu {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}

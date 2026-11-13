@@ -1,6 +1,7 @@
 import { LIMITS, rpsOf, totalRps, type Load, type RequestClass } from '@archsim/sim-engine';
 import { useState } from 'react';
 import { formatCompact, formatRps } from '../format';
+import { FileMenu } from '../files/FileMenu';
 import { useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
 
@@ -139,6 +140,7 @@ export function LoadPanel() {
       </div>
       <div className="load-status">
         <span className="num">Total: {formatRps(totalRps(load))}</span>
+        <FileMenu />
         {status === 'running' && (
           <button
             type="button"
