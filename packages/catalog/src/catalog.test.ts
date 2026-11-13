@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import data from './catalog.json' with { type: 'json' };
+import before from './fixtures/variants-2026-11-13.1.json' with { type: 'json' };
 import { catalog, findService, findVariant, parseCatalog } from './index';
 
 function variantOf(serviceId: string, variantId: string) {
@@ -129,5 +130,29 @@ describe('catalog.json', () => {
     );
     expect(ws?.source).toBe('assumption');
     expect(variantOf('aws.sns', 'standard').capSource).toBe('assumption');
+  });
+});
+
+describe('existing variants (aws-instance-types FR-10)', () => {
+  // The catalog as of 2026-11-13.1: saved diagrams, references and scores depend on these numbers.
+  const snapshot = before as Record<string, Record<string, unknown>[]>;
+
+  it('keeps every variant that existed, number for number', () => {
+    for (const [serviceId, variants] of Object.entries(snapshot)) {
+      const service = findService(catalog, serviceId);
+      expect(service, serviceId).toBeDefined();
+      for (const old of variants) {
+        const now = service ? findVariant(service, String(old.id)) : undefined;
+        expect(now, `${serviceId}/${String(old.id)}`).toBeDefined();
+        const { family: _family, ...rest } = now ?? {};
+        expect(rest, `${serviceId}/${String(old.id)}`).toEqual(old);
+      }
+    }
+  });
+
+  it('keeps the default type of a new node', () => {
+    for (const [serviceId, variants] of Object.entries(snapshot)) {
+      expect(findService(catalog, serviceId)?.variants[0]?.id, serviceId).toBe(variants[0]?.id);
+    }
   });
 });
