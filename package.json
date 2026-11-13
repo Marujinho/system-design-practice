@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p . && turbo run typecheck",
     "test": "vitest run",
-    "test:bench": "vitest bench --run",
+    "test:bench": "vitest run perf --reporter=verbose",
     "test:e2e": "pnpm --filter @archsim/app test:e2e",
     "archsim": "tsx packages/cli/src/index.ts",
     "audit": "pnpm audit --prod --audit-level high",

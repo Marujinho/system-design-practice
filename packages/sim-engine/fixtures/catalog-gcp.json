@@ -1,0 +1,41 @@
+{
+  "id": "gcp.cloud-run",
+  "provider": "gcp",
+  "kind": "compute",
+  "category": "computacao",
+  "label": "Cloud Run",
+  "description": "Fixture de teste: serviço de outro provedor simulado só com dados de catálogo.",
+  "errorCode": "503",
+  "validTargetKinds": ["sql-database"],
+  "variants": [
+    {
+      "id": "1vcpu",
+      "label": "1 vCPU",
+      "capPerUnit": 250,
+      "capSource": "assumption",
+      "baseLatencyMs": 15,
+      "prices": [
+        {
+          "id": "hourly",
+          "label": "Por hora (fixture)",
+          "amountUsd": 0.05,
+          "per": "unit-hour",
+          "priceDate": "2026-11-13",
+          "sourceUrl": "https://cloud.google.com/run/pricing"
+        }
+      ],
+      "limits": []
+    }
+  ],
+  "params": [
+    {
+      "key": "units",
+      "label": "Instâncias",
+      "unit": "",
+      "min": 1,
+      "max": 1000,
+      "step": 1,
+      "default": 1
+    }
+  ]
+}

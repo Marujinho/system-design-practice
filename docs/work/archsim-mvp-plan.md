@@ -208,6 +208,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - FR-28: Lambda 100 req/s → 52,56.
 - **Check**: `pnpm --filter @archsim/sim-engine test kinds` → verde
 - **Depends on**: T5
+- **Done**: `014aa28`
+- **Deviation**: As classes de requisição ganharam op: read|write (schema do T4), porque escrita não passa por cache, vai ao writer e conta como PUT. Réplicas de leitura do sql-database implementadas já aqui, e não no T10, porque o RDS do catálogo base já tem readReplicas. O registro de handlers é Partial<Record<Kind>> até o T10 completar os kinds; então vira total. O Lambda não tem fila: a latência é a duração mais o overhead, constante até o throttle.
 
 ### T7 — Motor: `step`, métricas globais e estados
 - **Covers**: FR-10, FR-26, FR-27, FR-28, FR-30 (cálculo do estado), NFR-1, NFR-4, NFR-9, NFR-11
