@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Leaderboard — referência",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 120
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "alb",
+      "serviceId": "aws.alb",
+      "variantId": "alb",
+      "position": {
+        "x": 220,
+        "y": 120
+      },
+      "label": "ALB",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "app",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 440,
+        "y": 120
+      },
+      "label": "API do ranking",
+      "props": {
+        "units": 15
+      },
+      "overrides": {}
+    },
+    {
+      "id": "updates",
+      "serviceId": "aws.sqs",
+      "variantId": "standard",
+      "position": {
+        "x": 660,
+        "y": 240
+      },
+      "label": "Fila de pontuações",
+      "props": {
+        "batchSize": 10
+      },
+      "overrides": {}
+    },
+    {
+      "id": "workers",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 880,
+        "y": 240
+      },
+      "label": "Workers de pontuação",
+      "props": {
+        "units": 2
+      },
+      "overrides": {}
+    },
+    {
+      "id": "ranking",
+      "serviceId": "aws.elasticache-valkey",
+      "variantId": "cache.t4g.micro",
+      "position": {
+        "x": 1100,
+        "y": 120
+      },
+      "label": "Ranking (sorted sets)",
+      "props": {
+        "units": 1,
+        "hitRatio": 1
+      },
+      "overrides": {}
+    },
+    {
+      "id": "db",
+      "serviceId": "aws.rds-postgres",
+      "variantId": "db.m7g.large",
+      "position": {
+        "x": 1320,
+        "y": 240
+      },
+      "label": "Histórico de pontuações",
+      "props": {},
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-alb",
+      "source": "users",
+      "target": "alb",
+      "protocol": "http"
+    },
+    {
+      "id": "alb-app",
+      "source": "alb",
+      "target": "app",
+      "protocol": "http"
+    },
+    {
+      "id": "app-ranking",
+      "source": "app",
+      "target": "ranking",
+      "protocol": "tcp",
+      "classes": [
+        "top"
+      ]
+    },
+    {
+      "id": "app-updates",
+      "source": "app",
+      "target": "updates",
+      "protocol": "queue",
+      "classes": [
+        "score"
+      ]
+    },
+    {
+      "id": "updates-workers",
+      "source": "updates",
+      "target": "workers",
+      "protocol": "queue"
+    },
+    {
+      "id": "workers-ranking",
+      "source": "workers",
+      "target": "ranking",
+      "protocol": "tcp"
+    },
+    {
+      "id": "ranking-db",
+      "source": "ranking",
+      "target": "db",
+      "protocol": "tcp",
+      "classes": [
+        "score"
+      ]
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "top",
+        "label": "Consulta do top 100",
+        "mode": "rps",
+        "op": "read",
+        "rps": 4000,
+        "payloadKB": 1,
+        "cacheable": true
+      },
+      {
+        "name": "score",
+        "label": "Atualização de pontuação",
+        "mode": "rps",
+        "op": "write",
+        "rps": 1000,
+        "payloadKB": 0.2,
+        "cacheable": false
+      }
+    ]
+  }
+}

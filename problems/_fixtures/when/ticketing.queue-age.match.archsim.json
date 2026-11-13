@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Fixture: ticketing.queue-age",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 120
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "alb",
+      "serviceId": "aws.alb",
+      "variantId": "alb",
+      "position": {
+        "x": 220,
+        "y": 160
+      },
+      "label": "ALB",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "app",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 440,
+        "y": 160
+      },
+      "label": "API do evento",
+      "props": {
+        "units": 48
+      },
+      "overrides": {}
+    },
+    {
+      "id": "cache",
+      "serviceId": "aws.elasticache-valkey",
+      "variantId": "cache.t4g.micro",
+      "position": {
+        "x": 680,
+        "y": 60
+      },
+      "label": "Cache do mapa de assentos",
+      "props": {
+        "units": 2,
+        "hitRatio": 0.95
+      },
+      "overrides": {}
+    },
+    {
+      "id": "orders",
+      "serviceId": "aws.sqs",
+      "variantId": "fifo",
+      "position": {
+        "x": 680,
+        "y": 280
+      },
+      "label": "Fila de pedidos (FIFO)",
+      "props": {
+        "batchSize": 10
+      },
+      "overrides": {}
+    },
+    {
+      "id": "workers",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 900,
+        "y": 280
+      },
+      "label": "Workers de reserva",
+      "props": {
+        "units": 1
+      },
+      "overrides": {}
+    },
+    {
+      "id": "db",
+      "serviceId": "aws.aurora-postgres",
+      "variantId": "db.r5.large",
+      "position": {
+        "x": 1120,
+        "y": 160
+      },
+      "label": "Assentos e pedidos",
+      "props": {
+        "readReplicas": 1
+      },
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-alb",
+      "source": "users",
+      "target": "alb",
+      "protocol": "http"
+    },
+    {
+      "id": "alb-app",
+      "source": "alb",
+      "target": "app",
+      "protocol": "http"
+    },
+    {
+      "id": "app-cache",
+      "source": "app",
+      "target": "cache",
+      "protocol": "tcp",
+      "classes": [
+        "browse"
+      ]
+    },
+    {
+      "id": "cache-db",
+      "source": "cache",
+      "target": "db",
+      "protocol": "tcp"
+    },
+    {
+      "id": "app-orders",
+      "source": "app",
+      "target": "orders",
+      "protocol": "queue",
+      "classes": [
+        "purchase"
+      ]
+    },
+    {
+      "id": "orders-workers",
+      "source": "orders",
+      "target": "workers",
+      "protocol": "queue"
+    },
+    {
+      "id": "workers-db",
+      "source": "workers",
+      "target": "db",
+      "protocol": "tcp"
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "browse",
+        "label": "Ver evento e assentos",
+        "mode": "rps",
+        "op": "read",
+        "rps": 15000,
+        "payloadKB": 2,
+        "cacheable": true
+      },
+      {
+        "name": "purchase",
+        "label": "Comprar ingresso",
+        "mode": "rps",
+        "op": "write",
+        "rps": 1500,
+        "payloadKB": 1,
+        "cacheable": false
+      }
+    ]
+  }
+}

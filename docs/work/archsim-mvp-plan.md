@@ -353,6 +353,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Os schemas exportados são iguais aos gerados.
 - **Check**: `pnpm --filter @archsim/problems test && pnpm test schemas` → verde
 - **Depends on**: T11
+- **Done**: `2851f99`
+- **Deviation**: O loader com fs fica num subpath (@archsim/problems/load), para o app poder importar os schemas sem puxar node:fs. Os schemas vivem em packages/problems/src/{schema,contracts}.ts; scripts/schemas.ts gera os JSON Schemas (pnpm schemas) e schemas/schemas.test.ts compara. O toPublic também remove os tópicos qualitativos, que são pistas.
 
 ### T13 — Problemas 1–5: encurtador, rate limiter, leaderboard, autocomplete, ingressos
 - **Covers**: FR-40 (parcial), FR-49, FR-60, G1, G2, G7

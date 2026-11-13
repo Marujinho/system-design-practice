@@ -1,0 +1,120 @@
+id: url-shortener
+title: Encurtador de URL
+difficulty: facil
+statement: |
+  Projete um encurtador de URL no estilo bit.ly.
+
+  Um usuário envia uma URL longa e recebe um código curto (por exemplo, `sho.rt/aZ3k9`).
+  Quem abre o link curto é redirecionado para a URL original. Links não expiram.
+
+  O tráfego é muito desigual: para cada link criado, ele é aberto cerca de 100 vezes.
+  Em horário de pico, o serviço recebe **10.000 redirecionamentos/s** e **100 criações/s**.
+  O redirecionamento precisa ser rápido, porque fica no caminho de cada clique.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Criar um código curto e único para uma URL longa
+  - Redirecionar do código curto para a URL original
+  - Links não expiram
+quantitative:
+  - id: redirect-throughput
+    label: Redirecionamentos atendidos
+    metric: throughput
+    class: redirect
+    op: '>='
+    value: 10000
+    unit: req/s
+  - id: create-throughput
+    label: Criações atendidas
+    metric: throughput
+    class: create
+    op: '>='
+    value: 100
+    unit: req/s
+  - id: redirect-p99
+    label: p99 do redirecionamento
+    metric: p99
+    class: redirect
+    op: '<='
+    value: 400
+    unit: ms
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: redirect
+      label: Redirecionamento
+      mode: rps
+      op: read
+      rps: 10000
+      payloadKB: 0.5
+      cacheable: true
+    - name: create
+      label: Criação de link
+      mode: rps
+      op: write
+      rps: 100
+      payloadKB: 1
+      cacheable: false
+qualitative:
+  - Geração de códigos únicos sem colisão (contador, hash, base62)
+  - Consistência entre criação e o primeiro redirecionamento
+  - Redirecionamento 301 × 302 e o efeito no cache dos navegadores
+followups:
+  - id: url-shortener.code-generation
+    question: Como você gera o código curto sem colisões quando há várias instâncias da API criando links ao mesmo tempo?
+    topic: qualitative
+    lookFor:
+      - contador distribuído ou faixas de IDs pré-alocadas por instância
+      - codificação base62
+      - por que hash truncado colide e como tratar a colisão
+  - id: url-shortener.no-cache
+    question: Seu p99 de redirecionamento ficou acima do alvo. Onde o tempo está sendo gasto e o que você colocaria no caminho?
+    when:
+      requirementFails: redirect-p99
+    lookFor:
+      - cache de leitura (Redis/ElastiCache) antes do banco
+      - hit ratio alto porque os links mais populares se repetem
+      - o banco não deveria ver cada clique
+  - id: url-shortener.cache-invalidation
+    question: Você usou cache. Os links não mudam, mas e se um link precisar ser removido por abuso?
+    when:
+      hasService:
+        - aws.elasticache-valkey
+    lookFor:
+      - TTL ou invalidação explícita na remoção
+      - remover do banco e do cache na mesma operação
+  - id: url-shortener.db-hot
+    question: O banco está perto do limite. O que você mudaria antes de trocar por uma instância maior?
+    when:
+      metric:
+        path: kind:sql-database.utilization
+        op: '>'
+        value: 0.6
+    lookFor:
+      - aumentar o hit ratio do cache
+      - réplicas de leitura para os misses
+      - separar leitura e escrita
+  - id: url-shortener.viral-10x
+    question: Uma campanha viral vai multiplicar os redirecionamentos por 10. O que quebra primeiro no seu desenho?
+    loadMultiplier: 10
+    lookFor:
+      - identificar o primeiro nó a saturar na simulação
+      - escalar a camada de API horizontalmente
+      - CDN para links muito populares, pesando o custo por requisição
+  - id: url-shortener.cdn-cost
+    question: Por que não colocar um CDN na frente de tudo? Faça a conta do custo com 10 mil requisições por segundo.
+    lookFor:
+      - custo por requisição do CDN em volume alto
+      - redirecionamento é resposta pequena e barata de servir na origem
+  - id: url-shortener.analytics
+    question: O produto agora quer contar cliques por link. Como você registra isso sem deixar o redirecionamento mais lento?
+    topic: qualitative
+    lookFor:
+      - registrar o clique de forma assíncrona (fila ou stream)
+      - agregação em lote
+      - não escrever no banco principal a cada clique

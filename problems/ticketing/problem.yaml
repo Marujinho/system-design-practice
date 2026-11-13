@@ -1,0 +1,133 @@
+id: ticketing
+title: Venda de ingressos com pico
+difficulty: dificil
+statement: |
+  Projete a venda de ingressos de um show muito disputado.
+
+  A venda abre num horário anunciado. Cerca de 1 milhão de pessoas entram nos primeiros
+  5 minutos para ver o mapa de assentos e tentar comprar. Cada assento só pode ser vendido
+  **uma vez**. Quem compra precisa ter o pedido aceito na hora, mesmo que a confirmação final
+  leve alguns segundos.
+
+  No pico há **15.000 visualizações do evento/s** e **1.500 tentativas de compra/s**.
+
+  Atenda a todos os requisitos pelo menor custo mensal possível.
+functional:
+  - Mostrar o evento e o mapa de assentos disponíveis
+  - Aceitar pedidos de compra durante o pico
+  - Nunca vender o mesmo assento duas vezes
+  - Confirmar ou recusar cada pedido em poucos segundos
+quantitative:
+  - id: browse-throughput
+    label: Visualizações atendidas
+    metric: throughput
+    class: browse
+    op: '>='
+    value: 15000
+    unit: req/s
+  - id: purchase-throughput
+    label: Pedidos aceitos
+    metric: throughput
+    class: purchase
+    op: '>='
+    value: 1500
+    unit: req/s
+  - id: browse-p99
+    label: p99 da visualização
+    metric: p99
+    class: browse
+    op: '<='
+    value: 400
+    unit: ms
+  - id: confirm-age
+    label: Atraso máximo para confirmar
+    metric: queueAge
+    op: '<='
+    value: 10
+    unit: s
+  - id: error-rate
+    label: Taxa de erro
+    metric: errorRate
+    op: '<='
+    value: 0.001
+    unit: fração
+load:
+  classes:
+    - name: browse
+      label: Ver evento e assentos
+      mode: rps
+      op: read
+      rps: 15000
+      payloadKB: 2
+      cacheable: true
+    - name: purchase
+      label: Comprar ingresso
+      mode: rps
+      op: write
+      rps: 1500
+      payloadKB: 1
+      cacheable: false
+qualitative:
+  - Evitar venda dupla do mesmo assento (escrita condicional, lock, reserva com expiração)
+  - Idempotência do pedido quando o cliente reenvia
+  - Sala de espera virtual para controlar a entrada
+  - Justiça na ordem de atendimento
+followups:
+  - id: ticketing.double-sell
+    question: Dois pedidos chegam ao mesmo tempo para o assento F12. Como o seu desenho garante que só um leva?
+    topic: qualitative
+    lookFor:
+      - escrita condicional ou transação com lock da linha do assento
+      - reserva temporária com expiração
+      - ordem garantida por assento (fila FIFO por grupo)
+  - id: ticketing.idempotency
+    question: O app reenviou o mesmo pedido porque a resposta demorou. Como você evita cobrar duas vezes?
+    topic: qualitative
+    lookFor:
+      - chave de idempotência por pedido
+      - deduplicação na fila FIFO
+  - id: ticketing.sync-purchase
+    question: As compras vão direto para o banco, no caminho da requisição. O que acontece com o banco quando 1.500 pessoas compram por segundo?
+    when:
+      missingService:
+        - aws.sqs
+    lookFor:
+      - fila desacopla aceitar o pedido de processar o pedido
+      - o banco processa no ritmo dele
+  - id: ticketing.queue-age
+    question: A confirmação está demorando mais que o alvo. O que você muda?
+    when:
+      requirementFails: confirm-age
+    lookFor:
+      - mais consumidores
+      - ler a idade da fila na simulação
+  - id: ticketing.fifo-limit
+    question: A fila FIFO tem cota de chamadas por segundo. Com 1.500 pedidos/s, como você fica dentro dela?
+    when:
+      hasService:
+        - aws.sqs
+    lookFor:
+      - lotes de até 10 mensagens
+      - grupos de mensagem por evento ou setor
+  - id: ticketing.browse-cache
+    question: Quase todo mundo só está olhando o mapa de assentos. Quanto disso precisa chegar ao banco?
+    when:
+      metric:
+        path: kind:sql-database.utilization
+        op: '>'
+        value: 0.5
+    lookFor:
+      - cache do mapa com TTL curto
+      - aceitar mapa levemente desatualizado e validar na compra
+  - id: ticketing.waiting-room
+    question: O artista anunciou uma data extra e o pico vai dobrar. O que quebra, e como uma sala de espera ajudaria?
+    loadMultiplier: 2
+    lookFor:
+      - identificar o primeiro nó a saturar
+      - sala de espera limita a entrada ao que o sistema aguenta
+  - id: ticketing.fairness
+    question: Quem chegou primeiro deve comprar primeiro? Como o seu desenho trata isso?
+    topic: qualitative
+    lookFor:
+      - ordem de chegada na sala de espera
+      - FIFO por grupo e o que ele garante

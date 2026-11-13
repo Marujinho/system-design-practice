@@ -48,7 +48,9 @@ export const queue: KindHandler = {
     }
 
     const inRate = sum(input);
-    const requests = sum(accepted.processed) * ctx.value('requestsPerMessage');
+    // Batching divides the API calls per message (send, receive and delete in batches).
+    const batch = Math.max(1, ctx.param('batchSize'));
+    const requests = (sum(accepted.processed) * ctx.value('requestsPerMessage')) / batch;
     return {
       processed: accepted.processed,
       errors: accepted.errors,

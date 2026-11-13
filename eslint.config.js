@@ -23,6 +23,7 @@ export default defineConfig(
       '**/coverage/**',
       '**/.turbo/**',
       '**/vendor/**',
+      '**/*.tmp.ts',
       'packages/icons/figures/**',
       'apps/app/playwright-report/**',
       'apps/app/test-results/**',

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Solução ingênua",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": { "x": 0, "y": 0 },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "app",
+      "serviceId": "aws.ec2",
+      "variantId": "t3.micro",
+      "position": { "x": 240, "y": 0 },
+      "label": "App",
+      "props": { "units": 1 },
+      "overrides": {}
+    },
+    {
+      "id": "db",
+      "serviceId": "aws.rds-postgres",
+      "variantId": "db.t4g.micro",
+      "position": { "x": 480, "y": 0 },
+      "label": "Banco",
+      "props": {},
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    { "id": "users-app", "source": "users", "target": "app", "protocol": "http" },
+    { "id": "app-db", "source": "app", "target": "db", "protocol": "tcp" }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "default",
+        "label": "Requisições",
+        "mode": "rps",
+        "op": "read",
+        "rps": 1,
+        "payloadKB": 1,
+        "cacheable": false
+      }
+    ]
+  }
+}

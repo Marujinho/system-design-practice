@@ -71,6 +71,16 @@ describe('queue (FR-18)', () => {
     expect(step(initialState(), fifo, catalog, 100).result.nodes.q?.errorRps).toBe(0);
   });
 
+  it('bills 3 calls per message, divided by the batch size', () => {
+    const one = handlers.queue.process({ read: 100 }, ctxFor('aws.sqs', 'standard'));
+    const ten = handlers.queue.process(
+      { read: 100 },
+      ctxFor('aws.sqs', 'standard', { props: { batchSize: 10 } }),
+    );
+    expect(one.costMonth).toBeCloseTo(0.4 * ((300 * SECONDS_PER_MONTH) / 1e6), 6);
+    expect(ten.costMonth).toBeCloseTo(one.costMonth / 10, 6);
+  });
+
   it('a queue without consumers grows without NaN and warns', () => {
     const lonely = diagram(
       [users, node('q', 'aws.sqs', 'standard')],

@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-11-13.1",
+  "name": "Rate limiter — referência",
+  "nodes": [
+    {
+      "id": "users",
+      "serviceId": "core.users",
+      "variantId": "default",
+      "position": {
+        "x": 0,
+        "y": 120
+      },
+      "label": "Usuários",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "alb",
+      "serviceId": "aws.alb",
+      "variantId": "alb",
+      "position": {
+        "x": 220,
+        "y": 120
+      },
+      "label": "ALB",
+      "props": {},
+      "overrides": {}
+    },
+    {
+      "id": "limiter",
+      "serviceId": "aws.ec2",
+      "variantId": "m5.large",
+      "position": {
+        "x": 440,
+        "y": 120
+      },
+      "label": "Gateway com limitador",
+      "props": {
+        "units": 15
+      },
+      "overrides": {}
+    },
+    {
+      "id": "counters",
+      "serviceId": "aws.elasticache-valkey",
+      "variantId": "cache.t4g.micro",
+      "position": {
+        "x": 680,
+        "y": 120
+      },
+      "label": "Contadores (Redis)",
+      "props": {
+        "units": 1,
+        "hitRatio": 0
+      },
+      "overrides": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-alb",
+      "source": "users",
+      "target": "alb",
+      "protocol": "http"
+    },
+    {
+      "id": "alb-limiter",
+      "source": "alb",
+      "target": "limiter",
+      "protocol": "http"
+    },
+    {
+      "id": "limiter-counters",
+      "source": "limiter",
+      "target": "counters",
+      "protocol": "tcp"
+    }
+  ],
+  "load": {
+    "classes": [
+      {
+        "name": "api",
+        "label": "Chamada de API",
+        "mode": "rps",
+        "op": "read",
+        "rps": 5000,
+        "payloadKB": 1,
+        "cacheable": false
+      }
+    ]
+  }
+}
