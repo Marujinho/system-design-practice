@@ -261,6 +261,11 @@
   font-size: 10px;
 }
 
+.service-node-variant {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
 .edge-label {
   position: absolute;
   display: flex;

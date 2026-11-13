@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emptyDiagram } from '../store/defaults';
@@ -154,5 +154,48 @@ describe('withMeasured (edge-hover T2a)', () => {
     out.forEach((n, i) => {
       expect(n).toBe(nodes[i]);
     });
+  });
+});
+
+describe('instance type on the node card (aws-instance-types FR-13)', () => {
+  it('passes the type to the card data', () => {
+    const id = useDiagram.getState().addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
+    const { nodes } = toFlow(useDiagram.getState().diagram, []);
+    expect(nodes.find((n) => n.id === id)?.data.variantId).toBe('t3.nano');
+  });
+
+  it('shows the type and follows a change of type', () => {
+    const id = useDiagram.getState().addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
+    const { container } = render(<Canvas />);
+    const card = () => container.querySelector('.service-node');
+    expect(card()?.querySelector('.service-node-variant')?.textContent).toBe('t3.nano');
+    act(() => {
+      useDiagram.getState().setVariant(id, 'c5.xlarge');
+    });
+    expect(card()?.querySelector('.service-node-variant')?.textContent).toBe('c5.xlarge');
+  });
+
+  it('shows no type on a service that has only one', () => {
+    useDiagram.getState().addNode('aws.alb', { x: 0, y: 0 });
+    const { container } = render(<Canvas />);
+    expect(container.querySelector('.service-node')).not.toBeNull();
+    expect(container.querySelector('.service-node-variant')).toBeNull();
+  });
+
+  it('shows nothing, and does not break, for a type the catalog does not know (A10)', () => {
+    const d = emptyDiagram();
+    d.nodes.push({
+      id: 'app',
+      serviceId: 'aws.ec2',
+      variantId: 'x9.mega',
+      position: { x: 0, y: 0 },
+      label: 'App',
+      props: {},
+      overrides: {},
+    });
+    useDiagram.getState().start({ kind: 'free' }, d);
+    const { container } = render(<Canvas />);
+    expect(container.querySelector('.service-node')).not.toBeNull();
+    expect(container.querySelector('.service-node-variant')).toBeNull();
   });
 });
