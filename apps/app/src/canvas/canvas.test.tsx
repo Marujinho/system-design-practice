@@ -5,7 +5,7 @@ import { emptyDiagram } from '../store/defaults';
 import { useDiagram } from '../store/diagram-store';
 import { Canvas } from './Canvas';
 import { defaultProtocol, protocolFor } from './connection-rules';
-import { toFlow } from './flow-model';
+import { toFlow, withMeasured } from './flow-model';
 import { Palette } from './Palette';
 import { DRAG_TYPE, paletteGroups } from './palette-model';
 
@@ -128,5 +128,31 @@ describe('Canvas', () => {
     expect(useDiagram.getState().diagram.nodes).toHaveLength(0);
     await userEvent.keyboard('{Meta>}{Shift>}z{/Shift}{/Meta}');
     expect(useDiagram.getState().diagram.nodes).toHaveLength(1);
+  });
+});
+
+describe('withMeasured (edge-hover T2a)', () => {
+  const two = () => {
+    const s = useDiagram.getState();
+    s.addNode('aws.ec2', { x: 0, y: 0 });
+    s.addNode('aws.rds-postgres', { x: 300, y: 0 });
+    return toFlow(useDiagram.getState().diagram, []).nodes;
+  };
+
+  it('gives a measured node its size back, so React Flow keeps its handles', () => {
+    const [a, b] = two();
+    if (!a || !b) throw new Error('add failed');
+    const out = withMeasured([a, b], new Map([[a.id, { width: 120, height: 64 }]]));
+    expect(out[0]?.measured).toEqual({ width: 120, height: 64 });
+    expect(out[1]).toBe(b);
+  });
+
+  it('leaves every node as it is when nothing was measured yet', () => {
+    const nodes = two();
+    const out = withMeasured(nodes, new Map());
+    expect(out).toHaveLength(2);
+    out.forEach((n, i) => {
+      expect(n).toBe(nodes[i]);
+    });
   });
 });

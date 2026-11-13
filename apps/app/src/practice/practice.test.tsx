@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { inlineBackend } from '../sim/sim-client';
 import { setBackendFactory, useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
+import { EXPANDED, useLayout } from '../workspace/layout-store';
 import { EvaluationPanel } from './EvaluationPanel';
 import { ProblemList, statusOf } from './ProblemList';
 import { ProblemView } from './ProblemView';
@@ -175,6 +176,26 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     const { container } = render(<ProblemView problemId="url-shortener" />);
     await screen.findByText('Encurtador de URL');
     expect(container.querySelector('script')).toBeNull();
+  });
+
+  it('shows the title on the collapsed top strip as text, never as an element (edge-hover FR-10, A05)', async () => {
+    const title = '<script>alert(1)</script> Encurtador';
+    const base = routes(false);
+    mockFetch((url, init) =>
+      url.endsWith('/problems/url-shortener')
+        ? { ...toPublic(loaded.problem), title }
+        : base(url, init),
+    );
+    useLayout.setState({ collapsed: { ...EXPANDED, top: true }, before: null });
+    try {
+      const { container } = render(<ProblemView problemId="url-shortener" />);
+      const strip = await screen.findByText(title, { selector: '.collapsible-top strong' });
+      expect(strip.textContent).toBe(title);
+      expect(container.querySelector('script')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Expandir barra superior' })).not.toBeNull();
+    } finally {
+      useLayout.setState({ collapsed: { ...EXPANDED }, before: null });
+    }
   });
 
   it('finalizes, shows the result, then opens the solution without touching the user diagram', async () => {
