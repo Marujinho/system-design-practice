@@ -1,0 +1,573 @@
+{
+  "catalogVersion": "2026-11-13.1",
+  "services": [
+    {
+      "id": "core.users",
+      "provider": "core",
+      "kind": "entry",
+      "category": "entrada",
+      "label": "Usuários / Internet",
+      "description": "De onde vem a carga: usuários simultâneos × requisições, ou req/s direto.",
+      "errorCode": "none",
+      "validTargetKinds": [
+        "dns",
+        "cdn",
+        "api-gateway",
+        "load-balancer",
+        "waf",
+        "compute",
+        "function",
+        "object-storage"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "label": "Usuários",
+          "capPerUnit": 1000000000000.0,
+          "capSource": "assumption",
+          "baseLatencyMs": 0.001,
+          "prices": [],
+          "limits": []
+        }
+      ],
+      "params": []
+    },
+    {
+      "id": "aws.route53",
+      "provider": "aws",
+      "kind": "dns",
+      "category": "rede",
+      "label": "Route 53",
+      "description": "DNS gerenciado. Só uma fração das requisições gera consulta, por causa do cache de DNS.",
+      "errorCode": "none",
+      "validTargetKinds": [
+        "cdn",
+        "api-gateway",
+        "load-balancer",
+        "waf",
+        "compute",
+        "object-storage"
+      ],
+      "variants": [
+        {
+          "id": "hosted-zone",
+          "label": "Zona hospedada",
+          "capPerUnit": 1000000000000.0,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hostedZone",
+              "label": "Zona hospedada",
+              "amountUsd": 0.5,
+              "per": "unit-month",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/route53/pricing/"
+            },
+            {
+              "id": "queries",
+              "label": "Consultas",
+              "amountUsd": 0.4,
+              "per": "million-requests",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/route53/pricing/"
+            }
+          ],
+          "limits": [
+            {
+              "id": "queryShare",
+              "label": "Fração das requisições que vira consulta DNS (cache de TTL)",
+              "value": 0.01,
+              "unit": "fração",
+              "source": "assumption"
+            }
+          ]
+        }
+      ],
+      "params": []
+    },
+    {
+      "id": "aws.cloudfront",
+      "provider": "aws",
+      "kind": "cdn",
+      "category": "rede",
+      "label": "CloudFront",
+      "description": "CDN. O hit ratio define quanto chega à origem; o miss segue adiante.",
+      "errorCode": "503",
+      "validTargetKinds": [
+        "load-balancer",
+        "api-gateway",
+        "compute",
+        "function",
+        "object-storage",
+        "waf"
+      ],
+      "variants": [
+        {
+          "id": "distribution",
+          "label": "Distribuição",
+          "capPerUnit": 250000,
+          "capSource": "aws-quota",
+          "baseLatencyMs": 10,
+          "prices": [
+            {
+              "id": "dataTransfer",
+              "label": "Transferência para a internet (primeiros 10 TB, EUA)",
+              "amountUsd": 0.085,
+              "per": "gb",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/cloudfront/pricing/"
+            },
+            {
+              "id": "httpsRequests",
+              "label": "Requisições HTTPS (EUA)",
+              "amountUsd": 1.0,
+              "per": "million-requests",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/cloudfront/pricing/"
+            }
+          ],
+          "limits": [],
+          "capSourceUrl": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits.html"
+        }
+      ],
+      "params": [
+        {
+          "key": "hitRatio",
+          "label": "Hit ratio",
+          "unit": "fração",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.8
+        }
+      ]
+    },
+    {
+      "id": "aws.alb",
+      "provider": "aws",
+      "kind": "load-balancer",
+      "category": "rede",
+      "label": "ALB",
+      "description": "Application Load Balancer. Cobra por hora e por LCU.",
+      "errorCode": "503",
+      "validTargetKinds": ["compute", "function"],
+      "variants": [
+        {
+          "id": "alb",
+          "label": "ALB",
+          "capPerUnit": 100000,
+          "capSource": "assumption",
+          "baseLatencyMs": 5,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.0225,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticloadbalancing/pricing/"
+            },
+            {
+              "id": "lcu",
+              "label": "Por LCU-hora",
+              "amountUsd": 0.008,
+              "per": "capacity-unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticloadbalancing/pricing/"
+            }
+          ],
+          "limits": [
+            {
+              "id": "newConnectionsPerLcu",
+              "label": "Conexões novas/s por LCU",
+              "value": 25,
+              "unit": "conexões/s",
+              "source": "aws-quota",
+              "sourceUrl": "https://aws.amazon.com/elasticloadbalancing/pricing/"
+            },
+            {
+              "id": "ruleEvaluationsPerLcu",
+              "label": "Avaliações de regra/s por LCU",
+              "value": 1000,
+              "unit": "avaliações/s",
+              "source": "aws-quota",
+              "sourceUrl": "https://aws.amazon.com/elasticloadbalancing/pricing/"
+            },
+            {
+              "id": "gbPerHourPerLcu",
+              "label": "GB processados por hora por LCU",
+              "value": 1,
+              "unit": "GB/h",
+              "source": "aws-quota",
+              "sourceUrl": "https://aws.amazon.com/elasticloadbalancing/pricing/"
+            },
+            {
+              "id": "newConnectionShare",
+              "label": "Fração das requisições que abre conexão nova (keep-alive)",
+              "value": 0.1,
+              "unit": "fração",
+              "source": "assumption"
+            }
+          ]
+        }
+      ],
+      "params": []
+    },
+    {
+      "id": "aws.ec2",
+      "provider": "aws",
+      "kind": "compute",
+      "category": "computacao",
+      "label": "EC2",
+      "description": "Máquinas virtuais. req/s por instância é premissa: a AWS não publica esse número.",
+      "errorCode": "503",
+      "validTargetKinds": [
+        "sql-database",
+        "kv-database",
+        "cache",
+        "queue",
+        "pubsub",
+        "stream",
+        "object-storage",
+        "search",
+        "nat",
+        "compute",
+        "function",
+        "load-balancer",
+        "api-gateway",
+        "observability"
+      ],
+      "variants": [
+        {
+          "id": "t3.nano",
+          "label": "t3.nano (2 vCPU, 0,5 GiB, baseline 5%)",
+          "capPerUnit": 100,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.0052,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/ec2/pricing/on-demand/"
+            }
+          ],
+          "limits": [],
+          "burst": true
+        },
+        {
+          "id": "t3.micro",
+          "label": "t3.micro (2 vCPU, 1 GiB, baseline 10%)",
+          "capPerUnit": 200,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.0104,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/ec2/pricing/on-demand/"
+            }
+          ],
+          "limits": [],
+          "burst": true
+        },
+        {
+          "id": "t3.small",
+          "label": "t3.small (2 vCPU, 2 GiB, baseline 20%)",
+          "capPerUnit": 300,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.0208,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/ec2/pricing/on-demand/"
+            }
+          ],
+          "limits": [],
+          "burst": true
+        },
+        {
+          "id": "t3.medium",
+          "label": "t3.medium (2 vCPU, 4 GiB, baseline 20%)",
+          "capPerUnit": 500,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.0416,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/ec2/pricing/on-demand/"
+            }
+          ],
+          "limits": [],
+          "burst": true
+        },
+        {
+          "id": "m5.large",
+          "label": "m5.large (2 vCPU, 8 GiB, sem burst)",
+          "capPerUnit": 800,
+          "capSource": "assumption",
+          "baseLatencyMs": 20,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.096,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/ec2/pricing/on-demand/"
+            }
+          ],
+          "limits": [],
+          "burst": false
+        }
+      ],
+      "params": [
+        {
+          "key": "units",
+          "label": "Réplicas",
+          "unit": "",
+          "min": 1,
+          "max": 1000,
+          "step": 1,
+          "default": 1
+        }
+      ]
+    },
+    {
+      "id": "aws.lambda",
+      "provider": "aws",
+      "kind": "function",
+      "category": "computacao",
+      "label": "Lambda",
+      "description": "Funções. Concorrência = req/s × duração; acima da cota, o excedente volta 429.",
+      "errorCode": "429",
+      "validTargetKinds": [
+        "sql-database",
+        "kv-database",
+        "cache",
+        "queue",
+        "pubsub",
+        "stream",
+        "object-storage",
+        "search",
+        "nat",
+        "compute",
+        "function",
+        "load-balancer",
+        "api-gateway",
+        "observability"
+      ],
+      "variants": [
+        {
+          "id": "x86",
+          "label": "x86_64",
+          "capPerUnit": 1000,
+          "capSource": "aws-quota",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "requests",
+              "label": "Requisições",
+              "amountUsd": 0.2,
+              "per": "million-requests",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/lambda/pricing/"
+            },
+            {
+              "id": "compute",
+              "label": "Computação (x86)",
+              "amountUsd": 1.66667e-5,
+              "per": "gb-second",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/lambda/pricing/"
+            }
+          ],
+          "limits": [
+            {
+              "id": "maxPayloadMB",
+              "label": "Payload máximo síncrono",
+              "value": 6,
+              "unit": "MB",
+              "source": "aws-quota",
+              "sourceUrl": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html"
+            },
+            {
+              "id": "maxDurationS",
+              "label": "Duração máxima",
+              "value": 900,
+              "unit": "s",
+              "source": "aws-quota",
+              "sourceUrl": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html"
+            }
+          ],
+          "capSourceUrl": "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html"
+        }
+      ],
+      "params": [
+        {
+          "key": "memoryMB",
+          "label": "Memória",
+          "unit": "MB",
+          "min": 128,
+          "max": 10240,
+          "step": 64,
+          "default": 128
+        },
+        {
+          "key": "durationMs",
+          "label": "Duração média",
+          "unit": "ms",
+          "min": 1,
+          "max": 900000,
+          "step": 1,
+          "default": 100
+        }
+      ]
+    },
+    {
+      "id": "aws.rds-postgres",
+      "provider": "aws",
+      "kind": "sql-database",
+      "category": "dados",
+      "label": "RDS PostgreSQL",
+      "description": "Banco relacional. Escritas no primário; leituras divididas entre as réplicas, se houver.",
+      "errorCode": "503",
+      "validTargetKinds": ["observability"],
+      "variants": [
+        {
+          "id": "db.t4g.micro",
+          "label": "db.t4g.micro (2 vCPU, 1 GiB)",
+          "capPerUnit": 300,
+          "capSource": "assumption",
+          "baseLatencyMs": 5,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.016,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/rds/postgresql/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": true
+        },
+        {
+          "id": "db.t4g.small",
+          "label": "db.t4g.small (2 vCPU, 2 GiB)",
+          "capPerUnit": 600,
+          "capSource": "assumption",
+          "baseLatencyMs": 5,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.032,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/rds/postgresql/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": true
+        },
+        {
+          "id": "db.m7g.large",
+          "label": "db.m7g.large (2 vCPU, 8 GiB)",
+          "capPerUnit": 3000,
+          "capSource": "assumption",
+          "baseLatencyMs": 5,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.168,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/rds/postgresql/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": false
+        }
+      ],
+      "params": [
+        {
+          "key": "readReplicas",
+          "label": "Réplicas de leitura",
+          "unit": "",
+          "min": 0,
+          "max": 15,
+          "step": 1,
+          "default": 0
+        }
+      ]
+    },
+    {
+      "id": "aws.elasticache-valkey",
+      "provider": "aws",
+      "kind": "cache",
+      "category": "cache",
+      "label": "ElastiCache (Valkey)",
+      "description": "Cache em memória. Em linha, só o miss chega ao banco.",
+      "errorCode": "503",
+      "validTargetKinds": ["sql-database", "kv-database", "search", "observability"],
+      "variants": [
+        {
+          "id": "cache.t4g.micro",
+          "label": "cache.t4g.micro (0,5 GiB)",
+          "capPerUnit": 20000,
+          "capSource": "assumption",
+          "baseLatencyMs": 1,
+          "prices": [
+            {
+              "id": "hourly",
+              "label": "Por hora",
+              "amountUsd": 0.0128,
+              "per": "unit-hour",
+              "priceDate": "2026-11-13",
+              "sourceUrl": "https://aws.amazon.com/elasticache/pricing/"
+            }
+          ],
+          "limits": [],
+          "burst": true
+        }
+      ],
+      "params": [
+        {
+          "key": "units",
+          "label": "Nós",
+          "unit": "",
+          "min": 1,
+          "max": 500,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "key": "hitRatio",
+          "label": "Hit ratio",
+          "unit": "fração",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "default": 0.8
+        }
+      ]
+    }
+  ]
+}

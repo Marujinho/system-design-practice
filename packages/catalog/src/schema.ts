@@ -69,6 +69,7 @@ export type Limit = z.infer<typeof Limit>;
 /** What a price is charged per. Handlers report usage in these dimensions. */
 export const PriceUnit = z.enum([
   'unit-hour',
+  'unit-month',
   'million-requests',
   'gb',
   'gb-second',

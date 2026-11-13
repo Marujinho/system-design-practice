@@ -106,6 +106,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
 - **Tests**: o schema aceita um serviço mínimo válido; recusa preço negativo, `capPerUnit` 0, cota sem `sourceUrl`, serviço sem `errorCode`, chave desconhecida e ID sem provider.
 - **Check**: `pnpm --filter @archsim/catalog test` → verde
 - **Depends on**: T1
+- **Done**: `a4bbe86`
+- **Deviation**: validTargets virou validTargetKinds (lista de kinds, não de IDs), para outro provedor não precisar repetir a regra. Price.per usa dimensões genéricas (unit-hour, million-requests, gb, gb-second, capacity-unit-hour), e cada handler informa o uso.
 
 ### T3 — Catálogo: os 8 serviços base
 - **Covers**: FR-4 (parcial), FR-8 (dados), FR-39 (flag `burst`)
