@@ -5,6 +5,8 @@ import {
   type Edge,
   type EdgeProps,
 } from '@xyflow/react';
+import { useEffect, useRef, useState } from 'react';
+import { useDiagram } from '../store/diagram-store';
 
 export interface FlowEdgeData extends Record<string, unknown> {
   warning: string | null;
@@ -17,29 +19,80 @@ export interface FlowEdgeData extends Record<string, unknown> {
 
 export type FlowFlowEdge = Edge<FlowEdgeData, 'flow'>;
 
-/** A connection; an unusual one carries a warning mark with the reason (FR-6). */
+/** How long the remove button outlives the pointer, so it can travel from the line to it. */
+export const HOVER_GRACE_MS = 120;
+
+/**
+ * A connection; an unusual one carries a warning mark with the reason (FR-6).
+ * Hovered or selected, it offers a button that removes just this edge (edge-hover FR-1, FR-2).
+ */
 export function FlowEdge(props: EdgeProps<FlowFlowEdge>) {
   const [path, labelX, labelY] = getBezierPath(props);
   const warning = props.data?.warning ?? null;
   const caption = props.data?.caption ?? '';
+  const [hovered, setHovered] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const enter = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    setHovered(true);
+  };
+  const leave = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      setHovered(false);
+    }, HOVER_GRACE_MS);
+  };
+
+  const showRemove = hovered || props.selected === true;
   return (
     <>
-      <BaseEdge
-        id={props.id}
-        path={path}
-        className={props.selected ? 'flow-edge selected' : 'flow-edge'}
-      />
-      {(warning !== null || caption !== '') && (
+      <g onMouseEnter={enter} onMouseLeave={leave}>
+        <BaseEdge
+          id={props.id}
+          path={path}
+          interactionWidth={20}
+          className={props.selected ? 'flow-edge selected' : 'flow-edge'}
+        />
+      </g>
+      {(warning !== null || caption !== '' || showRemove) && (
         <EdgeLabelRenderer>
           <div
             className="edge-label nodrag nopan"
             style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+            onMouseEnter={enter}
+            onMouseLeave={leave}
           >
             {caption !== '' && <span>{caption}</span>}
             {warning !== null && (
               <span className="edge-warning" role="img" aria-label={warning} title={warning}>
                 !
               </span>
+            )}
+            {showRemove && (
+              <button
+                type="button"
+                className="edge-remove nodrag nopan nokey"
+                aria-label="Remover conexão"
+                title="Remover conexão"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useDiagram.getState().removeEdge(props.id);
+                }}
+              >
+                ×
+              </button>
             )}
           </div>
         </EdgeLabelRenderer>
