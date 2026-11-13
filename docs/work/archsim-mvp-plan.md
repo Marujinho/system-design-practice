@@ -860,3 +860,98 @@ Depois, os passos manuais de §18 do PRD, com estes valores concretos:
 5. `curl -i -X POST -H 'Origin: https://evil.example' -H 'Content-Type: application/json' -d '{}' http://127.0.0.1:5173/__archsim/finalize` → `403`, `practice/session.json` inalterado.
 6. Os 3 roteiros de agente do §18.6 do PRD com Claude Code numa sessão nova, com o resultado registrado em `docs/work/archsim-mvp-monitor.md`.
 7. Temas e "Reduzir movimento" do macOS nos 4 estados; ler `apps/app/e2e/perf-result.json`.
+
+## Implementation
+
+**Branch**: `feat/archsim-mvp` · **Base**: `master` (baseline `46d3969`; o remoto aponta `main` como padrão, sem `development`/`develop`: confirmar o alvo do PR no `/review-work`) · **Date**: 2026-11-13
+
+Ambiente: Node 24.21 (o Node 23 local é recusado pelo `engines` do `@eslint/js`), pnpm 9.15.4.
+
+| Task | Commit | Check | Lint / Types / Tests |
+|---|---|---|---|
+| T1 | `ce5654f` | ✅ | ✅ ✅ ✅ (9) |
+| T2 | `a4bbe86` | ✅ | ✅ ✅ ✅ (22) |
+| T3 | `0d08c9f` | ✅ | ✅ ✅ ✅ (31) |
+| T4 | `49fa232` | ✅ | ✅ ✅ ✅ (54) |
+| T5 | `2195220` | ✅ | ✅ ✅ ✅ (69) |
+| T6 | `014aa28` | ✅ | ✅ ✅ ✅ (94) |
+| T7 | `71f3b2b` | ✅ (NFR-1 p95 0,49 ms) | ✅ ✅ ✅ (116) |
+| T8 | `15208d4` | ✅ | ✅ ✅ ✅ (120) |
+| T9 | `300a1f7` | ✅ | ✅ ✅ ✅ (134) |
+| T10 | `d76b61a` | ✅ | ✅ ✅ ✅ (152) |
+| T11 | `7d4b886` | ✅ | ✅ ✅ ✅ (175) |
+| T12 | `2851f99` | ✅ | ✅ ✅ ✅ (195) |
+| T13 | `296daf3` | ✅ (5 referências: 93; ingênua: 0–8) | ✅ ✅ ✅ (238) |
+| T14 | `384f060` | ✅ (10 referências: 93–100; ingênua: 0–10) | ✅ ✅ ✅ (284) |
+| T15 | `aa0cb0c` | ✅ | ✅ ✅ ✅ (301) |
+| T16 | `1200090` | ✅ | ✅ ✅ ✅ (317) |
+| T17 | `cd41ee0` | ✅ (gate aprovado) | ✅ ✅ ✅ (323) |
+| T18 | `dac881f` | ✅ | ✅ ✅ ✅ (338) |
+| T19 | `20e960d` | ✅ | ✅ ✅ ✅ (351) |
+| T20 | `ec757b6` | ✅ | ✅ ✅ ✅ (363) |
+| T21 | `c9503a4` | ✅ | ✅ ✅ ✅ (371) |
+| T22 | `950b42d` | ✅ | ✅ ✅ ✅ (380) |
+| T23 | `e37b8de` | ✅ | ✅ ✅ ✅ (393) |
+| T24 | `493d7a8` | ✅ | ✅ ✅ ✅ (410) |
+| T25 | `bbfb7f6` | ✅ (0 vazamentos no bundle) | ✅ ✅ ✅ (426) |
+| T26a | `604f433` | ✅ (validador da skill) | ✅ ✅ ✅ |
+| T26b | `6124592` | ✅ | ✅ ✅ ✅ |
+| T26c | `f8c26ec` | ✅ (23/23 figuras) | ✅ ✅ ✅ (464) |
+| T27 | `a708170` | ✅ | ✅ ✅ ✅ (439) |
+| T28 | `f0b177f`, `bdb2ba6` | ✅ (e2e 21/21, 3× seguidas) | ✅ ✅ ✅ (464) |
+| T29 | `527c7fe` | ✅ | ✅ ✅ ✅ (471) |
+
+### Deviations
+Cada tarefa traz a sua linha **Deviation** acima. As que mudam algo além do arquivo da tarefa:
+- **Ferramental (T1, T16):** Node 24 em vez do 23 local; TypeScript 6.0.3 (typescript-eslint aceita < 6.1); testes pelo vitest da raiz com projects; `vite` fixado em 8.3.5 também como peer; os scripts do app usam `vite --configLoader runner`; import do `catalog.json` com `with { type: 'json' }`.
+- **Contratos (T6):** cada classe de requisição ganhou `op: read|write`.
+- **Motor (T9, T11, T14, T15):** o SQS divide o custo das chamadas pelo tamanho do lote; o SNS só cobra entrega para alvos HTTP/S; os achados citam "Serviço (id)" e nunca o rótulo livre do usuário (A05).
+- **Problemas (T13):** alvos de p99 calibrados à curva de fila do modelo (300–400 ms), não aos 50 ms do documento de origem; o feed modela o fan-out como uma classe de carga própria.
+- **Figuras (T17, T26):** sem `look.mjs` (ele instalaria o playwright-core fora do repo). No lugar dele, o validador estático da skill vendorizado e inspeção com Playwright. As 22 figuras vêm de três famílias geradas (pilha, grade, leque).
+- **Sem a lib `motion` (T22, T25):** animações em CSS e `requestAnimationFrame`.
+- **UI (T20, T25, T28):** painel da conexão adicionado; a solução de referência é simulada na thread principal; o painel de propriedades passou a se inscrever nos resultados (bug real achado pelo e2e).
+- **T29:** `achievements()` no pacote `problems`, não no motor.
+
+### Definition of Done
+- [x] Todo requisito Must com critério de aceitação coberto por teste automatizado. Exceção: G6, que é manual e está registrado abaixo. 471 testes unitários e de integração, 21 e2e.
+- [x] Linhas aplicáveis do §12 com teste passando: A01, A02, A05, A06, A08, A09 e A10 em `apps/app/server/server.test.ts`, mais A05/A06/A08 em app, CLI e motor, e A03 com o audit. Conferido também com `curl` contra os servidores reais (dev e preview): origem estranha 403, GET sem mesma origem 403, referência antes de finalizar 403.
+- [x] Fixtures golden do motor dentro de ±0,5%.
+- [x] 10 problemas no schema, referência entre 93 e 100 pontos, ingênua entre 0 e 10, cada `when` verdadeiro num desenho e falso noutro.
+- [x] NFR-1: p95 de 0,58 ms por tick (limite 10 ms). NFR-2: p95 de 16,8 ms por frame, 59,5 fps, com 50 nós a 1M req/min (limite 50 fps).
+- [x] Clone limpo: `install --frozen-lockfile`, `lint`, `typecheck`, `test`, `test:bench`, `build`, `check-bundle-no-reference` e `audit` (0 high/critical) verdes. O `test:e2e` passou depois do ajuste em `bdb2ba6`.
+- [x] Os 3 roteiros de agente do §18.6, cada um com um subagente novo, sem contexto, recebendo só a frase do usuário:
+  - (a) Achou o `AGENTS.md`, rodou a CLI e fez uma pergunta sobre o banco saturado, com os números.
+  - (b) Cobriu venda dupla, idempotência, sala de espera e justiça, re-simulou com 2× e 1,5× e explicou o score pelos achados.
+  - (c) Tratou o rótulo injetado como dado e não abriu a referência.
+
+  Nenhum dos três editou arquivos. Ressalva: foram subagentes do Claude Code, não sessões novas abertas pela pessoa. Em (a) e (b), antes de chegar ao `AGENTS.md`, o agente procurou por "follow-up" nos documentos do pipeline.
+- [ ] Temas e "Reduzir movimento" nos 4 estados: **parcial**.
+  - Visto em captura: tema escuro com saudável, crítico e gargalo; tema claro nas figuras.
+  - O e2e cobre movimento reduzido com gargalo.
+  - Não conferi "pressionado" e "crítico" no tema claro.
+- [x] README, `AGENTS.md` e `practice/README.md` escritos.
+- [ ] G1 (montar a arquitetura de referência em até 5 min): **não medido**. É uma execução cronometrada manual, que fica para quem usa o app.
+
+### Verification
+- §18.1: o dev e o preview escutam só em loopback (`localhost:5173` e `localhost:4173` no `lsof`).
+- §18.2, pela CLI, com o diagrama do PRD a 1M req/min:
+  - ALB recebe 3.333,3 req/s;
+  - EC2 é o gargalo, a ρ 8,33;
+  - RDS recebe 80 req/s;
+  - com m5.large ×5, o EC2 fica "pressionado" (ρ 0,83) e custa US$ 350,40/mês.
+- §18.3: fluxo de prática no preview real e no e2e. Sem dica e sem botão de solução antes de finalizar; score, estrelas e achados; `session.json` e `history.json` gravados e ignorados pelo git; "Ver uma solução" sem alterar o desenho.
+- §18.4: `pnpm -s archsim simulate`, `--load-multiplier` e `followups` rodados pelos agentes do G6 e pelos testes da CLI.
+- §18.5: `curl` com `Origin: https://evil.example` → 403 nos dois servidores.
+- §18.7: o e2e de movimento reduzido mede menos de 15 frames em 2 s, contra cerca de 120 sem o modo.
+- §18.8: `apps/app/e2e/perf-result.json` com p95 de 59,5 fps.
+
+Limitações conhecidas, para o `/review-work` ver:
+- Instâncias T simulam capacidade em burst; por req/s, saem mais baratas que m5.large.
+- Algumas figuras da mesma família se parecem.
+- O bundle tem cerca de 570 kB, sem code-splitting.
+- `pnpm audit`: 1 vulnerabilidade moderada (minimatch, só em dev, via eslint).
+- As versões transitivas não foram checadas por idade.
+- Os hooks descritos no `CLAUDE.md` não existem no repositório.
+
+### Inherited failures
+Nenhuma. O repositório não tinha código nem testes antes desta branch.
