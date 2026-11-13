@@ -10,11 +10,11 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useCallback, useEffect, useMemo, type DragEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from 'react';
 import { useDiagram } from '../store/diagram-store';
 import { protocolFor } from './connection-rules';
 import { FlowEdge, type FlowFlowEdge } from './FlowEdge';
-import { toFlow } from './flow-model';
+import { toFlow, withMeasured } from './flow-model';
 import { DRAG_TYPE } from './palette-model';
 import { ServiceNode, type ServiceFlowNode } from './ServiceNode';
 
@@ -41,7 +41,12 @@ function CanvasInner({ decorate, decorateEdges, overlay, onReady }: CanvasProps)
   const selection = useDiagram((s) => s.selection);
   const flow = useReactFlow();
   const { nodes, edges } = useMemo(() => toFlow(diagram, selection), [diagram, selection]);
-  const shown = useMemo(() => (decorate ? decorate(nodes) : nodes), [decorate, nodes]);
+  // Sizes React Flow measured: without them every simulation tick remounts all edges.
+  const sizes = useRef(new Map<string, { width: number; height: number }>());
+  const shown = useMemo(
+    () => withMeasured(decorate ? decorate(nodes) : nodes, sizes.current),
+    [decorate, nodes],
+  );
   const shownEdges = useMemo(
     () => (decorateEdges ? decorateEdges(edges) : edges),
     [decorateEdges, edges],
@@ -79,6 +84,7 @@ function CanvasInner({ decorate, decorateEdges, overlay, onReady }: CanvasProps)
     let dragging = false;
     let moved = false;
     for (const c of changes) {
+      if (c.type === 'dimensions' && c.dimensions) sizes.current.set(c.id, c.dimensions);
       if (c.type === 'position' && c.position) {
         positions[c.id] = c.position;
         dragging = dragging || c.dragging === true;

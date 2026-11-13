@@ -3,6 +3,19 @@ import type { FlowFlowEdge } from './FlowEdge';
 import type { ServiceFlowNode } from './ServiceNode';
 import { edgeWarning } from './connection-rules';
 
+export type NodeSizes = ReadonlyMap<string, { width: number; height: number }>;
+
+/**
+ * Hand React Flow back the sizes it measured. A node without `measured` is treated as new:
+ * React Flow drops its handles and every edge on it unmounts until the node is measured again.
+ */
+export function withMeasured(nodes: ServiceFlowNode[], sizes: NodeSizes): ServiceFlowNode[] {
+  return nodes.map((n) => {
+    const m = sizes.get(n.id);
+    return m ? { ...n, measured: m } : n;
+  });
+}
+
 /** The store's diagram as React Flow nodes and edges. */
 export function toFlow(
   diagram: Diagram,

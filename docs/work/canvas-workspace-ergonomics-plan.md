@@ -65,6 +65,15 @@
 - **Check**: `pnpm vitest run apps/app/src/canvas` → verde; `pnpm lint`; `pnpm typecheck`
 - **Depends on**: T1
 
+### T2a — Preservar o tamanho medido dos nós (adicionada na implementação, aprovada pelo usuário em 2026-11-13)
+- **Covers**: FR-1, FR-2, FR-5 (estabilidade), NFR-1
+- **Why**: no e2e do T3, o "×" sumia e o clique se perdia. A causa: a cada tick da simulação o `decorate` cria nós novos sem `measured`, porque `onNodesChange` ignorava `dimensions` (`Canvas.tsx:76`). O React Flow então zera os handles (`@xyflow/system` `parseHandles`, `index.mjs:1639-1641`; `adoptUserNodes`, `1692-1699`), e todas as conexões ficam um frame sem posição e são desmontadas e remontadas a cada 100 ms. Esse bug já existia antes desta mudança.
+- **Files**: `apps/app/src/canvas/flow-model.ts` (edit), `apps/app/src/canvas/Canvas.tsx` (edit), `apps/app/src/canvas/canvas.test.tsx` (edit)
+- **Do**: `withMeasured(nodes, sizes)` em `flow-model.ts`. O `Canvas` guarda as `dimensions` de `onNodesChange` num `useRef<Map>` e aplica `withMeasured` aos nós mostrados.
+- **Tests**: `withMeasured` com e sem medidas. No e2e do T3, nenhuma conexão é desmontada em 1 s de simulação.
+- **Check**: `pnpm test`; `pnpm test:e2e` (incluindo `perf.spec.ts`)
+- **Depends on**: T1
+
 ### T3 — e2e da Parte A
 - **Covers**: G1, G2, G3, FR-1, FR-2, FR-3, FR-5, risco de z-index, NFR-2
 - **Files**: `apps/app/e2e/edge-remove.spec.ts` (new)
