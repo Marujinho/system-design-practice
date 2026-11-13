@@ -24,6 +24,7 @@ const edgeTypes = { flow: FlowEdge };
 export interface CanvasProps {
   /** Decorates nodes with live status (visualization layer). */
   decorate?: (nodes: ServiceFlowNode[]) => ServiceFlowNode[];
+  decorateEdges?: (edges: FlowFlowEdge[]) => FlowFlowEdge[];
   overlay?: ReactNode;
   onReady?: (api: { centre: () => { x: number; y: number } }) => void;
 }
@@ -35,12 +36,16 @@ function isTyping(target: EventTarget | null): boolean {
   );
 }
 
-function CanvasInner({ decorate, overlay, onReady }: CanvasProps) {
+function CanvasInner({ decorate, decorateEdges, overlay, onReady }: CanvasProps) {
   const diagram = useDiagram((s) => s.diagram);
   const selection = useDiagram((s) => s.selection);
   const flow = useReactFlow();
   const { nodes, edges } = useMemo(() => toFlow(diagram, selection), [diagram, selection]);
   const shown = useMemo(() => (decorate ? decorate(nodes) : nodes), [decorate, nodes]);
+  const shownEdges = useMemo(
+    () => (decorateEdges ? decorateEdges(edges) : edges),
+    [decorateEdges, edges],
+  );
 
   useEffect(() => {
     onReady?.({
@@ -137,7 +142,7 @@ function CanvasInner({ decorate, overlay, onReady }: CanvasProps) {
     >
       <ReactFlow
         nodes={shown}
-        edges={edges}
+        edges={shownEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}

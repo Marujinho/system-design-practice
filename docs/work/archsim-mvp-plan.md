@@ -552,6 +552,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - Painel travado no modo problema.
 - **Check**: `pnpm --filter @archsim/app test sim` → verde
 - **Depends on**: T20, T10
+- **Done**: `c9503a4`
+- **Deviation**: O estado da simulação vive num store próprio (sim/sim-store.ts) com backend trocável: Worker (Comlink) no app, loop em processo (sim/loop.ts compartilhado) nos testes do jsdom, que não tem Worker. O gancho de falha é o método crash() do worker, que só age com import.meta.env.MODE === 'test'. Capacidade e custo no painel passam a vir da simulação ao vivo quando ela existe. Conferido no preview com CSP estrita: o worker carrega, sem erros no console.
 
 ### T22 — Visualização: estados, barra global, partículas, movimento reduzido
 - **Covers**: FR-26, FR-27 (UI), FR-29, FR-30, FR-31, NFR-2, NFR-6

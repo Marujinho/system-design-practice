@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { Canvas, type CanvasProps } from '../canvas/Canvas';
+import { Canvas } from '../canvas/Canvas';
 import { Palette } from '../canvas/Palette';
 import { useSimulation } from '../sim/useSimulation';
 import { createAutosave, loadSaved } from '../store/autosave';
+import { useDecorations } from '../viz/decorate';
+import { GlobalBar } from '../viz/GlobalBar';
+import { ParticleLayer } from '../viz/ParticleLayer';
+import { useReducedMotion } from '../viz/useReducedMotion';
 import { emptyDiagram } from '../store/defaults';
 import { useDiagram, type Mode } from '../store/diagram-store';
 
@@ -29,11 +33,10 @@ export interface WorkspaceProps {
   initial?: () => ReturnType<typeof emptyDiagram>;
   side?: ReactNode;
   top?: ReactNode;
-  canvas?: Pick<CanvasProps, 'decorate' | 'overlay'>;
 }
 
 /** Palette, canvas and side panel around the diagram store, with autosave per mode. */
-export function Workspace({ mode, initial, side, top, canvas }: WorkspaceProps) {
+export function Workspace({ mode, initial, side, top }: WorkspaceProps) {
   const centre = useRef<() => { x: number; y: number }>(() => ({ x: 0, y: 0 }));
   const modeKey = mode.kind === 'free' ? 'free' : mode.problemId;
 
@@ -51,6 +54,8 @@ export function Workspace({ mode, initial, side, top, canvas }: WorkspaceProps) 
   }, [modeKey]);
 
   useSimulation();
+  const reduced = useReducedMotion();
+  const decorations = useDecorations(reduced);
 
   const onReady = useCallback((api: { centre: () => { x: number; y: number } }) => {
     centre.current = api.centre;
@@ -74,7 +79,17 @@ export function Workspace({ mode, initial, side, top, canvas }: WorkspaceProps) 
             );
           }}
         />
-        <Canvas {...canvas} onReady={onReady} />
+        <Canvas
+          decorate={decorations.nodes}
+          decorateEdges={decorations.edges}
+          onReady={onReady}
+          overlay={
+            <>
+              <ParticleLayer enabled={!reduced} />
+              <GlobalBar />
+            </>
+          }
+        />
         <div className="side-panel">{side}</div>
       </div>
       {notice && (

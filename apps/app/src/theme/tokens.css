@@ -87,8 +87,13 @@ select {
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100%;
+}
+
+.app-shell > main {
+  min-height: 0;
+  overflow: auto;
 }
 
 .app-header {

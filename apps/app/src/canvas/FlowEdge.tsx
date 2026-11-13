@@ -9,6 +9,10 @@ import {
 export interface FlowEdgeData extends Record<string, unknown> {
   warning: string | null;
   caption: string;
+  /** Stroke width: grows with traffic in the reduced-motion view. */
+  stroke?: number;
+  /** Errors flow back along this edge. */
+  errors?: boolean;
 }
 
 export type FlowFlowEdge = Edge<FlowEdgeData, 'flow'>;
