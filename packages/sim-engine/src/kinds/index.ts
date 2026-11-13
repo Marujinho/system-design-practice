@@ -17,7 +17,7 @@ import { stream } from './stream';
 import type { KindHandler } from './types';
 
 export type { KindHandler, NodeContext, NodeOutput, NodeState } from './types';
-export { makeContext } from './context';
+export { makeContext, readParam, readValue } from './context';
 
 /** Behaviour by kind, never by service id (NFR-11). Total: a kind without a handler does not compile. */
 export const handlers: Record<Kind, KindHandler> = {

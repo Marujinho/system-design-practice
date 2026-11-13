@@ -1,4 +1,6 @@
 import './canvas/canvas.css';
+import { PropertiesPanel } from './panels/PropertiesPanel';
+import './panels/panels.css';
 import { hrefOf, type Route } from './routes';
 import { ThemeToggle } from './theme/ThemeToggle';
 import { useRoute } from './useRoute';
@@ -40,7 +42,7 @@ export function Screen({ route }: { route: Route }) {
     case 'home':
       return <Home />;
     case 'free':
-      return <Workspace mode={{ kind: 'free' }} />;
+      return <Workspace mode={{ kind: 'free' }} side={<PropertiesPanel />} />;
     default:
       return <NotFound />;
   }

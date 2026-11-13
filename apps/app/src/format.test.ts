@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMs, formatNumber, formatPct, formatRps, formatUsd } from './format';
+import { formatCompact, formatMs, formatNumber, formatPct, formatRps, formatUsd } from './format';
 
 describe('pt-BR formatting (NFR-8)', () => {
   it('formats money', () => {
@@ -25,5 +25,11 @@ describe('pt-BR formatting (NFR-8)', () => {
 
   it('formats plain numbers', () => {
     expect(formatNumber(1_000_000)).toBe('1.000.000');
+  });
+
+  it('formats compact numbers without forced decimals', () => {
+    expect(formatCompact(1)).toBe('1');
+    expect(formatCompact(0.01)).toBe('0,01');
+    expect(formatCompact(1000)).toBe('1.000');
   });
 });

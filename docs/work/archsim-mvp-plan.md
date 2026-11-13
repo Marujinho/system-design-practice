@@ -510,6 +510,8 @@ Repositório greenfield: nenhum arquivo existe ainda. Estes são os que decidem 
   - S3 → RDS mostra aviso e não bloqueia.
 - **Check**: `pnpm --filter @archsim/app test canvas` → verde
 - **Depends on**: T17, T18
+- **Done**: `20e960d`
+- **Deviation**: Arquivos extras: canvas/{palette-model,flow-model}.ts, canvas/canvas.css e workspace/Workspace.tsx (paleta + canvas + painel lateral, autosave por modo), que liga a rota #/free. Clique e Enter na paleta adicionam o nó no centro da viewport, em cascata de 40 px se o lugar estiver ocupado. Conferido no navegador (preview): nós adicionados pela paleta, sem erros no console. O bundle passa de 500 kB (React Flow + motor); não fiz code-splitting.
 
 ### T20 — Painel de propriedades
 - **Covers**: FR-7, FR-8 (UI), FR-39

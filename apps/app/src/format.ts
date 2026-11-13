@@ -28,3 +28,8 @@ export function formatPct(fraction: number, digits = 1): string {
 export function formatNumber(value: number, digits = 0): string {
   return fixed(value, digits);
 }
+
+/** Up to `digits` decimals, none when not needed: 1 · 0,01 · 1.000 */
+export function formatCompact(value: number, digits = 2): string {
+  return value.toLocaleString(pt, { maximumFractionDigits: digits });
+}

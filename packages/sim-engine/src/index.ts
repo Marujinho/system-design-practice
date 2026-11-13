@@ -7,5 +7,6 @@ export * from './requirements';
 export * from './score';
 export * from './simulate';
 export * from './state';
+export * from './statics';
 export * from './step';
 export * from './warnings';
