@@ -36,5 +36,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ problemId, diagram }),
     }),
+  /** Study mode: the same answer as finalize, recorded nowhere (study-mode FR-9). */
+  studyScore: (problemId: string, diagram: Diagram) =>
+    call(FinalizeResponse, 'study-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ problemId, diagram }),
+    }),
   reference: (id: string) => call(Diagram, `reference/${encodeURIComponent(id)}`),
 };

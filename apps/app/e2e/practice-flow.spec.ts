@@ -36,7 +36,7 @@ test('practice: statement only, finalize, score, record, session, solution', asy
   );
 
   await page.goto('/#/problems');
-  await page.getByRole('link', { name: new RegExp(plan.title) }).click();
+  await page.getByRole('link', { name: new RegExp(`^${plan.title}`) }).click();
   await expect(page.getByRole('heading', { name: plan.title })).toBeVisible();
   await expect(page.getByText('Carga definida pelo problema.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Ver uma solução' })).toHaveCount(0);

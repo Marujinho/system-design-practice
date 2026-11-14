@@ -34,10 +34,14 @@ export function ResultScreen({
   result,
   onClose,
   onSolution,
+  study = false,
 }: {
   result: FinalizeResponse;
   onClose: () => void;
-  onSolution: () => void;
+  /** Absent in study mode, where the mentor already discusses the reference. */
+  onSolution?: () => void;
+  /** Study mode: the score is shown but recorded nowhere (study-mode FR-9). */
+  study?: boolean;
 }) {
   const reduced = useReducedMotion();
   const shown = useCountUp(result.score.total, reduced);
@@ -54,7 +58,8 @@ export function ResultScreen({
           <p className="stars" aria-label={`${s.stars} de 3 estrelas`}>
             {starsText(s.stars)}
           </p>
-          {result.isRecord && <p className="record">novo recorde</p>}
+          {study && <p className="record study">estudo · não registrado</p>}
+          {!study && result.isRecord && <p className="record">novo recorde</p>}
           {s.belowReference && <p className="badge changed">abaixo da referência</p>}
           {s.solutionSeen && (
             <p className="muted">Solução já vista: esta tentativa não conta para o recorde.</p>
@@ -116,15 +121,17 @@ export function ResultScreen({
           </section>
         )}
 
-        <AgentHint />
+        {!study && <AgentHint />}
 
         <footer className="result-actions">
           <button type="button" className="button primary" onClick={onClose}>
             Continuar ajustando
           </button>
-          <button type="button" className="button" onClick={onSolution}>
-            Ver uma solução
-          </button>
+          {!study && onSolution && (
+            <button type="button" className="button" onClick={onSolution}>
+              Ver uma solução
+            </button>
+          )}
         </footer>
       </div>
     </div>

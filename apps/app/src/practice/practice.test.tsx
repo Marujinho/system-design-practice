@@ -20,6 +20,7 @@ import { EvaluationPanel } from './EvaluationPanel';
 import { ProblemList, statusOf } from './ProblemList';
 import { ProblemView } from './ProblemView';
 import { ResultScreen } from './ResultScreen';
+import { StudyView } from './StudyView';
 
 const loaded = (() => {
   const r = loadProblem(join(PROBLEMS_DIR, 'url-shortener'));
@@ -124,7 +125,7 @@ describe('ProblemList (FR-43)', () => {
       url.endsWith('/problems') ? [summary({ attempts: 3, record: 85, stars: 2 })] : undefined,
     );
     render(<ProblemList />);
-    const card = await screen.findByRole('link', { name: /Encurtador de URL/ });
+    const card = await screen.findByRole('link', { name: /^Encurtador de URL/ });
     expect(within(card).getByText('fácil')).toBeTruthy();
     expect(within(card).getByText('finalizado')).toBeTruthy();
     expect(within(card).getByText(/recorde 85/)).toBeTruthy();
@@ -317,5 +318,40 @@ describe('ResultScreen (FR-58)', () => {
     expect(
       screen.getByText('pnpm -s archsim simulate --session practice/session.json'),
     ).toBeTruthy();
+  });
+});
+
+describe('study mode (study-mode FR-1, FR-9)', () => {
+  it('offers "Estudar" next to each problem', async () => {
+    mockFetch((url) => (url.endsWith('/problems') ? [summary()] : undefined));
+    render(<ProblemList />);
+    const study = await screen.findByRole('link', {
+      name: 'Estudar Encurtador de URL com o mentor',
+    });
+    expect(study).toHaveAttribute('href', '#/problems/url-shortener/study');
+  });
+
+  it('shows the badge, scores through study-score and records nothing', async () => {
+    const calls: string[] = [];
+    mockFetch((url, init) => {
+      calls.push(url);
+      if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem);
+      if (url.endsWith('/study-score') && init?.method === 'POST')
+        return finalizeAnswer({ isRecord: false });
+      return undefined;
+    });
+    render(<StudyView problemId="url-shortener" />);
+    expect((await screen.findAllByText('Modo estudo')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('note').textContent).toContain('não conta para a nota');
+    expect(useDiagram.getState().mode).toEqual({ kind: 'study', problemId: 'url-shortener' });
+    await userEvent.click(screen.getByRole('button', { name: 'Finalizar e pontuar' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('estudo · não registrado')).toBeTruthy();
+    expect(within(dialog).queryByText('novo recorde')).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Ver uma solução' })).toBeNull();
+    expect(within(dialog).queryByText(/Peça ao seu agente/)).toBeNull();
+    expect(calls.some((u) => u.endsWith('/study-score'))).toBe(true);
+    expect(calls.some((u) => u.endsWith('/finalize'))).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Ver uma solução' })).toBeNull();
   });
 });

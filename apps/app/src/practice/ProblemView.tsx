@@ -17,7 +17,7 @@ import { SolutionView } from './SolutionView';
 /** Markdown without raw HTML, images or anything that loads (PRD §12 A05). */
 const ALLOWED = ['p', 'strong', 'em', 'code', 'ul', 'ol', 'li', 'br'];
 
-function Brief({ problem }: { problem: PublicProblem }) {
+export function Brief({ problem }: { problem: PublicProblem }) {
   const [open, setOpen] = useState(true);
   return (
     <section className="brief" aria-label="Enunciado">
