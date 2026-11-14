@@ -229,6 +229,9 @@ export function createPracticeHandler(options: PracticeOptions) {
         case 'chat':
           await mentor.chat(req, res);
           return;
+        case 'proposal':
+          await mentor.proposalStatus(req, res);
+          return;
         case 'reference':
           reference(req, res, parts[1]);
           return;

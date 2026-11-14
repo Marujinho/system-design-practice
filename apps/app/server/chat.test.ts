@@ -330,6 +330,163 @@ describe('review fixes: clearing mid-reply, thinking, very long replies', () => 
   });
 });
 
+describe('proposals (mentor-edits FR-1, FR-6, FR-9, A01, A08, A09, A10)', () => {
+  async function restart(providers: MentorProvider[]) {
+    await new Promise<void>((done) => {
+      server.close(() => {
+        done();
+      });
+      server.closeAllConnections();
+    });
+    await start(providers);
+  }
+  const proposer = (input: unknown): MentorProvider => ({
+    id: 'api',
+    available: () => Promise.resolve(true),
+    async *stream() {
+      await Promise.resolve();
+      yield { type: 'delta', text: 'Proponho. ' };
+      yield { type: 'proposal', input };
+    },
+  });
+  const status = (proposalId: string, s: string, headers: Record<string, string> = {}) =>
+    call('POST', '/__archsim/proposal', {
+      body: JSON.stringify({ problemId: 'url-shortener', proposalId, status: s }),
+      headers,
+    });
+
+  it('validates a proposal against the diagram the mentor saw and sends it with real ids', async () => {
+    const r = await call('POST', '/__archsim/chat', { body: chatBody('proponha:ec2') });
+    const ev = events(r.body);
+    const p = ev.find((e) => e.type === 'proposal');
+    if (p?.type !== 'proposal') throw new Error('sem proposta');
+    expect(p.proposal.status).toBe('pending');
+    expect(p.proposal.ops).toEqual([
+      { op: 'add', ref: 'novo1', service: 'aws.ec2', label: 'API' },
+      { op: 'connect', from: 'users', to: 'novo1' },
+    ]);
+    expect(saved().messages[1]).toMatchObject({ role: 'mentor', proposal: { id: p.proposal.id } });
+    expect(logs.find((l) => l.includes('mentor problema='))).toMatch(/propostas=1 rejeitadas=0$/);
+    expect(logs.join('\n')).not.toContain('API atrás dos Usuários');
+  });
+
+  it('rejects a proposal the simulator would not accept, and keeps the text', async () => {
+    const r = await call('POST', '/__archsim/chat', { body: chatBody('proponha:invalida') });
+    const ev = events(r.body);
+    expect(ev.find((e) => e.type === 'proposal_rejected')).toMatchObject({
+      reason: expect.stringContaining('serviço desconhecido') as unknown,
+    });
+    expect(ev.some((e) => e.type === 'proposal')).toBe(false);
+    expect(saved().messages[1]).not.toHaveProperty('proposal');
+    expect(logs.find((l) => l.includes('mentor problema='))).toMatch(/propostas=0 rejeitadas=1$/);
+  });
+
+  it('never takes an id the mentor did not see, nor a real one it guessed', async () => {
+    for (const node of ['users', 'n99', 'app']) {
+      await restart([proposer({ summary: 's', ops: [{ op: 'rename', node, label: 'X' }] })]);
+      const ev = events((await call('POST', '/__archsim/chat', { body: chatBody('oi') })).body);
+      expect(
+        ev.some((e) => e.type === 'proposal_rejected'),
+        node,
+      ).toBe(true);
+    }
+    await restart([proposer({ summary: 's', ops: [{ op: 'set_load', rps: 9 }] })]);
+    const ev = events((await call('POST', '/__archsim/chat', { body: chatBody('oi') })).body);
+    expect(ev.find((e) => e.type === 'proposal_rejected')).toMatchObject({
+      reason: 'a proposta não segue o formato esperado',
+    });
+  });
+
+  it('drops the proposal of an interrupted reply', async () => {
+    const slow: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream(_i, signal) {
+        yield { type: 'delta', text: 'Proponho. ' };
+        yield {
+          type: 'proposal',
+          input: { summary: 's', ops: [{ op: 'set_prop', node: 'n3', key: 'units', value: 2 }] },
+        };
+        await new Promise<void>((resolve) => {
+          signal.addEventListener('abort', () => {
+            resolve();
+          });
+        });
+      },
+    };
+    await restart([slow]);
+    await new Promise<void>((resolve) => {
+      const req = request(
+        {
+          host: '127.0.0.1',
+          port,
+          method: 'POST',
+          path: '/__archsim/chat',
+          headers: {
+            host: `127.0.0.1:${String(port)}`,
+            origin: `http://127.0.0.1:${String(port)}`,
+            'content-type': 'application/json',
+          },
+        },
+        (res) => {
+          let seen = '';
+          res.on('data', (c: Buffer) => {
+            seen += c.toString();
+            if (seen.includes('event: proposal')) {
+              req.destroy();
+              resolve();
+            }
+          });
+        },
+      );
+      req.on('error', () => undefined);
+      req.end(chatBody('oi'));
+    });
+    await vi.waitFor(() => {
+      expect(existsSync(join(dir, 'mentor-url-shortener.json'))).toBe(true);
+    });
+    expect(saved().messages[1]).toMatchObject({ interrupted: true });
+    expect(saved().messages[1]).not.toHaveProperty('proposal');
+  });
+
+  it('keeps the status the person chose, with the allowed transitions only', async () => {
+    const ev = events(
+      (await call('POST', '/__archsim/chat', { body: chatBody('proponha:ec2') })).body,
+    );
+    const p = ev.find((e) => e.type === 'proposal');
+    if (p?.type !== 'proposal') throw new Error('sem proposta');
+    const id = p.proposal.id;
+    expect((await status(id, 'applied')).status).toBe(200);
+    expect(saved().messages[1]).toMatchObject({ proposal: { status: 'applied' } });
+    expect((await status(id, 'discarded')).status).toBe(409);
+    expect((await status(id, 'pending')).status).toBe(200);
+    expect((await status(id, 'discarded')).status).toBe(200);
+    expect((await status(id, 'applied')).status).toBe(409);
+    expect((await status('0b6c1f9e-6b1a-4a5f-9a7e-0c2b1d3e4f50', 'applied')).status).toBe(404);
+  });
+
+  it('refuses a status change from another origin or without Origin (A01)', async () => {
+    const ev = events(
+      (await call('POST', '/__archsim/chat', { body: chatBody('proponha:ec2') })).body,
+    );
+    const p = ev.find((e) => e.type === 'proposal');
+    if (p?.type !== 'proposal') throw new Error('sem proposta');
+    expect(
+      (await status(p.proposal.id, 'applied', { origin: 'https://evil.example' })).status,
+    ).toBe(403);
+    const noOrigin = await call('POST', '/__archsim/proposal', {
+      body: JSON.stringify({
+        problemId: 'url-shortener',
+        proposalId: p.proposal.id,
+        status: 'applied',
+      }),
+      omitOrigin: true,
+    });
+    expect(noOrigin.status).toBe(403);
+    expect(saved().messages[1]).toMatchObject({ proposal: { status: 'pending' } });
+  });
+});
+
 describe('A10: stop, disconnect, time out', () => {
   it('aborts the provider when the browser goes away and keeps what was said, marked interrupted', async () => {
     let signal: AbortSignal | undefined;
@@ -407,7 +564,7 @@ describe('A09 / A04: what the log and the disk keep', () => {
     await call('POST', '/__archsim/chat', { body: chatBody(question) });
     const line = logs.find((l) => l.includes('mentor problema='));
     expect(line).toMatch(
-      /^\[archsim\] mentor problema=url-shortener provedor=api status=ok ttft_ms=\d+ in=1200 out=30$/,
+      /^\[archsim\] mentor problema=url-shortener provedor=api status=ok ttft_ms=\d+ in=1200 out=30 propostas=0 rejeitadas=0$/,
     );
     expect(logs.join('\n')).not.toContain(question);
     expect(logs.join('\n')).not.toContain('Olhando o desenho');
