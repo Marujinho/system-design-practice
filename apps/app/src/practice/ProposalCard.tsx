@@ -1,7 +1,7 @@
 import { catalog } from '@archsim/catalog';
 import type { Proposal, ProposalStatus } from '@archsim/problems';
 import type { Diagram } from '@archsim/sim-engine';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDiagram } from '../store/diagram-store';
 import { applyProposal, describeOp, proposalNodeId } from '../store/proposal';
 import { ApiError } from './api';
@@ -31,6 +31,7 @@ export function ProposalCard({
 }) {
   const diagram = useDiagram((s) => s.diagram);
   const [applied, setApplied] = useState<Diagram | null>(null);
+  const [before, setBefore] = useState<Diagram | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
   const setStatus = (status: ProposalStatus) => {
@@ -53,6 +54,7 @@ export function ProposalCard({
       setNote(r.code === 'missing' ? STALE : `Não dá para aplicar: ${r.message}`);
       return;
     }
+    setBefore(useDiagram.getState().diagram);
     useDiagram.getState().replaceDiagram(r.diagram);
     setApplied(r.diagram);
     setNote('Proposta aplicada. Ctrl+Z desfaz.');
@@ -61,10 +63,18 @@ export function ProposalCard({
 
   const undo = () => {
     useDiagram.getState().undo();
+  };
+
+  // Back to exactly the diagram before Aplicar — by Desfazer or by Ctrl+Z — the
+  // proposal is pending again and can be applied once more (FR-8).
+  useEffect(() => {
+    if (proposal.status !== 'applied' || before === null || diagram !== before) return;
     setApplied(null);
+    setBefore(null);
     setNote('Proposta desfeita.');
     setStatus('pending');
-  };
+    // Runs on the transition only: setStatus is a fresh closure every render.
+  }, [diagram, before, proposal.status]);
 
   const canUndo = proposal.status === 'applied' && applied !== null && diagram === applied;
 

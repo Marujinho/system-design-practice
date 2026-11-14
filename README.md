@@ -55,8 +55,11 @@ recalculados pelo servidor local, o enunciado e a solução de referência. Por 
 não conta para a nota**: **Finalizar** mostra o score, mas não grava a sessão, o histórico nem o
 recorde. Para valer, use **Praticar**.
 
-O mentor só conversa: não tem ferramentas, não lê arquivos, não roda comandos e não edita o
-desenho. Ele responde por um destes provedores, que você escolhe no próprio chat:
+Peça uma mudança ("coloca um cache entre a API e o banco", "sobe a API para 6 réplicas") e o
+mentor responde com uma **proposta**: um card que lista o que vai mudar. Nada muda até você clicar
+em **Aplicar**; tudo entra de uma vez e um Ctrl+Z desfaz. **Descartar** deixa o desenho como está.
+O mentor não lê arquivos, não roda comandos nem acessa a web: a única ferramenta dele é propor.
+Ele responde por um destes provedores, que você escolhe no próprio chat:
 
 - **Assinatura do Claude**: usa o `claude` (Claude Code) instalado e logado na máquina que roda o
   `pnpm dev`. Consome a cota do seu plano.
@@ -68,6 +71,9 @@ Anthropic**: o desenho e as métricas dele, o enunciado, a solução de referên
 conversa fica em `practice/mentor-<problema>.json` (fora do git); **Nova conversa** no chat, ou
 apagar o arquivo, a remove. O servidor registra uma linha por resposta (provedor, status, tempo
 até o primeiro token e tokens), nunca o texto.
+
+No canvas, arrastar o fundo move a vista (Shift + arrastar seleciona vários cards), e um duplo
+clique num card abre as propriedades dele.
 
 Os serviços que aparecem por sigla (ALB, SQS, EKS…) mostram o nome por extenso na paleta, no
 painel e ao passar o mouse no card, e a busca também acha por ele ("load balancer", "queue").

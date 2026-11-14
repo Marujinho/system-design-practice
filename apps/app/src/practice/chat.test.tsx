@@ -441,6 +441,20 @@ describe('proposals in the chat (mentor-edits FR-3–FR-9, NFR-2, A05)', () => {
     expect(statusCalls(fetch).map((c) => c.status)).toEqual(['applied', 'pending']);
   });
 
+  it('goes back to pending when Ctrl+Z undoes it, so it can be applied again', async () => {
+    const fetch = mockFetch({ conversation: withProposal(proposal()) });
+    render(<ChatPanel problemId="url-shortener" />);
+    const before = useDiagram.getState().diagram;
+    await userEvent.click(await screen.findByRole('button', { name: 'Aplicar' }));
+    act(() => {
+      useDiagram.getState().undo();
+    });
+    expect(useDiagram.getState().diagram).toBe(before);
+    expect(await screen.findByRole('button', { name: 'Aplicar' })).toBeTruthy();
+    expect(screen.getByText('proposta')).toBeTruthy();
+    expect(statusCalls(fetch).map((c) => c.status)).toEqual(['applied', 'pending']);
+  });
+
   it('hides Desfazer once something else changes the diagram', async () => {
     mockFetch({ conversation: withProposal(proposal()) });
     render(<ChatPanel problemId="url-shortener" />);
