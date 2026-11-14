@@ -3,6 +3,7 @@ import { LoadPanel } from './panels/LoadPanel';
 import { PropertiesPanel } from './panels/PropertiesPanel';
 import { ProblemList } from './practice/ProblemList';
 import { ProblemView } from './practice/ProblemView';
+import { StudyView } from './practice/StudyView';
 import './practice/practice.css';
 import './panels/panels.css';
 import { hrefOf, type Route } from './routes';
@@ -49,6 +50,8 @@ export function Screen({ route }: { route: Route }) {
       return <ProblemList />;
     case 'problem':
       return <ProblemView key={route.problemId} problemId={route.problemId} />;
+    case 'study':
+      return <StudyView key={route.problemId} problemId={route.problemId} />;
     case 'free':
       return <Workspace mode={{ kind: 'free' }} top={<LoadPanel />} side={<PropertiesPanel />} />;
     default:

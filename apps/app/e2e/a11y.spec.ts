@@ -7,6 +7,7 @@ const PAGES = [
   ['lista de problemas', '/#/problems'],
   ['problema', '/#/problems/url-shortener'],
   ['canvas livre', '/#/free'],
+  ['estudo', '/#/problems/url-shortener/study'],
 ] as const;
 
 for (const [name, url] of PAGES) {
@@ -42,6 +43,37 @@ test('no serious or critical accessibility violations: canvas livre recolhido (e
   const bad = results.violations
     .filter((v) => v.impact === 'serious' || v.impact === 'critical')
     .map((v) => `${v.id}: ${v.help} (${v.nodes.length})`);
+  expect(bad).toEqual([]);
+  expect(problems).toEqual([]);
+});
+
+test('no serious or critical accessibility violations: estudo com o mentor aberto (study-mode NFR-5)', async ({
+  page,
+}) => {
+  const problems = watchConsole(page);
+  // its own problem, so the study flow's conversation never meets this one
+  await page.goto('/#/problems/ticketing/study');
+  await page.getByRole('button', { name: 'Abrir mentor' }).click();
+  const log = page.getByRole('log', { name: 'Conversa com o mentor' });
+  // with a conversation in it, whatever ran before (the fake provider answers)
+  const question = page.getByRole('textbox', { name: 'Pergunta para o mentor' });
+  for (let i = 0; i < 6; i += 1) {
+    await question.fill(`Pergunta ${String(i)}: por onde eu começo?`);
+    await question.press('Enter');
+    await expect(log).toContainText(`Pergunta ${String(i)}`);
+    await expect(page.getByRole('button', { name: 'Enviar' })).toBeVisible();
+  }
+  await page.waitForTimeout(500);
+  const results = await new AxeBuilder({ page }).analyze();
+  const bad = results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map(
+      (v) =>
+        `${v.id}: ${v.help} (${v.nodes.length}) ${v.nodes
+          .slice(0, 2)
+          .map((n) => n.target.join(' '))
+          .join(' | ')}`,
+    );
   expect(bad).toEqual([]);
   expect(problems).toEqual([]);
 });

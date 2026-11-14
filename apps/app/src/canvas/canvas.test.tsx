@@ -64,10 +64,44 @@ describe('palette (FR-3)', () => {
   it('carries the service id when dragged', () => {
     render(<Palette onAdd={vi.fn()} />);
     const setData = vi.fn();
-    fireEvent.dragStart(screen.getByRole('button', { name: 'SQS' }), {
+    // The accessible name carries the acronym and its full name (study-mode FR-18).
+    fireEvent.dragStart(screen.getByRole('button', { name: 'SQS Simple Queue Service' }), {
       dataTransfer: { setData, effectAllowed: '' },
     });
     expect(setData).toHaveBeenCalledWith(DRAG_TYPE, 'aws.sqs');
+  });
+});
+
+describe('full names next to acronyms (study-mode FR-18, FR-20, FR-21)', () => {
+  const ids = (q: string) => paletteGroups(q).flatMap((g) => g.services.map((s) => s.id));
+
+  it('finds services by their full name, ignoring case', () => {
+    expect(ids('load balancer')).toEqual(['aws.alb', 'aws.nlb']);
+    expect(ids('QUEUE')).toEqual(['aws.sqs']);
+    expect(ids('kubernetes')).toEqual(['aws.eks']);
+  });
+
+  it('shows the full name under the acronym, and nothing extra for a plain name', () => {
+    const { container } = render(<Palette onAdd={vi.fn()} />);
+    const alb = screen.getByRole('button', { name: 'ALB Application Load Balancer' });
+    expect(alb.querySelector('.palette-item-full')?.textContent).toBe('Application Load Balancer');
+    const lambda = screen.getByRole('button', { name: 'Lambda' });
+    expect(lambda.querySelector('.palette-item-full')).toBeNull();
+    expect(container.textContent).not.toContain('undefined');
+  });
+
+  it('puts the full name on the node card as a hint, not as a new line', () => {
+    const { container } = render(<Canvas />);
+    act(() => {
+      useDiagram.getState().addNode('aws.sqs', { x: 0, y: 0 });
+      useDiagram.getState().addNode('aws.lambda', { x: 300, y: 0 });
+    });
+    const cards = [...container.querySelectorAll<HTMLElement>('.service-node')];
+    const sqs = cards.find((c) => c.textContent.includes('SQS'));
+    const lambda = cards.find((c) => c.textContent.includes('Lambda'));
+    expect(sqs?.title).toBe('Simple Queue Service');
+    expect(sqs?.textContent).not.toContain('Simple Queue Service');
+    expect(lambda?.hasAttribute('title')).toBe(false);
   });
 });
 

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { formatCompact, formatRps } from '../format';
 import { FileMenu } from '../files/FileMenu';
 import { useSim } from '../sim/sim-store';
-import { useDiagram } from '../store/diagram-store';
+import { hasProblem, useDiagram } from '../store/diagram-store';
 
 const MAX_RPM = LIMITS.maxTotalRpm;
 const SLIDER_STEPS = 1000;
@@ -107,7 +107,7 @@ function ClassRow({
 /** The load of the Users node, the pause control and the worker's status. */
 export function LoadPanel() {
   const load = useDiagram((s) => s.diagram.load);
-  const locked = useDiagram((s) => s.mode.kind === 'problem');
+  const locked = useDiagram((s) => hasProblem(s.mode));
   const status = useSim((s) => s.status);
   const error = useSim((s) => s.error);
   const [refusal, setRefusal] = useState<string | null>(null);

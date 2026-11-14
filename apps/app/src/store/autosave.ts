@@ -5,8 +5,16 @@ import type { Mode } from './diagram-store';
 
 export const AUTOSAVE_DELAY_MS = 500;
 
+/** One save per mode: the study draft never overwrites the practice one (study-mode FR-2). */
 export function keyOf(mode: Mode): string {
-  return mode.kind === 'free' ? 'archsim:free' : `archsim:problem:${mode.problemId}`;
+  switch (mode.kind) {
+    case 'free':
+      return 'archsim:free';
+    case 'problem':
+      return `archsim:problem:${mode.problemId}`;
+    case 'study':
+      return `archsim:study:${mode.problemId}`;
+  }
 }
 
 /** The last saved diagram for this mode, or null when none, invalid or storage is unavailable (FR-36, A08). */

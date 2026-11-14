@@ -36,7 +36,13 @@ export function Palette({ onAdd }: { onAdd: (serviceId: string) => void }) {
                     onAdd(s.id);
                   }}
                 >
-                  {s.label}
+                  <span className="palette-item-label">{s.label}</span>
+                  {s.fullName !== undefined && (
+                    <>
+                      {/* Keeps "SQS Simple Queue Service" apart in the accessible name. */}{' '}
+                      <span className="palette-item-full">{s.fullName}</span>
+                    </>
+                  )}
                 </button>
               </li>
             ))}

@@ -120,6 +120,7 @@ describe('collapsible panels (edge-hover FR-8–FR-10, FR-14, FR-15)', () => {
       side: true,
       top: true,
       metrics: true,
+      chat: true,
     });
     const restore = button('Restaurar painéis');
     expect(restore.getAttribute('aria-pressed')).toBe('true');

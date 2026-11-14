@@ -60,6 +60,12 @@
             "type": "string",
             "minLength": 1
           },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[^<>]+$"
+          },
           "description": {
             "type": "string",
             "minLength": 1

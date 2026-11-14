@@ -72,7 +72,7 @@ test('the problem title stays on the collapsed top strip (edge-hover FR-10)', as
 test('the panel layout never lands in the saved diagram (edge-hover A08)', async ({ page }) => {
   await page.goto('/#/free');
   await page.getByRole('button', { name: 'Recolher painel lateral' }).click();
-  await page.getByRole('button', { name: 'EC2', exact: true }).click();
+  await page.getByRole('button', { name: 'EC2 Elastic Compute Cloud', exact: true }).click();
   await expect
     .poll(async () => page.evaluate(() => localStorage.getItem('archsim:free') ?? ''))
     .toContain('aws.ec2');

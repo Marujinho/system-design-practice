@@ -18,6 +18,18 @@ function select(serviceId: string): string {
 }
 
 describe('PropertiesPanel (FR-7, FR-8, FR-39)', () => {
+  it('spells out the acronym under the title, and nothing extra for a plain name (study-mode FR-19)', () => {
+    select('aws.nlb');
+    const { unmount } = render(<PropertiesPanel />);
+    expect(screen.getByRole('heading', { name: 'NLB' })).toBeInTheDocument();
+    expect(screen.getByText('Network Load Balancer')).toBeInTheDocument();
+    unmount();
+    s().start({ kind: 'free' }, emptyDiagram());
+    select('aws.lambda');
+    render(<PropertiesPanel />);
+    expect(document.querySelector('.service-full-name')).toBeNull();
+  });
+
   it('asks for a selection when nothing is selected', () => {
     render(<PropertiesPanel />);
     expect(screen.getByText('Selecione um nó ou uma conexão.')).toBeTruthy();

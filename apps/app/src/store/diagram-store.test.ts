@@ -196,6 +196,14 @@ describe('problem mode (FR-44)', () => {
     expect(s().diagram.nodes.map((n) => n.id)).toEqual(['users']);
   });
 
+  it('locks the load and keeps the Users node in study mode too (study-mode FR-1)', () => {
+    s().start({ kind: 'study', problemId: 'url-shortener' }, problemStart(load));
+    expect(s().setLoad({ classes: [{ ...load.classes[0], rps: 1 }] } as typeof load)).toBe(false);
+    s().select(['users']);
+    s().removeSelection();
+    expect(s().diagram.nodes.map((n) => n.id)).toEqual(['users']);
+  });
+
   it('lets the free mode change the load', () => {
     expect(s().setLoad(load)).toBe(true);
   });
@@ -221,6 +229,16 @@ describe('autosave (FR-36, A08, A10)', () => {
     save({ kind: 'problem', problemId: 'a' }, problemStart(emptyDiagram().load));
     expect(loadSaved({ kind: 'problem', problemId: 'a' })).not.toBeNull();
     expect(loadSaved({ kind: 'problem', problemId: 'b' })).toBeNull();
+  });
+
+  it('keeps the study draft apart from the practice draft of the same problem (study-mode FR-2)', () => {
+    const practice = problemStart(emptyDiagram().load);
+    const study = { ...practice, name: 'estudo' };
+    save({ kind: 'problem', problemId: 'a' }, practice);
+    save({ kind: 'study', problemId: 'a' }, study);
+    expect(keyOf({ kind: 'study', problemId: 'a' })).toBe('archsim:study:a');
+    expect(loadSaved({ kind: 'problem', problemId: 'a' })).toEqual(practice);
+    expect(loadSaved({ kind: 'study', problemId: 'a' })).toEqual(study);
   });
 
   it('ignores a corrupted save', () => {

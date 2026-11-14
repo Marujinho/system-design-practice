@@ -61,6 +61,18 @@ describe('parseCatalog', () => {
     expect(parseCatalog(catalog([s])).ok).toBe(true);
   });
 
+  it('accepts a service with a full name, and one without (study-mode FR-17)', () => {
+    const named = service({ fullName: 'Elastic Compute Cloud' });
+    const plain = service({ id: 'aws.lambda', label: 'Lambda' });
+    expect(parseCatalog(catalog([named, plain])).ok).toBe(true);
+  });
+
+  it('rejects an empty full name, or one with markup (A05)', () => {
+    expect(parseCatalog(catalog([service({ fullName: '' })])).ok).toBe(false);
+    expect(parseCatalog(catalog([service({ fullName: '<b>EC2</b>' })])).ok).toBe(false);
+    expect(parseCatalog(catalog([service({ fullName: 'x'.repeat(81) })])).ok).toBe(false);
+  });
+
   it('rejects an unknown family', () => {
     const s = service({ variants: [variant({ family: 'gpu' })] });
     expect(parseCatalog(catalog([s])).ok).toBe(false);

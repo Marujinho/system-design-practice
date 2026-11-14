@@ -12,7 +12,13 @@ import { create } from 'zustand';
 import { emptyDiagram } from './defaults';
 import { push, redo, undo, type History } from './history';
 
-export type Mode = { kind: 'free' } | { kind: 'problem'; problemId: string };
+export type Mode =
+  { kind: 'free' } | { kind: 'problem'; problemId: string } | { kind: 'study'; problemId: string };
+
+/** Practice and study both work on a problem: its load is fixed and the Users node stays. */
+export function hasProblem(mode: Mode): mode is Exclude<Mode, { kind: 'free' }> {
+  return mode.kind !== 'free';
+}
 
 export interface DiagramState {
   mode: Mode;
@@ -129,7 +135,7 @@ export const useDiagram = create<DiagramState>()((set, get) => {
       const ids = new Set(selection);
       commit((d) => {
         d.nodes = d.nodes.filter(
-          (n) => !ids.has(n.id) || (mode.kind === 'problem' && n.serviceId === 'core.users'),
+          (n) => !ids.has(n.id) || (hasProblem(mode) && n.serviceId === 'core.users'),
         );
         const alive = new Set(d.nodes.map((n) => n.id));
         d.edges = d.edges.filter(
@@ -233,7 +239,7 @@ export const useDiagram = create<DiagramState>()((set, get) => {
     },
 
     setLoad: (load) => {
-      if (get().mode.kind === 'problem') return false;
+      if (hasProblem(get().mode)) return false;
       commit((d) => {
         d.load = load;
       });

@@ -37,6 +37,11 @@ export interface WorkspaceProps {
   top?: ReactNode;
   /** What the collapsed top strip shows: the problem title, or "Carga" on the free canvas. */
   topSummary?: ReactNode;
+  /**
+   * The study-mode mentor: a column right of the side panel when open, nothing
+   * but the launcher on the canvas when closed (study-mode FR-3).
+   */
+  chat?: { panel: ReactNode; launcher: ReactNode };
 }
 
 /** Collapse every panel around the canvas, then put them back as they were (edge-hover FR-12). */
@@ -72,9 +77,9 @@ function SelectionBadge() {
 }
 
 /** Palette, canvas and side panel around the diagram store, with autosave per mode. */
-export function Workspace({ mode, initial, side, top, topSummary }: WorkspaceProps) {
+export function Workspace({ mode, initial, side, top, topSummary, chat }: WorkspaceProps) {
   const centre = useRef<() => { x: number; y: number }>(() => ({ x: 0, y: 0 }));
-  const modeKey = mode.kind === 'free' ? 'free' : mode.problemId;
+  const modeKey = mode.kind === 'free' ? 'free' : `${mode.kind}:${mode.problemId}`;
 
   useEffect(() => {
     useDiagram.getState().start(mode, loadSaved(mode) ?? (initial ? initial() : emptyDiagram()));
@@ -100,10 +105,12 @@ export function Workspace({ mode, initial, side, top, topSummary }: WorkspacePro
   const notice = useDiagram((s) => s.notice);
   const paletteCollapsed = useLayout((s) => s.collapsed.palette);
   const sideCollapsed = useLayout((s) => s.collapsed.side);
+  const chatCollapsed = useLayout((s) => s.collapsed.chat);
   const bodyClass = [
     'workspace-body',
     paletteCollapsed && 'palette-collapsed',
     sideCollapsed && 'side-collapsed',
+    chat && !chatCollapsed && 'chat-open',
   ]
     .filter(Boolean)
     .join(' ');
@@ -142,12 +149,19 @@ export function Workspace({ mode, initial, side, top, topSummary }: WorkspacePro
               <ParticleLayer enabled={!reduced} />
               <GlobalBar />
               <FocusButton />
+              {chat?.launcher}
             </>
           }
         />
         <Collapsible id="side" label="painel lateral" edge="right" summary={<SelectionBadge />}>
           <div className="side-panel">{side}</div>
         </Collapsible>
+        {chat && (
+          // Stays mounted while closed, so a reply keeps streaming and the draft survives.
+          <aside id="mentor-chat" className="chat-column" hidden={chatCollapsed}>
+            {chat.panel}
+          </aside>
+        )}
       </div>
       {notice && (
         <div className="notice" role="status">

@@ -40,3 +40,33 @@ test('50 nodes, 60 edges, 1M req/min: p95 frame time within 50 fps (NFR-2) @perf
   });
   expect(fps).toBeGreaterThanOrEqual(50);
 });
+
+test('the same 50 nodes in study mode with the mentor chat open stay within 50 fps (study-mode NFR-1) @perf', async ({
+  page,
+}) => {
+  await seed(page, 'archsim:study:url-shortener', perfDiagram());
+  await page.goto('/#/problems/url-shortener/study');
+  await page.getByRole('button', { name: 'Abrir mentor' }).click();
+  await expect(page.locator('.service-node')).toHaveCount(50);
+  await page.waitForTimeout(1500);
+  const frames = await page.evaluate(
+    () =>
+      new Promise<number[]>((done) => {
+        const times: number[] = [];
+        const start = performance.now();
+        const tick = (t: number) => {
+          times.push(t);
+          if (t - start < 10_000) requestAnimationFrame(tick);
+          else done(times);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
+  const gaps = frames
+    .slice(1)
+    .map((t, i) => t - (frames[i] ?? t))
+    .sort((a, b) => a - b);
+  const fps = 1000 / (gaps[Math.floor(gaps.length * 0.95)] ?? Infinity);
+  test.info().annotations.push({ type: 'NFR-1', description: `p95 ${fps.toFixed(1)} fps` });
+  expect(fps).toBeGreaterThanOrEqual(50);
+});

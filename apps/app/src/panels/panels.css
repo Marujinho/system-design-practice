@@ -17,6 +17,11 @@
   font-size: 12px;
 }
 
+.panel header .service-full-name {
+  margin: -2px 0 4px;
+  color: var(--text-muted);
+}
+
 .panel h3 {
   font-size: 11px;
   text-transform: uppercase;

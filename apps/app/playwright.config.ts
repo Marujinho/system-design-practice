@@ -32,6 +32,7 @@ export default defineConfig({
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: false,
     timeout: 120_000,
-    env: { ARCHSIM_PRACTICE_DIR: practice },
+    // The mentor answers from scripted fakes: no claude, no API key, no cost (study-mode §17).
+    env: { ARCHSIM_PRACTICE_DIR: practice, ARCHSIM_MENTOR_FAKE: '1' },
   },
 });

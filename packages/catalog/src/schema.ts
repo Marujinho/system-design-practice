@@ -138,6 +138,13 @@ export const Service = z
     kind: Kind,
     category: Category,
     label: z.string().min(1),
+    /** The acronym spelled out ("Simple Queue Service"), shown next to `label` (study-mode FR-17). */
+    fullName: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^[^<>]+$/)
+      .optional(),
     description: z.string().min(1),
     errorCode: ErrorCode,
     validTargetKinds: z.array(Kind),

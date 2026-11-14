@@ -40,7 +40,7 @@ export function ProblemList() {
         {problems.map((p) => {
           const status = statusOf(p, loadSaved({ kind: 'problem', problemId: p.id }) !== null);
           return (
-            <li key={p.id}>
+            <li key={p.id} className="problem-row">
               <a className="problem-card" href={hrefOf({ screen: 'problem', problemId: p.id })}>
                 <span className="problem-title">{p.title}</span>
                 <span className="muted">{DIFFICULTY[p.difficulty]}</span>
@@ -53,6 +53,13 @@ export function ProblemList() {
                     </span>
                   </span>
                 )}
+              </a>
+              <a
+                className="button study-link"
+                href={hrefOf({ screen: 'study', problemId: p.id })}
+                aria-label={`Estudar ${p.title} com o mentor`}
+              >
+                Estudar
               </a>
             </li>
           );
