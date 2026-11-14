@@ -500,3 +500,54 @@
   outline: 1px solid var(--focus);
   outline-offset: 2px;
 }
+
+/* Mentor proposals (mentor-edits FR-3) */
+.proposal {
+  margin-top: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.proposal-discarded {
+  opacity: 0.6;
+}
+
+.proposal-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.proposal-badge {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.proposal-applied .proposal-badge {
+  border-color: var(--state-healthy);
+  color: var(--state-healthy);
+}
+
+.proposal-ops {
+  margin: 0;
+  padding-left: 16px;
+  overflow-wrap: anywhere;
+}
+
+.proposal-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.proposal-note {
+  margin: 0;
+  color: var(--text-muted);
+}
