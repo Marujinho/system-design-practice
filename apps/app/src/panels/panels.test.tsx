@@ -34,6 +34,31 @@ describe('PropertiesPanel (FR-7, FR-8, FR-39)', () => {
     expect(screen.getByText('US$ 45,55/mês')).toBeTruthy();
   });
 
+  it('groups the EC2 types by family and shows req/s and US$/mês on each (aws-instance-types FR-9b, FR-12)', async () => {
+    select('aws.ec2');
+    const { container } = render(<PropertiesPanel />);
+    const picker = screen.getByLabelText('Tipo');
+    expect([...container.querySelectorAll('optgroup')].map((g) => g.label)).toEqual([
+      'Burst',
+      'Uso geral',
+      'Computação',
+      'Memória',
+    ]);
+    const option = within(picker).getByRole('option', { name: /^c5\.xlarge / });
+    expect(option.textContent).toContain('2.000 req/s');
+    expect(option.textContent).toContain('US$ 124,10/mês');
+    await userEvent.selectOptions(picker, 'c5.xlarge');
+    expect(s().diagram.nodes[0]?.variantId).toBe('c5.xlarge');
+    expect(container.querySelector('.figures')?.textContent).toContain('2.000 req/s');
+  });
+
+  it('keeps a flat list for a service with a single family', () => {
+    select('aws.fargate');
+    const { container } = render(<PropertiesPanel />);
+    expect(container.querySelectorAll('optgroup')).toHaveLength(0);
+    expect(within(screen.getByLabelText('Tipo')).getAllByRole('option')).toHaveLength(7);
+  });
+
   it('refuses 0 replicas and shows the valid range', async () => {
     select('aws.ec2');
     render(<PropertiesPanel />);

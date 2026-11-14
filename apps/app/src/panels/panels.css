@@ -1,5 +1,7 @@
 .panel {
   display: grid;
+  /* long type options must not widen the side panel */
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   padding: 14px;
 }
@@ -30,6 +32,7 @@
 
 .field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   border: 0;
   margin: 0;
@@ -49,6 +52,12 @@
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   padding: 5px 8px;
+}
+
+.field select {
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
 .field select option {

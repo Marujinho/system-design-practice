@@ -135,6 +135,15 @@
                 "burst": {
                   "type": "boolean"
                 },
+                "family": {
+                  "type": "string",
+                  "enum": [
+                    "burst",
+                    "general",
+                    "compute",
+                    "memory"
+                  ]
+                },
                 "prices": {
                   "type": "array",
                   "items": {

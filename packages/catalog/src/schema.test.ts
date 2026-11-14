@@ -54,6 +54,18 @@ describe('parseCatalog', () => {
     expect(parseCatalog(catalog([s])).ok).toBe(false);
   });
 
+  it('accepts a variant with a family, and one without (aws-instance-types FR-12)', () => {
+    const s = service({
+      variants: [variant({ family: 'compute' }), variant({ id: 't3.small', label: 't3.small' })],
+    });
+    expect(parseCatalog(catalog([s])).ok).toBe(true);
+  });
+
+  it('rejects an unknown family', () => {
+    const s = service({ variants: [variant({ family: 'gpu' })] });
+    expect(parseCatalog(catalog([s])).ok).toBe(false);
+  });
+
   it('rejects capPerUnit 0', () => {
     const s = service({ variants: [variant({ capPerUnit: 0 })] });
     expect(parseCatalog(catalog([s])).ok).toBe(false);

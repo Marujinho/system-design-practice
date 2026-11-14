@@ -89,6 +89,10 @@ export const Price = z
   .strict();
 export type Price = z.infer<typeof Price>;
 
+/** Instance family: groups the type picker. Omitted on services with a single family. */
+export const Family = z.enum(['burst', 'general', 'compute', 'memory']);
+export type Family = z.infer<typeof Family>;
+
 export const Variant = z
   .object({
     id: z.string().regex(/^[a-z0-9][a-z0-9.-]*$/),
@@ -100,6 +104,7 @@ export const Variant = z
     baseLatencyMs: z.number().positive(),
     /** T-family burstable instance: the MVP simulates burst capacity only (FR-39). */
     burst: z.boolean().optional(),
+    family: Family.optional(),
     prices: z.array(Price),
     limits: z.array(Limit),
   })
