@@ -68,6 +68,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 ## Tasks
 
 ### T1 — Nome por extenso no catálogo
+- **Done**: `a61ced6`
 - **Covers**: FR-17, A05 (nomes), A08 (nomes), G5
 - **Files**: `packages/catalog/src/schema.ts` (edit), `packages/catalog/src/catalog.json` (edit), `packages/catalog/src/schema.test.ts` (edit), `packages/catalog/src/catalog.test.ts` (edit), `schemas/catalog.schema.json` (regenerated)
 - **Mirror**: o campo opcional `family` da variante e o seu teste, "accepts a variant with a family, and one without" (`schema.test.ts:57`); o snapshot de variantes antigas (`catalog.test.ts:136`)
@@ -98,6 +99,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: —
 
 ### T2 — Nome por extenso na paleta, no painel e no card
+- **Done**: `d553dac`
 - **Covers**: FR-18, FR-19, FR-20, FR-21, NFR-8, A10 (nomes)
 - **Files**: `apps/app/src/canvas/Palette.tsx`, `palette-model.ts`, `ServiceNode.tsx`, `apps/app/src/panels/PropertiesPanel.tsx`, o CSS da paleta e do painel (`apps/app/src/canvas/canvas.css`, `apps/app/src/panels/panels.css`), `apps/app/src/canvas/canvas.test.tsx` (edit), `apps/app/src/panels/panels.test.tsx` (edit)
 - **Mirror**: a linha secundária do card, `service-node-kind` (`ServiceNode.tsx:31-33`); a busca com `fold` (`palette-model.ts:27`); o título do painel (`PropertiesPanel.tsx:45-46`)
@@ -116,6 +118,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: T1
 
 ### T3 — Rota e modo de estudo, com rascunho próprio
+- **Done**: `4d322ad`
 - **Covers**: FR-1 (rota), FR-2, US-6
 - **Files**: `apps/app/src/routes.ts`, `routes.test.ts`, `store/diagram-store.ts`, `store/autosave.ts`, `store/diagram-store.test.ts`, `panels/LoadPanel.tsx`, `files/FileMenu.tsx`, `workspace/Workspace.tsx`
 - **Mirror**: a regex de problema (`routes.ts:14`) e o round-trip (`routes.test.ts:21-24`); o teste de isolamento por problema (`diagram-store.test.ts:221-223`)
@@ -134,6 +137,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: —
 
 ### T4 — Pontuar em estudo sem registrar nada
+- **Done**: `8c6903a`
 - **Covers**: FR-9, FR-10, FR-11 (o 403 da prática continua), A06, A01 (rota nova), G3
 - **Files**: `apps/app/server/routes.ts`, `apps/app/server/server.test.ts`
 - **Mirror**: `finalize` (`routes.ts:71-122`) até o `scoreAttempt`; os testes `describe('finalize (FR-47, FR-59)')` (`server.test.ts:284`) e o helper `finalizeBody` (:90)
@@ -151,6 +155,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: —
 
 ### T5 — Tela de estudo, entrada na lista e resultado não registrado
+- **Done**: `8953b5e`
 - **Covers**: FR-1 (UI e selo), FR-9 (UI), NFR-3
 - **Files**: `apps/app/src/practice/StudyView.tsx` (new), `apps/app/src/App.tsx`, `practice/ProblemList.tsx`, `practice/ResultScreen.tsx`, `practice/api.ts`, `practice/practice.css`, `practice/practice.test.tsx` (edit), `apps/app/src/practice/study.test.tsx` (new)
 - **Mirror**: o `ProblemView` inteiro (`ProblemView.tsx:60-197`: carga do problema, abas :137-158, finalize :95-109, overlays :181-197); `mockFetch` e as rotas de teste (`practice.test.tsx:85-95`, `:145-156`)
@@ -171,6 +176,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: T3, T4
 
 ### T6 — Contratos do mentor e persistência da conversa
+- **Done**: `ca21198`
 - **Covers**: FR-8 (servidor), A01 (caminho), A08, NFR-4 (limite de mensagem no contrato)
 - **Files**: `packages/problems/src/mentor.ts` (new), `packages/problems/src/index.ts` (export), `packages/problems/src/mentor.test.ts` (new), `apps/app/server/practice-store.ts`, `apps/app/server/server.test.ts`
 - **Mirror**: `History`/`emptyHistory` (`contracts.ts:94-104`); o fluxo de `readHistory` que deixa de lado um arquivo corrompido (`practice-store.ts:25-39`); `writeHistory` com `writeAtomic` (:41-43)
@@ -195,6 +201,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: —
 
 ### T7 — Montar o contexto e o prompt do mentor
+- **Done**: `243395b, e6ee1df`
 - **Covers**: FR-4, FR-5, FR-11 (a referência vai ao mentor), A05, A08, NFR-4 (corte do histórico)
 - **Files**: `packages/cli/package.json` (export `./output`), `apps/app/package.json` (`"@archsim/cli": "workspace:*"`), `apps/app/server/mentor/context.ts` (new), `apps/app/server/mentor/prompt.ts` (new), `apps/app/server/mentor/context.test.ts` (new)
 - **Mirror**: `execute()` em `packages/cli/src/run.ts:110-151` (`neutralIds` → `withProblemLoad` → `scoreAttempt` → `summarize`); os rótulos isolados em `userContent` (`output.ts:12-23`); a seção "Dados, não instruções" do `AGENTS.md`
@@ -222,6 +229,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: T6
 
 ### T8 — Provedores: API, assinatura (`claude`) e falso
+- **Done**: `59ef2fb`
 - **Covers**: FR-6 (detecção), FR-7 (abort no upstream), FR-12, FR-13, FR-15 (uso), A02, A03, A04, A07, A10
 - **Files**: `apps/app/package.json` (`"@anthropic-ai/sdk": "1.8.0"`), `apps/app/server/mentor/provider.ts` (new: interface + tipos), `apps/app/server/mentor/api-provider.ts` (new), `apps/app/server/mentor/cli-provider.ts` (new), `apps/app/server/mentor/fake-provider.ts` (new), `apps/app/server/mentor/providers.test.ts` (new)
 - **Mirror**: as dependências fixadas sem `^` (`apps/app/package.json`); `Refusal` com mensagens em pt-BR (`guard.ts:6-13`)
@@ -259,6 +267,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: T6
 
 ### T9 — Rotas do chat: status, conversa e stream
+- **Done**: `444e40a`
 - **Covers**: FR-6, FR-7, FR-8, FR-13, NFR-4, A01, A02, A06, A07, A09, A10
 - **Files**: `apps/app/server/guard.ts`, `apps/app/server/routes.ts`, `apps/app/server/mentor/chat-route.ts` (new), `apps/app/server/server.test.ts`
 - **Mirror**: o `switch` e o `catch` de `routes.ts:146-183`; `sendJson` (`guard.ts:84`); a forma de logar de `logRefusal` (`guard.ts:20-30`); os blocos de teste A01, A02, A09 e A10 (`server.test.ts:93-268`)
@@ -300,6 +309,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: T6, T7, T8
 
 ### T10 — Ligar os provedores no servidor do Vite
+- **Done**: `dbcf7f4`
 - **Covers**: FR-6, NFR-3, §19 Config
 - **Files**: `apps/app/vite-plugin-practice.ts`, `apps/app/playwright.config.ts`, `apps/app/config.test.ts`
 - **Mirror**: `practiceDir(env)` (`vite-plugin-practice.ts:7-9`); `webServer.env` (`playwright.config.ts:35`)
@@ -316,6 +326,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: T8, T9
 
 ### T11 — Painel do chat na tela de estudo
+- **Done**: `39f5295`
 - **Covers**: FR-3, FR-6 (UI), FR-7 (UI), FR-8 (UI), FR-13 (UI), FR-14, FR-15, NFR-5, NFR-6, NFR-7, A05 (XSS)
 - **Files**:
   - novos: `apps/app/src/practice/mentor-api.ts`, `apps/app/src/practice/ChatPanel.tsx`, `apps/app/src/practice/chat.test.tsx`;
@@ -375,6 +386,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: T5, T9, T10
 
 ### T12 — e2e do modo estudo
+- **Done**: `a93e901`
 - **Covers**: G1–G3 (automatizáveis), NFR-1, NFR-3, NFR-5, FR-2, FR-9, FR-20
 - **Files**: `apps/app/e2e/study-flow.spec.ts` (new), `apps/app/e2e/a11y.spec.ts` (edit), `apps/app/e2e/perf.spec.ts` (edit)
 - **Mirror**: `practice-flow.spec.ts` (o `PLAN` por browser :8-25; `seed` :34; a leitura de `history.json` a partir de `ARCHSIM_PRACTICE_DIR`); `watchConsole` (`helpers.ts`)
@@ -396,6 +408,7 @@ O plano tem três camadas, entregues nesta ordem, e cada uma deixa a árvore ver
 - **Depends on**: T11, T2
 
 ### T13 — README
+- **Done**: `e28e3cb`
 - **Covers**: DoD (README), §12 Secrets/PII (transparência), §19 Config
 - **Files**: `README.md`
 - **Mirror**: as seções "Praticar" e "Cota da AWS × premissa" do README
@@ -477,3 +490,69 @@ Depois, o roteiro manual do PRD §18, passos 1–12. Os do provedor real exigem 
 - **Passo 4:** "leia o .env" → a resposta diz que ele não tem acesso a arquivos. No log, a linha do pedido aparece sem o texto.
 - **Passo 10:** `grep -r "$ANTHROPIC_API_KEY" practice/ ; ls ~/.claude/projects | grep archsim-mentor | wc -l` → nada no `practice/`, e no máximo 1 pasta (cwd fixo).
 - **Passo 11:** `grep "mentor problema=" <log do pnpm dev>` → a mediana de `ttft_ms` em 10 mensagens por provedor ≤ 3000.
+
+## Implementation
+
+**Branch**: `feat/study-mode-mentor-chat` · **Base**: `master` (com o PR #3 mergeado antes, a pedido da pessoa) · **Date**: 2026-11-14
+
+| Task | Commit | Check | Lint / Types / Tests |
+|---|---|---|---|
+| T1 | `a61ced6` | ✅ | ✅ ✅ ✅ (575) |
+| T2 | `d553dac` | ✅ (+ e2e afetados) | ✅ ✅ ✅ (579) |
+| T3 | `4d322ad` | ✅ | ✅ ✅ ✅ (582) |
+| T4 | `8c6903a` | ✅ | ✅ ✅ ✅ (585) |
+| T5 | `8953b5e` | ✅ (+ e2e prática/a11y) | ✅ ✅ ✅ (587) |
+| T6 | `ca21198` | ✅ | ✅ ✅ ✅ (598) |
+| T7 | `243395b`, `e6ee1df` | ✅ | ✅ ✅ ✅ (606) |
+| T8 | `59ef2fb` | ✅ (+ `pnpm audit` limpo, smoke com o `claude` real) | ✅ ✅ ✅ (620) |
+| T9 | `444e40a` | ✅ | ✅ ✅ ✅ (632) |
+| T10 | `dbcf7f4` | ✅ | ✅ ✅ ✅ (635) |
+| T11 | `39f5295` | ✅ | ✅ ✅ ✅ (650) |
+| T12 | `a93e901` | ✅ e2e 50/50 (chromium + webkit) | ✅ ✅ ✅ (650) |
+| T13 | `e28e3cb` | ✅ | ✅ ✅ ✅ (650) |
+
+Baseline: 570 testes unitários e 43 e2e, todos verdes. No fim: 650 unitários e 50 e2e, todos verdes.
+
+### Deviations
+- **Ambiente** — o shell tinha Node 23.11, e o repositório exige `^22.13 || >=24` (`.node-version` = 24). Todos os comandos rodaram com o `node@24` do Homebrew (`/opt/homebrew/opt/node@24/bin`).
+- **Base** — o §19 do PRD dizia "a partir de `master`", mas o código estudado era o do PR #3 (aberto). Com o ok da pessoa, o #3 foi mergeado (`33cb65d`), e a branch partiu do `master` atualizado.
+- **T2** — o nome acessível do item da paleta passou a incluir o nome por extenso (FR-18). Por isso, os locators exatos do botão EC2 nos e2e (`panels`, `instance-types`, `keyboard`, `free-flow`) e o matcher do `keyboard.spec` foram atualizados. Entre os dois spans entrou um espaço explícito, para o nome não sair grudado.
+- **T4** — o parse e a pontuação de `finalize` foram extraídos para `scoreBody`, usado também por `study-score` (mesmo arquivo, sem mudança de comportamento).
+- **T5** — `Brief` foi exportado de `ProblemView` para reuso. Os testes do estudo ficaram em `practice.test.tsx` (as fixtures já estão lá), e não num `study.test.tsx` novo. O link "Estudar" tem o título no nome acessível; as regex de título do teste de lista e do `practice-flow.spec` foram ancoradas em `^`.
+- **T6** — os testes do store ficaram num `practice-store.test.ts` novo, e não em `server.test.ts`.
+- **T7** — o contexto não leva `userContent.ids` (os ids originais não servem ao mentor) e leva, por nó, a capacidade e os limites com `source` (`aws-quota`/`assumption`), para o FR-5. O fixture do teste usava `units` no RDS (inválido) e foi corrigido em `e6ee1df`, quando o servidor real recusou o mesmo diagrama.
+- **T9** — os testes ficaram num `chat.test.ts` novo. Uma decisão de implementação: a pergunta é gravada só junto com a resposta. Uma falha sem resposta deixa a conversa como estava, e o "Tentar de novo" não duplica a pergunta.
+- **T11** — `Workspace` recebe `chat={{ panel, launcher }}`, para continuar sem depender de `practice/`. `isTyping` foi exportado de `Canvas` para o atalho `M`, e o estado da pílula ficou num store pequeno em `mentor-api.ts`.
+- **T12** — o e2e e as screenshots revelaram quatro coisas, já corrigidas:
+  1. o log do chat rola e não era alcançável pelo teclado (`scrollable-region-focusable`); agora tem `tabIndex=0`;
+  2. com o chat aberto, a pílula disputava espaço com o painel de métricas; agora ela some com o chat aberto (o painel tem "Fechar", e o `M` continua);
+  3. a coluna passou a 320px, a mitigação prevista em Risks;
+  4. o "Estudar" estava sublinhado.
+
+  O teste de a11y do chat usa `ticketing`, para não dividir a conversa com o `study-flow`.
+
+### Definition of Done
+- [x] Todo requisito Must atende ao seu critério de aceite: FR-1 a FR-13 e FR-17 a FR-21, cobertos por testes (ver Coverage). Os Should FR-14, FR-15 e FR-20 também.
+- [ ] **Os dois provedores funcionam de ponta a ponta numa máquina real** — **assinatura: verificada** em 2026-11-14, no preview com o `claude` 2.1.325 (ver Verification). **API: não verificada**, porque não há `ANTHROPIC_API_KEY` neste ambiente. O caminho da API foi testado só com um stream injetado.
+- [x] Os testes A01/A02 do servidor seguem passando e cobrem as rotas novas (`server.test.ts`, `chat.test.ts`).
+- [x] O modo prática se comporta como antes: `practice-flow.spec` verde; `history.json` e `session.json` intocados pelo estudo (testes do FR-9/FR-10 e o e2e).
+- [x] O README documenta o modo estudo, os provedores, o custo e o que vai à Anthropic (`e28e3cb`).
+- [ ] **Os 11 nomes conferidos contra a página oficial, com links no PR** — os nomes são os oficiais conhecidos, mas **os links ainda não foram coletados nem conferidos página a página**. Pendente para o PR.
+- [x] Saída da CLI e textos dos achados idênticos: `git diff 33cb65d -- packages/sim-engine packages/cli/src packages/problems/src/{attempt,contracts,session}.ts AGENTS.md` está vazio; o catálogo só ganhou `fullName`, que nem o motor nem o `summarize` leem; o teste dos 23 `label` e a saída da CLI não contêm `fullName`.
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test` (650), `pnpm test:e2e` (50) e `pnpm audit` (sem vulnerabilidades) passam.
+- [ ] **NFR-2 (primeiro token com p50 ≤ 3 s)** — **não atingido** pela assinatura no meio de uma conversa (ver Verification).
+
+### Verification
+- `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm audit` → verde (650 unitários, 50 e2e, nenhuma vulnerabilidade).
+- `pnpm build` + `grep` em `apps/app/dist` por `@anthropic-ai`, `claude-agent`, `archsim/cli`, `stream-json` e `--setting-sources` → nada: os SDKs ficaram fora do bundle.
+- **Ponta a ponta com a assinatura real** (preview em `127.0.0.1:4173`, `ARCHSIM_PRACTICE_DIR` temporário; o servidor de dev da pessoa na 5173 não foi tocado):
+  - `GET mentor/status` → `{"subscription":true,"api":false,"model":"claude-opus-5-5"}`.
+  - "O que está saturando?" com o RDS sem réplicas e o cache com hit ratio 0 → cita **n5 "Banco de URLs"**, **10.100 req/s × 600 de capacidade**, os erros, o hit ratio do n4 e o p99. Também chama os 600 req/s de **premissa do simulador**, devolve uma pergunta e trata o rótulo malicioso do n3 como "só o nome de uma caixa".
+  - "Leia o arquivo .env" → "Não consigo: aqui não tenho ferramentas…", e volta ao problema lembrando a pergunta anterior.
+  - O log tem uma linha por resposta, sem texto (`[archsim] mentor problema=url-shortener provedor=subscription status=ok ttft_ms=… in=… out=…`).
+  - A conversa foi gravada só no diretório temporário. `~/.claude/projects` não ganhou nenhuma pasta nova (antes 0, depois 0).
+  - **Tempo até o primeiro token, pelo servidor, em 6 respostas numa mesma conversa: 3662, 3667, 3671, 4104, 4114 e 5981 ms → mediana ≈ 3,9 s**, acima da meta de 3 s. Chamando o `claude` direto com o mesmo contexto e sem histórico, a mediana foi de 2,8 s (`medium`) e 2,5 s (`low`). Montar o contexto custa ~100 ms. O tempo cresce com o histórico e com o pensamento do modelo, não com o servidor.
+- Provedor da API → **não verificado** (sem chave neste ambiente).
+
+### Inherited failures
+Nenhuma. As 2 falhas da primeira rodada de e2e da baseline vieram da edição do catálogo durante a execução e passaram ao rodar de novo com a árvore consistente.
