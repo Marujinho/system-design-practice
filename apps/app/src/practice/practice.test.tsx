@@ -8,7 +8,7 @@ import {
 } from '@archsim/problems';
 import { loadProblem, PROBLEMS_DIR } from '@archsim/problems/load';
 import { initialState, step } from '@archsim/sim-engine';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -238,6 +238,40 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     await user.click(screen.getByRole('button', { name: 'Finalizar e pontuar' }));
     expect((await screen.findByRole('alert')).textContent).toMatch(
       /Não consegui gravar a sessão: não encontrado/,
+    );
+  });
+});
+
+describe('double click asks for properties (mentor-edits FR-14)', () => {
+  const routesFor: Route = (url) => {
+    if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem);
+    if (url.endsWith('/problems')) return [summary()];
+    return undefined;
+  };
+
+  it('switches to Propriedades when a request comes after the screen opened', async () => {
+    mockFetch(routesFor);
+    render(<ProblemView problemId="url-shortener" />);
+    const req = await screen.findByRole('tab', { name: 'Requisitos' });
+    expect(req).toHaveAttribute('aria-selected', 'true');
+    act(() => {
+      useLayout.getState().showProperties();
+    });
+    expect(screen.getByRole('tab', { name: 'Propriedades' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('ignores a request left from before the screen opened', async () => {
+    act(() => {
+      useLayout.getState().showProperties();
+    });
+    mockFetch(routesFor);
+    render(<ProblemView problemId="url-shortener" />);
+    expect(await screen.findByRole('tab', { name: 'Requisitos' })).toHaveAttribute(
+      'aria-selected',
+      'true',
     );
   });
 });

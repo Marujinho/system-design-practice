@@ -75,3 +75,39 @@ test('dragging a card moves the card, not the view', async ({ page }) => {
   await expect.poll(async () => (await card.boundingBox())?.x).not.toBe(box.x);
   expect(await viewport(page)).toBe(before);
 });
+
+test('double click on a card opens its properties, without zooming (mentor-edits FR-14)', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: 'Recolher painel lateral' }).click();
+  await expect(page.getByRole('button', { name: 'Expandir painel lateral' })).toBeVisible();
+  const before = await viewport(page);
+  await page.locator('.service-node-label', { hasText: 'API de redirecionamento' }).dblclick();
+  await expect(page.getByRole('button', { name: 'Recolher painel lateral' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'EC2' })).toBeVisible();
+  expect(await viewport(page)).toBe(before);
+});
+
+test('in a problem, double click switches the side panel to Propriedades', async ({ page }) => {
+  await seed(page, 'archsim:problem:url-shortener', reference('url-shortener'));
+  await page.goto('/#/problems/url-shortener');
+  // the hash change alone doesn't reload, and the seed only runs on a real navigation
+  await page.reload();
+  const req = page.getByRole('tab', { name: 'Requisitos' });
+  await expect(req).toHaveAttribute('aria-selected', 'true');
+  // The card re-renders with every result (10/s), so it is never 'stable' for Playwright:
+  // double click where it is, like a person would, and retry until it lands.
+  await expect(async () => {
+    const box = await page
+      .locator('.service-node-label', { hasText: 'Banco de URLs' })
+      .boundingBox({ timeout: 1000 });
+    if (!box) throw new Error('card fora da tela');
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.getByRole('tab', { name: 'Propriedades' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+      { timeout: 1000 },
+    );
+  }).toPass();
+  await expect(page.getByRole('heading', { name: 'RDS PostgreSQL' })).toBeVisible();
+});
