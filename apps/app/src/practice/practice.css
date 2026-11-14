@@ -39,6 +39,7 @@
 .study-link {
   display: flex;
   align-items: center;
+  text-decoration: none;
 }
 
 .problem-card:hover {
@@ -493,4 +494,9 @@
 .chat-new {
   align-self: flex-start;
   font-size: 12px;
+}
+
+.chat-log:focus-visible {
+  outline: 1px solid var(--focus);
+  outline-offset: 2px;
 }

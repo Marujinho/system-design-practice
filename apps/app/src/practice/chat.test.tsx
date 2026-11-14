@@ -292,10 +292,14 @@ describe('the floating launcher (study-mode FR-3)', () => {
     expect(launcher).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(launcher);
     expect(body?.classList.contains('chat-open')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Fechar mentor' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+    // open, the pill leaves the canvas; the panel closes itself
+    expect(screen.queryByRole('button', { name: 'Abrir mentor' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(body?.classList.contains('chat-open')).toBe(false);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Abrir mentor' })).toHaveFocus();
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir mentor' }));
     // the side panel is still there and usable next to the chat
     expect(screen.getByText('lateral')).toBeVisible();
   });
@@ -338,6 +342,7 @@ describe('the floating launcher (study-mode FR-3)', () => {
 
   it('pulses while the mentor answers, unless motion is reduced', () => {
     mockFetch({});
+    useLayout.setState({ collapsed: { ...EXPANDED }, before: null });
     useMentorUi.setState({ streaming: true });
     const { container, unmount } = renderStudy();
     expect(container.querySelector('.mentor-dot.pulsing')).not.toBeNull();

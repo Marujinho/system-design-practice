@@ -14,7 +14,7 @@ function toggleChat() {
 }
 
 /**
- * The closed chat: a pill on the canvas, a dot while the mentor answers, and
+ * The closed chat: a pill on the canvas (gone while the chat is open), a dot while the mentor answers, and
  * the first line of a reply that arrived meanwhile. `M` opens and closes it
  * outside text fields (study-mode FR-3).
  */
@@ -37,9 +37,12 @@ export function MentorLauncher() {
     };
   }, []);
 
+  // Open, the panel has its own "Fechar": the canvas stays clear (M still toggles).
+  if (open) return null;
+
   return (
     <div className="mentor-launcher-wrap">
-      {!open && unread !== null && (
+      {unread !== null && (
         <button type="button" className="mentor-unread" role="status" onClick={toggleChat}>
           {unread}
         </button>
@@ -48,7 +51,7 @@ export function MentorLauncher() {
         id="mentor-launcher"
         type="button"
         className="button mentor-launcher"
-        aria-expanded={open}
+        aria-expanded={false}
         aria-controls="mentor-chat"
         aria-keyshortcuts="M"
         title="Mentor (M)"
@@ -60,7 +63,7 @@ export function MentorLauncher() {
             aria-label="o mentor está respondendo"
           />
         )}
-        {open ? 'Fechar mentor' : 'Abrir mentor'}
+        Abrir mentor
       </button>
     </div>
   );

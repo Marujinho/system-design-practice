@@ -23,7 +23,7 @@
 
 /* The mentor chat only takes a column while open (study-mode FR-3). */
 .workspace-body.chat-open {
-  --chat-w: 360px;
+  --chat-w: 320px;
   grid-template-columns: var(--palette-w) minmax(0, 1fr) var(--side-w) var(--chat-w);
 }
 

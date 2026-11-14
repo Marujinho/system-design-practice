@@ -307,7 +307,14 @@ export function ChatPanel({ problemId }: { problemId: string }) {
         </div>
       )}
 
-      <div className="chat-log" role="log" aria-live="polite" aria-label="Conversa com o mentor">
+      {/* Focusable: once it scrolls, the conversation must be readable from the keyboard (NFR-5). */}
+      <div
+        className="chat-log"
+        role="log"
+        aria-live="polite"
+        aria-label="Conversa com o mentor"
+        tabIndex={0}
+      >
         {messages.length === 0 && !live && (
           <div className="chat-empty">
             <p className="muted">
