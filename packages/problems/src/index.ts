@@ -4,3 +4,4 @@ export * from './schema';
 export * from './session';
 export * from './when';
 export * from './achievements';
+export * from './mentor';
