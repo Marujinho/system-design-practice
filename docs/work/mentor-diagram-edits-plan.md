@@ -59,6 +59,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 ## Tasks
 
 ### T1 — Contratos da proposta
+- **Done**: `b8cdad8`
 - **Covers**: FR-2 (forma), FR-9 (contrato), NFR-3, A05, A08
 - **Files**: `packages/problems/src/mentor.ts`, `packages/problems/src/mentor.test.ts`
 - **Mirror**: `MentorEvent` como discriminated union `.strict()` (`mentor.ts`); `ChatRequest`
@@ -82,6 +83,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Depends on**: —
 
 ### T2 — `applyProposal` pura, e `freeSpot` em módulo próprio
+- **Done**: `1ed060d`
 - **Covers**: FR-2, FR-6 (navegador e servidor), FR-7, FR-8 (resultado único), FR-10, NFR-1, A06, A08
 - **Files**:
   - novos: `apps/app/src/canvas/place.ts`, `apps/app/src/store/proposal.ts`, `apps/app/src/store/proposal.test.ts`;
@@ -115,6 +117,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Depends on**: T1
 
 ### T3 — O mentor vê as conexões e o catálogo, e sabe propor
+- **Done**: `339034a, 7527668`
 - **Covers**: FR-1, FR-11 (prompt), FR-12 (contexto comum)
 - **Files**: `apps/app/server/mentor/context.ts`, `apps/app/server/mentor/prompt.ts`, `apps/app/server/mentor/context.test.ts`
 - **Mirror**: `engineView`/`catalogFacts` (`context.ts`)
@@ -135,6 +138,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Depends on**: T1
 
 ### T4 — A ferramenta nos dois provedores (MCP no `claude`, nativa na API)
+- **Done**: `f7a9b59`
 - **Covers**: FR-1, FR-12, A02, A03 (sem dependência nova)
 - **Files**:
   - novos: `apps/app/server/mentor/proposal-tool.ts`, `apps/app/server/mentor/mcp-server.ts` (o código do servidor MCP como string);
@@ -162,6 +166,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Depends on**: T1, T3
 
 ### T5 — O servidor valida, traduz, grava e controla o estado da proposta
+- **Done**: `7c6e877`
 - **Covers**: FR-1, FR-4, FR-6 (servidor), FR-9, NFR-3, A01, A06, A08, A09, A10
 - **Files**: `apps/app/server/mentor/chat-route.ts`, `apps/app/server/routes.ts`, `apps/app/server/chat.test.ts`
 - **Mirror**: o loop de chunks e o `finally` de `chat-route.ts`; a rota `conversation` (`checkMethod`, `problemOf`); os testes A01/A10 de `chat.test.ts`
@@ -190,6 +195,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Depends on**: T2, T4
 
 ### T6 — O card no chat: Aplicar, Descartar, Desfazer
+- **Done**: `255ff87`
 - **Covers**: FR-3, FR-4, FR-5, FR-7 (UI), FR-8, FR-9 (UI), NFR-2, NFR-4, A05
 - **Files**:
   - novos: `apps/app/src/practice/ProposalCard.tsx`;
@@ -218,6 +224,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Depends on**: T2, T5
 
 ### T8 — Arrastar com um dedo move o canvas; Shift + arrastar seleciona
+- **Done**: `77eb488`
 - **Covers**: FR-13
 - **Files**: `apps/app/src/canvas/Canvas.tsx`, `apps/app/e2e/canvas-gestures.spec.ts` (new), os e2e que dependam do arrasto de seleção (conferir)
 - **Mirror**: as props atuais do `ReactFlow` (`Canvas.tsx:149-164`); os e2e com `page.mouse` (`apps/app/e2e/edge-remove.spec.ts:82-86`)
@@ -232,6 +239,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Depends on**: —
 
 ### T9 — Duplo clique num card abre as propriedades
+- **Done**: `ad2f18e`
 - **Covers**: FR-14
 - **Files**: `apps/app/src/workspace/layout-store.ts` (um pedido de "mostrar propriedades"), `apps/app/src/canvas/Canvas.tsx` (`onNodeDoubleClick`, `zoomOnDoubleClick={false}`), `apps/app/src/practice/ProblemView.tsx`, `apps/app/src/practice/StudyView.tsx` (a aba responde ao pedido), testes em `apps/app/src/workspace/layout-store.test.ts` e `apps/app/src/practice/practice.test.tsx`
 - **Mirror**: `useLayout.toggle` (`layout-store.ts`); as abas de `ProblemView.tsx:137-158`
@@ -247,6 +255,7 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Depends on**: —
 
 ### T7 — e2e e README
+- **Done**: `8f97c18`
 - **Covers**: G1–G4 (automatizáveis), NFR-2, DoD README
 - **Files**: `apps/app/e2e/study-flow.spec.ts` (ou um novo `mentor-edits.spec.ts`), `apps/app/e2e/a11y.spec.ts`, `README.md`
 - **Mirror**: `study-flow.spec.ts` (abrir Estudar, pílula, perguntar); o teste do a11y com o mentor aberto
@@ -311,3 +320,54 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e && pnpm audit
 ```
 Depois, o roteiro do PRD §18 (passos 1–10) com a **assinatura real**, no preview em `127.0.0.1:4173`, com `ARCHSIM_PRACTICE_DIR` temporário, sem tocar no servidor de dev da pessoa. Os passos que dependem da UI (Aplicar, Ctrl+Z, recarregar) são verificados com um script Playwright temporário contra o preview real. O resultado é registrado no PR. A API real fica não verificada se não houver chave.
+
+## Implementation
+
+**Branch**: `feat/mentor-diagram-edits` · **Base**: `master` · **Date**: 2026-11-14
+
+| Task | Commit | Check | Lint / Types / Tests |
+|---|---|---|---|
+| T1 | `b8cdad8` | ✅ | ✅ ✅ ✅ (659) |
+| T2 | `1ed060d` | ✅ | ✅ ✅ ✅ (668) |
+| T3 | `339034a`, `7527668` | ✅ (+ verificação real) | ✅ ✅ ✅ (671) |
+| T4 | `f7a9b59` | ✅ (+ probe e smoke com o `claude` real) | ✅ ✅ ✅ (674) |
+| T5 | `7c6e877` | ✅ | ✅ ✅ ✅ (680) |
+| T6 | `255ff87` | ✅ | ✅ ✅ ✅ (689) |
+| T8 | `77eb488` | ✅ e2e (3× por browser) | ✅ ✅ ✅ (689) |
+| T9 | `ad2f18e` | ✅ e2e (2× por browser) | ✅ ✅ ✅ (693) |
+| T7 | `8f97c18` | ✅ e2e completo 62/62 | ✅ ✅ ✅ (694) |
+
+Baseline: 656 testes unitários e 50 e2e, verdes. No fim: 694 unitários e 62 e2e, verdes. T8 e T9 entraram antes da T7, porque o e2e da T7 cobre o fluxo inteiro.
+
+### Deviations
+- **T4** — o teste de UI do modo estudo (da feature anterior) falhava 1 vez em 5, porque lia o `mode` no mesmo tick da primeira pintura. Passou a esperar o efeito do `Workspace` (`waitFor`). A correção é só de teste e foi junto no commit da T4.
+- **T7** — o e2e mostrou que um Ctrl+Z deixava o card "aplicada", sem como aplicar de novo. O `ProposalCard` agora volta a `pending` sempre que o desenho volta exatamente ao de antes de Aplicar, seja pelo Desfazer ou pelo Ctrl+Z. O e2e também passou a esperar o autosave (500 ms) antes de recarregar e a limpar a conversa do problema no início.
+- **T8** — o Shift saiu do `multiSelectionKeyCode`: Cmd/Ctrl + clique soma à seleção e Shift + arrastar desenha o retângulo. O plano previa manter o Shift nas duas funções se o React Flow aceitasse; não aceitou.
+- **T9** — as telas de prática e estudo só trocam de aba com pedidos feitos depois de abrir, para que um pedido antigo, guardado no store global, não abra uma tela nova já em Propriedades. Os e2e de duplo clique no problema recarregam a página depois do seed (a navegação só por hash não roda o `addInitScript`) e clicam por coordenada, porque o card renderiza 10 vezes por segundo.
+- **T3 (`7527668`)** — na verificação real, o mentor escreveu "Montei a proposta" sem chamar a ferramenta. O prompt agora proíbe afirmar uma proposta sem a chamada e pede o motivo quando ele decide não propor.
+
+### Definition of Done
+- [x] Todo requisito Must atende ao seu critério de aceite: FR-1 a FR-9, FR-12, FR-13 e FR-14 (ver Coverage), mais os Should FR-10 e FR-11.
+- [x] **Roteiro §18 com a assinatura real** (preview em 127.0.0.1:4173, diretório de prática temporário, navegador Playwright):
+  - viraram card e aplicaram certo: adicionar ElastiCache entre a API e o banco (3 operações), renomear, remover o cache, réplicas 30 → 40 e tipo do banco;
+  - a carga para 50 mil e 3 perguntas de entendimento não geraram proposta;
+  - "conecta o ALB no banco" foi recusado com o motivo;
+  - remover o ALB à mão e depois aplicar → "o desenho mudou desde esta proposta";
+  - recarregar trouxe os estados de volta.
+
+  G1: 7 de 8 pedidos de mudança viraram proposta aplicável. A falha foi o "montei" sem chamada, corrigido no prompt e confirmado em seguida. **API real: não verificada** (sem chave neste ambiente).
+- [x] O modo prática e o canvas livre se comportam como antes: os e2e existentes passam. Os gestos do canvas mudaram de propósito (FR-13).
+- [x] O README explica a proposta, o Aplicar, o Ctrl+Z, os gestos e o duplo clique.
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test` (694), `pnpm test:e2e` (62) e `pnpm audit` passam. O audit da feature anterior não teve dependências novas.
+
+### Verification
+- O build não tem `@anthropic-ai`, `archsim/cli`, `stream-json`, `--setting-sources` nem `mcpServers` no bundle.
+- Probe e smoke com o `claude` 2.1.325:
+  - só `mcp__archsim__propor_mudancas` exposto;
+  - o schema real foi aceito (o pedido chega à API da Anthropic);
+  - o provedor gera e remove o script MCP no diretório privado.
+- O log de cada resposta tem `propostas=` e `rejeitadas=`, sem texto.
+- **Tempo e tokens:** em 12 respostas reais, o primeiro token levou de 4,0 a 13,6 s (mediana ≈ 6,5 s), contra ≈ 3,9 s antes desta feature, e o input ficou entre 12 e 32 mil tokens. O catálogo pesa ≈ 2,9 mil tokens do system prompt. O resto vem da segunda rodada que a ferramenta exige e do histórico. **Achado em aberto** (a meta do NFR-2 da feature anterior já não era atingida).
+
+### Inherited failures
+Nenhuma. O teste intermitente do modo estudo (1 em 5) era da feature anterior e foi corrigido na T4.
