@@ -371,3 +371,24 @@ Baseline: 656 testes unitários e 50 e2e, verdes. No fim: 694 unitários e 62 e2
 
 ### Inherited failures
 Nenhuma. O teste intermitente do modo estudo (1 em 5) era da feature anterior e foi corrigido na T4.
+
+### Review fixes (`c60f5de`)
+A revisão independente não achou nada Critical nem High. Foram corrigidos:
+- **M1:** um redo depois do undo duplicava nós ao aplicar de novo.
+- **M2:** os botões esperam a resposta do mentor, e o estado recusado com 409 é reenviado.
+- **M3:** ids de arquivo importado (`API_GW`) quebravam a proposta.
+- **M4:** uma proposta podia conectar algo em Usuários.
+- **M5:** a API agora devolve `is_error` com o motivo quando a proposta é recusada.
+- **L1:** um stream sem `done` não guarda proposta.
+- **L3:** os ids das arestas novas vêm do gerador de ids.
+- **L5:** os textos das duas rodadas saem separados.
+- **L6:** o aviso de proposta recusada some quando outra proposta da resposta entrou.
+- **L7:** uma falha ao escrever os arquivos de prompt não deixa arquivo para trás.
+
+Em aberto (Low):
+- **L2:** uma proposta corrompida no arquivo faz a conversa inteira ser deixada de lado, como qualquer outro arquivo inválido.
+- **L4:** um id importado chamado literalmente `novoN` colide com um nó novo.
+- **L8:** depois de recarregar, um card aplicado não oferece Desfazer, mas o Ctrl+Z continua funcionando no desenho.
+- **M5 no CLI:** o `claude -p` sempre recebe "Proposta registrada", porque o servidor MCP não fala com o nosso servidor. Fica coberto pelo aviso na UI e pelo prompt.
+
+656 → 705 testes unitários e 62 e2e verdes; `pnpm audit` limpo.
