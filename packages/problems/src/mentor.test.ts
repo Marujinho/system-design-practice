@@ -99,6 +99,16 @@ describe('proposals (mentor-edits FR-2, FR-9, NFR-3, A05, A08)', () => {
     expect(ProposalInput.safeParse({ summary: 's', ops: [] }).success).toBe(false);
   });
 
+  it('keeps real ids from an imported file once translated (review M3)', () => {
+    const p = {
+      summary: 's',
+      ops: [{ op: 'set_prop', node: 'API_GW', key: 'units', value: 2 }],
+      id: '0b6c1f9e-6b1a-4a5f-9a7e-0c2b1d3e4f50',
+      status: 'pending',
+    };
+    expect(MentorEvent.safeParse({ type: 'proposal', proposal: p }).success).toBe(true);
+  });
+
   it('keeps a proposal on a reply, and old replies without one stay valid', () => {
     const proposal = {
       summary: 's',

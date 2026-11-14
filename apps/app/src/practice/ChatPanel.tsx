@@ -168,6 +168,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
     let error: MentorErrorCode | null = null;
     let interrupted = false;
     let proposal: Proposal | undefined;
+    let sawDone = false;
     setLive({ question: text, text: '', provider });
     setRejected(false);
     setUi({ streaming: true, unread: null });
@@ -177,7 +178,10 @@ export function ChatPanel({ problemId }: { problemId: string }) {
       setLive(null);
       setUi({ streaming: false });
       const at = new Date().toISOString();
+      // A stream that ended without done was cut: the server kept no proposal either (L1).
+      if (!sawDone) interrupted = true;
       const kept = interrupted ? undefined : proposal;
+      if (kept !== undefined) setRejected(false); // one proposal made it: no warning (L6)
       if (reply.length > 0 || kept !== undefined) {
         setMessages((m) => [
           ...m,
@@ -215,8 +219,10 @@ export function ChatPanel({ problemId }: { problemId: string }) {
           } else if (e.type === 'usage') usage = e.usage;
           else if (e.type === 'trimmed') setTrimmed(true);
           else if (e.type === 'error') error = e.code;
-          else if (e.type === 'done') interrupted = e.interrupted;
-          else if (e.type === 'proposal') proposal = e.proposal;
+          else if (e.type === 'done') {
+            sawDone = true;
+            interrupted = e.interrupted;
+          } else if (e.type === 'proposal') proposal = e.proposal;
           else if (e.type === 'proposal_rejected') setRejected(true);
         },
       )

@@ -199,7 +199,17 @@ export function mentorRoutes(deps: {
       if (trimmed) send({ type: 'trimmed' });
 
       armIdle();
-      const input = { system, history: kept, state, message: request.message, model };
+      const input = {
+        system,
+        history: kept,
+        state,
+        message: request.message,
+        model,
+        check: (raw: unknown) => {
+          const r = validateProposal(raw, seen.ids, checked.diagram);
+          return r.ok ? null : r.reason;
+        },
+      };
       for await (const chunk of provider.stream(input, controller.signal)) {
         armIdle();
         if (chunk.type === 'heartbeat') continue;

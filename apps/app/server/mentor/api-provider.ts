@@ -8,7 +8,13 @@ import type {
   BetaToolResultBlockParam,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import type { MentorErrorCode } from '@archsim/problems';
-import { TOOL_DESCRIPTION, TOOL_NAME, TOOL_RESULT, toolInputSchema } from './proposal-tool';
+import {
+  TOOL_DESCRIPTION,
+  TOOL_NAME,
+  TOOL_REJECTED,
+  TOOL_RESULT,
+  toolInputSchema,
+} from './proposal-tool';
 import { PRICE_PER_MTOK, PRICED_MODEL, type MentorProvider, type ProviderChunk } from './provider';
 
 /** What the provider needs from a stream: the raw events, then the final message. */
@@ -103,10 +109,17 @@ export function apiProvider(
       try {
         let params = apiParams(input);
         // At most two rounds: the reply (maybe with a proposal), then its closing text.
+        let wrote = false;
         for (let round = 0; round < 2; round += 1) {
           const stream = open(params, signal);
+          let gap = round > 0 && wrote; // keep the closing text apart from what came before
           for await (const event of stream) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              if (gap) {
+                yield { type: 'delta', text: '\n\n' };
+                gap = false;
+              }
+              wrote = true;
               yield { type: 'delta', text: event.delta.text };
             } else {
               yield { type: 'heartbeat' }; // thinking and other events: alive, nothing to show
@@ -127,11 +140,25 @@ export function apiProvider(
           if (round === 0 && call?.type === 'tool_use')
             yield { type: 'proposal', input: call.input };
           if (final.stop_reason !== 'tool_use' || round === 1) break;
-          // Answer every tool call the same way, then let the model close its reply.
+          // Answer every tool call — with the simulator's reason when it refuses — and let the
+          // model close its reply knowing whether there is a card (M5).
           const results: BetaToolResultBlockParam[] = [];
           for (const b of final.content) {
-            if (b.type === 'tool_use')
-              results.push({ type: 'tool_result', tool_use_id: b.id, content: TOOL_RESULT });
+            if (b.type !== 'tool_use') continue;
+            const reason =
+              call?.type === 'tool_use' && b.id === call.id
+                ? (input.check?.(b.input) ?? null)
+                : 'só uma proposta por resposta';
+            results.push(
+              reason === null
+                ? { type: 'tool_result', tool_use_id: b.id, content: TOOL_RESULT }
+                : {
+                    type: 'tool_result',
+                    tool_use_id: b.id,
+                    is_error: true,
+                    content: `${TOOL_REJECTED}${reason}`,
+                  },
+            );
           }
           params = {
             ...params,

@@ -8,7 +8,15 @@ import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { spawn as nodeSpawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { createInterface } from 'node:readline';
-import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -515,6 +523,7 @@ describe('the proposal tool (mentor-edits FR-1, FR-12, A02)', () => {
     ]);
     expect(chunks.flatMap((c) => (c.type === 'delta' ? [c.text] : []))).toEqual([
       'Proponho isto. ',
+      '\n\n',
       'Você decide.',
     ]);
     const last = calls[1]?.messages.at(-1);
@@ -562,3 +571,67 @@ function streamOfFor(
       } as Awaited<ReturnType<ApiStream['finalMessage']>>),
   };
 }
+
+describe('review fixes in the providers (M5, L5, L7)', () => {
+  it('answers a refused proposal with is_error and the reason, and keeps round texts apart', async () => {
+    const calls: BetaMessageStreamParams[] = [];
+    const tool = {
+      type: 'tool_use',
+      id: 'toolu_9',
+      name: 'propor_mudancas',
+      input: { summary: 's', ops: [] },
+    };
+    const rounds = [
+      () => streamOfFor([deltaEvent('Proponho isto.')], 'tool_use', [tool]),
+      () => streamOfFor([deltaEvent('Não deu.')], 'end_turn', []),
+    ];
+    const p = apiProvider({
+      env: { ANTHROPIC_API_KEY: 'k' },
+      stream: (params) => {
+        calls.push(params);
+        const next = rounds[calls.length - 1];
+        if (!next) throw new Error('rodada a mais');
+        return next();
+      },
+    });
+    const chunks: ProviderChunk[] = [];
+    for await (const c of p.stream(
+      { ...input, check: () => 'serviço desconhecido: aws.nope' },
+      new AbortController().signal,
+    ))
+      chunks.push(c);
+    expect(calls[1]?.messages.at(-1)).toEqual({
+      role: 'user',
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: 'toolu_9',
+          is_error: true,
+          content: expect.stringContaining('serviço desconhecido: aws.nope') as unknown,
+        },
+      ],
+    });
+    expect(chunks.flatMap((c) => (c.type === 'delta' ? [c.text] : [])).join('')).toBe(
+      'Proponho isto.\n\nNão deu.',
+    );
+  });
+
+  it('leaves no file behind when it cannot write its prompt files', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'archsim-mentor-ro-'));
+    chmodSync(cwd, 0o500);
+    try {
+      const p = cliProvider({
+        cwd,
+        spawn: () => {
+          throw new Error('não devia chegar aqui');
+        },
+      });
+      const chunks: ProviderChunk[] = [];
+      for await (const c of p.stream(input, new AbortController().signal)) chunks.push(c);
+      expect(chunks).toEqual([{ type: 'error', code: 'unknown' }]);
+      expect(readdirSync(cwd)).toEqual([]);
+    } finally {
+      chmodSync(cwd, 0o700);
+    }
+  });
+});

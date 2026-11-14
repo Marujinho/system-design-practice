@@ -34,8 +34,12 @@ const Label = z
   .min(1)
   .max(80)
   .regex(/^[^<>]+$/);
-/** An existing node: a neutral id (`n3`) from the mentor, a real id once translated. */
-const NodeRef = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}$/);
+/**
+ * An existing node: a neutral id (`n3`) from the mentor, a real id once translated —
+ * so the diagram's own id rule (an imported file may use `API_GW`). Only n# and novoN
+ * are accepted from the model; the server enforces that when translating.
+ */
+const NodeRef = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 /** A node this proposal creates: `novo1` … `novo50`. */
 export const NewRef = z.string().regex(/^novo([1-9]|[1-4]\d|50)$/);
 const AnyRef = z.union([NewRef, NodeRef]);

@@ -515,7 +515,120 @@ describe('proposals in the chat (mentor-edits FR-3–FR-9, NFR-2, A05)', () => {
     });
     await userEvent.type(box, 'põe uma API{Enter}');
     expect(await screen.findByRole('region', { name: 'Proposta do mentor' })).toBeTruthy();
-    expect(screen.getByText(/O mentor propôs uma mudança que o simulador não aceita/)).toBeTruthy();
+    // a proposal made it: the extra rejected one is not worth a warning (review L6)
+    expect(screen.queryByText(/O mentor propôs uma mudança que o simulador não aceita/)).toBeNull();
+  });
+
+  it('warns when the only proposal of a reply was rejected', async () => {
+    mockFetch({
+      chat: (_b, s) =>
+        streamed([
+          { type: 'start' },
+          { type: 'delta', text: 'Tentei.' },
+          { type: 'proposal_rejected', reason: 'x' },
+          { type: 'done', interrupted: false },
+        ])(s),
+    });
+    render(<ChatPanel problemId="url-shortener" />);
+    const box = await screen.findByRole('textbox', { name: 'Pergunta para o mentor' });
+    await waitFor(() => {
+      expect(box).toBeEnabled();
+    });
+    await userEvent.type(box, 'põe uma API{Enter}');
+    expect(
+      await screen.findByText(/O mentor propôs uma mudança que o simulador não aceita/),
+    ).toBeTruthy();
+  });
+
+  it('keeps no proposal from a stream that ended without done (review L1)', async () => {
+    mockFetch({
+      chat: (_b, s) =>
+        streamed([
+          { type: 'start' },
+          { type: 'delta', text: 'Proponho.' },
+          { type: 'proposal', proposal: proposal() },
+        ])(s),
+    });
+    render(<ChatPanel problemId="url-shortener" />);
+    const box = await screen.findByRole('textbox', { name: 'Pergunta para o mentor' });
+    await waitFor(() => {
+      expect(box).toBeEnabled();
+    });
+    await userEvent.type(box, 'põe uma API{Enter}');
+    expect(await screen.findByText('resposta interrompida')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Proposta do mentor' })).toBeNull();
+  });
+
+  it('follows a redo after an undo, and never applies the same proposal twice (review M1)', async () => {
+    mockFetch({ conversation: withProposal(proposal()) });
+    render(<ChatPanel problemId="url-shortener" />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Aplicar' }));
+    act(() => {
+      useDiagram.getState().undo();
+    });
+    expect(await screen.findByRole('button', { name: 'Aplicar' })).toBeTruthy();
+    act(() => {
+      useDiagram.getState().redo();
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Aplicar' })).toBeNull();
+    });
+    expect(screen.getByText('aplicada')).toBeTruthy();
+    expect(useDiagram.getState().diagram.nodes.filter((n) => n.label === 'API')).toHaveLength(1);
+  });
+
+  it('holds the buttons while the mentor replies, and saves a refused status once it ends (review M2)', async () => {
+    let refuse = false;
+    const bodies: string[] = [];
+    const fetch = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith('/mentor/status'))
+        return Promise.resolve(new Response(JSON.stringify(BOTH)));
+      if (url.endsWith('/proposal')) {
+        bodies.push(typeof init?.body === 'string' ? init.body : '');
+        return Promise.resolve(
+          refuse
+            ? new Response(JSON.stringify({ error: 'já há uma resposta em andamento' }), {
+                status: 409,
+              })
+            : new Response(JSON.stringify(withProposal(proposal()))),
+        );
+      }
+      if (url.includes('/conversation/'))
+        return Promise.resolve(new Response(JSON.stringify(withProposal(proposal()))));
+      return Promise.resolve(new Response('{}', { status: 404 }));
+    });
+    vi.stubGlobal('fetch', fetch);
+    render(<ChatPanel problemId="url-shortener" />);
+    const applyButton = await screen.findByRole('button', { name: 'Aplicar' });
+    act(() => {
+      useMentorUi.setState({ streaming: true });
+    });
+    expect(applyButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Descartar' })).toBeDisabled();
+    act(() => {
+      useMentorUi.setState({ streaming: false });
+    });
+    await userEvent.click(applyButton);
+    await waitFor(() => {
+      expect(bodies).toHaveLength(1);
+    });
+    // Ctrl+Z while a reply streams: the server refuses (409) and the card waits for the end
+    refuse = true;
+    act(() => {
+      useMentorUi.setState({ streaming: true });
+      useDiagram.getState().undo();
+    });
+    await waitFor(() => {
+      expect(bodies).toHaveLength(2);
+    });
+    refuse = false;
+    act(() => {
+      useMentorUi.setState({ streaming: false });
+    });
+    await waitFor(() => {
+      expect(bodies).toHaveLength(3);
+    });
+    expect(JSON.parse(bodies[2] ?? '{}')).toMatchObject({ status: 'pending' });
   });
 
   it('never renders markup from a proposal: one with tags does not even load', async () => {

@@ -93,6 +93,20 @@ describe('applyProposal (mentor-edits FR-2, FR-6, FR-7, FR-10)', () => {
     expect(apply([{ op: 'connect', from: 'users', to: 'alb' }])).toMatchObject({ ok: false });
   });
 
+  it('refuses a connection into Users, which the canvas can’t draw (review M4)', () => {
+    expect(apply([{ op: 'connect', from: 'app', to: 'users' }])).toMatchObject({
+      ok: false,
+      code: 'invalid',
+    });
+  });
+
+  it('names new edges with the id maker, never from node ids (review L3)', () => {
+    const r = apply([{ op: 'connect', from: 'alb', to: 'db' }]);
+    if (!r.ok) throw new Error(r.message);
+    const added = r.diagram.edges.find((e) => e.source === 'alb' && e.target === 'db');
+    expect(added?.id).toMatch(/^e-t0-\d+$/);
+  });
+
   it('places new nodes on free ground next to the node they hang from', () => {
     const r = apply([
       { op: 'add', ref: 'novo1', service: 'aws.sqs' },

@@ -203,16 +203,23 @@ export function cliProvider(
       const cwd = workDir();
       // One file per reply: two problems asked at once never read each other's prompt.
       const systemFile = `system-${randomUUID()}.txt`;
-      writeAtomic(join(cwd, systemFile), input.system);
       const mcpFile = join(cwd, `mcp-${randomUUID()}.mjs`);
-      writeAtomic(mcpFile, mcpServerSource(toolInputSchema()));
-      const mcpConfig = JSON.stringify({
-        mcpServers: { [MCP_SERVER_NAME]: { command: process.execPath, args: [mcpFile] } },
-      });
+      // Cleanup is ready before the first write, so a failed write leaves nothing behind.
       const removeSystem = () => {
         rmSync(join(cwd, systemFile), { force: true });
         rmSync(mcpFile, { force: true });
       };
+      try {
+        writeAtomic(join(cwd, systemFile), input.system);
+        writeAtomic(mcpFile, mcpServerSource(toolInputSchema()));
+      } catch {
+        removeSystem();
+        yield { type: 'error', code: 'unknown' };
+        return;
+      }
+      const mcpConfig = JSON.stringify({
+        mcpServers: { [MCP_SERVER_NAME]: { command: process.execPath, args: [mcpFile] } },
+      });
       let child: ChildProcessWithoutNullStreams;
       try {
         child = run('claude', cliArgs(input.model, systemFile, mcpConfig), { cwd, env });

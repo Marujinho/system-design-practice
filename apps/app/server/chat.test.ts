@@ -397,6 +397,50 @@ describe('proposals (mentor-edits FR-1, FR-6, FR-9, A01, A08, A09, A10)', () => 
     });
   });
 
+  it('keeps a proposal on a node whose id came from an imported file (review M3)', async () => {
+    const imported = JSON.parse(JSON.stringify(reference)) as {
+      nodes: { id: string }[];
+      edges: { source: string; target: string }[];
+    };
+    const rename = (from: string, to: string) => {
+      for (const n of imported.nodes) if (n.id === from) n.id = to;
+      for (const e of imported.edges) {
+        if (e.source === from) e.source = to;
+        if (e.target === from) e.target = to;
+      }
+    };
+    rename('app', 'API_GW');
+    await restart([
+      proposer({ summary: 's', ops: [{ op: 'set_prop', node: 'n3', key: 'units', value: 2 }] }),
+    ]);
+    const ev = events(
+      (await call('POST', '/__archsim/chat', { body: chatBody('oi', { diagram: imported }) })).body,
+    );
+    const p = ev.find((e) => e.type === 'proposal');
+    if (p?.type !== 'proposal') throw new Error(JSON.stringify(ev));
+    expect(p.proposal.ops).toEqual([{ op: 'set_prop', node: 'API_GW', key: 'units', value: 2 }]);
+    expect(saved().messages).toHaveLength(2);
+  });
+
+  it('tells the API provider why the simulator refused, through check (review M5)', async () => {
+    let seen: string | null | undefined;
+    const checker: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream(input) {
+        await Promise.resolve();
+        seen = input.check?.({
+          summary: 's',
+          ops: [{ op: 'add', ref: 'novo1', service: 'aws.nope' }],
+        });
+        yield { type: 'delta', text: 'ok' };
+      },
+    };
+    await restart([checker]);
+    await call('POST', '/__archsim/chat', { body: chatBody('oi') });
+    expect(seen).toContain('serviço desconhecido');
+  });
+
   it('drops the proposal of an interrupted reply', async () => {
     const slow: MentorProvider = {
       id: 'api',

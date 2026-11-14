@@ -12,6 +12,11 @@ export interface ProviderInput {
   state: string;
   message: string;
   model: string;
+  /**
+   * Checks a propor_mudancas input the way the route will: null when it holds,
+   * else the reason. A provider that can answer the tool call tells the model (M5).
+   */
+  check?: (proposal: unknown) => string | null;
 }
 
 export type ProviderChunk =

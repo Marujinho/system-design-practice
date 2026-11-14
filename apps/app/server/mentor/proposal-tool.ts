@@ -15,6 +15,10 @@ export const TOOL_DESCRIPTION =
 /** What the tool answers, in both providers: the person decides. */
 export const TOOL_RESULT = 'Proposta registrada. Ela aparece num card e a pessoa decide se aplica.';
 
+/** What the API provider answers when the simulator refuses the proposal: no card. */
+export const TOOL_REJECTED =
+  'Proposta recusada pelo simulador, não aparece card. Diga isso à pessoa e, se fizer sentido, proponha de outro jeito. Motivo: ';
+
 /** The tool's input schema, from the same zod contract the server validates against. */
 export function toolInputSchema(): Record<string, unknown> {
   const schema = z.toJSONSchema(ProposalInput) as Record<string, unknown>;

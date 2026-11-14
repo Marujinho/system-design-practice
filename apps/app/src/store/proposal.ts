@@ -112,6 +112,9 @@ export function applyProposal(
             const from = nodeOf(op.from);
             const to = nodeOf(op.to);
             if (from.id === to.id) throw new Refused('invalid', 'um nó não se conecta a si mesmo');
+            // The canvas gives Users no input: nothing can connect into it (mentor-edits FR-6).
+            if (serviceOf(to.serviceId).kind === 'entry')
+              throw new Refused('invalid', 'nada se conecta em Usuários; Usuários só envia');
             if (d.edges.some((e) => e.source === from.id && e.target === to.id))
               throw new Refused('invalid', `${from.label} já está conectado a ${to.label}`);
             if (d.edges.length >= LIMITS.maxEdges)
@@ -121,7 +124,7 @@ export function applyProposal(
               serviceOf(to.serviceId).kind,
             );
             d.edges.push({
-              id: `e-${to.id}-${String(i)}-${from.id}`.slice(0, 64),
+              id: options.newId('core.e', i),
               source: from.id,
               target: to.id,
               protocol,
