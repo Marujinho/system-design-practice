@@ -537,7 +537,7 @@ Baseline: 570 testes unitários e 43 e2e, todos verdes. No fim: 650 unitários e
 - [x] Os testes A01/A02 do servidor seguem passando e cobrem as rotas novas (`server.test.ts`, `chat.test.ts`).
 - [x] O modo prática se comporta como antes: `practice-flow.spec` verde; `history.json` e `session.json` intocados pelo estudo (testes do FR-9/FR-10 e o e2e).
 - [x] O README documenta o modo estudo, os provedores, o custo e o que vai à Anthropic (`e28e3cb`).
-- [ ] **Os 11 nomes conferidos contra a página oficial, com links no PR** — os nomes são os oficiais conhecidos, mas **os links ainda não foram coletados nem conferidos página a página**. Pendente para o PR.
+- [x] Os 11 nomes conferidos contra a página oficial da AWS em 2026-11-14 (os links estão no PR). Todos conferem. Para o WAF, o produto se chama "AWS WAF", e o campo expande a sigla: "Web Application Firewall".
 - [x] Saída da CLI e textos dos achados idênticos: `git diff 33cb65d -- packages/sim-engine packages/cli/src packages/problems/src/{attempt,contracts,session}.ts AGENTS.md` está vazio; o catálogo só ganhou `fullName`, que nem o motor nem o `summarize` leem; o teste dos 23 `label` e a saída da CLI não contêm `fullName`.
 - [x] `pnpm lint`, `pnpm typecheck`, `pnpm test` (650), `pnpm test:e2e` (50) e `pnpm audit` (sem vulnerabilidades) passam.
 - [ ] **NFR-2 (primeiro token com p50 ≤ 3 s)** — **não atingido** pela assinatura no meio de uma conversa (ver Verification).
@@ -556,3 +556,14 @@ Baseline: 570 testes unitários e 43 e2e, todos verdes. No fim: 650 unitários e
 
 ### Inherited failures
 Nenhuma. As 2 falhas da primeira rodada de e2e da baseline vieram da edição do catálogo durante a execução e passaram ao rodar de novo com a árvore consistente.
+
+### Review fixes (`fdc75af`)
+Uma revisão independente do código de servidor e do chat não achou nada Critical nem High. Os 7 achados (2 Medium, 5 Low) foram corrigidos:
+- prompt próprio por resposta, num diretório privado;
+- heartbeat para o modelo que pensa por mais tempo que o limite de inatividade;
+- DELETE com 409 durante o stream;
+- corte da resposta em 100.000 caracteres;
+- custo com o preço do cache;
+- saída 0 sem resultado tratada como erro.
+
+656 testes unitários e 50 e2e verdes depois das correções, e um smoke repetido com o `claude` real.
