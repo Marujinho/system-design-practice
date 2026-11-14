@@ -43,6 +43,35 @@ pnpm -s archsim simulate --load-multiplier 2   # com o dobro da carga
 pnpm -s archsim followups                      # os follow-ups que se aplicam ao desenho
 ```
 
+## Estudar com o mentor
+
+Cada problema tem também um **modo estudo** (botão **Estudar** na lista). O canvas é o mesmo,
+com um rascunho separado do da prática, mais um chat com um mentor (Claude) para conversar
+enquanto você monta: perguntar por que algo satura, validar uma ideia, entender um trade-off.
+Fechado, o chat é só uma pílula **Abrir mentor** no canto do canvas; a tecla `M` abre e fecha.
+
+A cada pergunta, o mentor recebe o desenho que está na tela, com os números da simulação
+recalculados pelo servidor local, o enunciado e a solução de referência. Por isso **o modo estudo
+não conta para a nota**: **Finalizar** mostra o score, mas não grava a sessão, o histórico nem o
+recorde. Para valer, use **Praticar**.
+
+O mentor só conversa: não tem ferramentas, não lê arquivos, não roda comandos e não edita o
+desenho. Ele responde por um destes provedores, que você escolhe no próprio chat:
+
+- **Assinatura do Claude**: usa o `claude` (Claude Code) instalado e logado na máquina que roda o
+  `pnpm dev`. Consome a cota do seu plano.
+- **API key**: rode o app com `ANTHROPIC_API_KEY` no ambiente (`ANTHROPIC_API_KEY=… pnpm dev`).
+  É cobrado por uso na sua conta da API; o chat mostra os tokens e o valor estimado da conversa.
+
+O modelo padrão é `claude-opus-5-5`; troque com `ARCHSIM_MENTOR_MODEL`. **O que é enviado à
+Anthropic**: o desenho e as métricas dele, o enunciado, a solução de referência e a conversa. A
+conversa fica em `practice/mentor-<problema>.json` (fora do git); **Nova conversa** no chat, ou
+apagar o arquivo, a remove. O servidor registra uma linha por resposta (provedor, status, tempo
+até o primeiro token e tokens), nunca o texto.
+
+Os serviços que aparecem por sigla (ALB, SQS, EKS…) mostram o nome por extenso na paleta, no
+painel e ao passar o mouse no card, e a busca também acha por ele ("load balancer", "queue").
+
 ## O score
 
 - Algum requisito falhou: até 40 pontos, proporcional aos requisitos atendidos.
