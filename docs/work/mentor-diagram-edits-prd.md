@@ -1,6 +1,6 @@
 # PRD: O mentor propõe mudanças no desenho, aplicadas com um clique
 
-**Source**: `conversation` — "torne possível o agente que eu tô conversando fazer alterações no diagrama caso eu peça"; respostas: proposta com **Aplicar** (nada muda sem o clique) e alcance igual ao que a pessoa faz à mão · **Type**: feature · **Status**: READY · **Approval**: 2026-11-14 · **Standards**: owasp-top10-2025 · **Date**: 2026-11-14
+**Source**: `conversation` — "torne possível o agente que eu tô conversando fazer alterações no diagrama caso eu peça"; respostas: proposta com **Aplicar** (nada muda sem o clique) e alcance igual ao que a pessoa faz à mão; acréscimo (2026-11-14): "invés de eu ter que usar dois dedos no mousepad pra mover a posição do diagrama, faça ser apenas 1 click normal segurando com um dedo só" e "quando eu der double click num card, ele já deve abrir expandido as propriedades dele" · **Type**: feature · **Status**: READY · **Approval**: 2026-11-14 · **Standards**: owasp-top10-2025 · **Date**: 2026-11-14
 
 ## 1. Overview
 No modo estudo, o mentor do chat hoje só conversa. A pessoa lê a sugestão ("põe um ElastiCache entre a API e o banco e sobe a EC2 para 6 réplicas") e refaz tudo à mão. Esta feature deixa a pessoa pedir a mudança ao mentor. Ele responde com uma **proposta**, um card no chat que lista as operações. Com um clique em **Aplicar**, a proposta entra no desenho de uma vez, como um único passo de desfazer. O alcance é o mesmo da pessoa: adicionar e remover serviços, conectar e desconectar, mudar réplicas, tipo, hit ratio e nomes. A carga do problema continua travada.
@@ -27,6 +27,8 @@ A mesma pessoa do modo estudo. Depois desta entrega, ela diz "coloca um cache na
 - **US-2**: Como pessoa estudando, quero ver exatamente o que vai mudar antes de aplicar, para entender a mudança e decidir.
 - **US-3**: Como pessoa estudando, quero desfazer uma proposta aplicada de uma vez, para voltar atrás sem medo.
 - **US-4**: Como pessoa estudando, quero que perguntas comuns continuem sendo só conversa, para que o mentor não proponha mudanças quando eu só quero entender.
+- **US-5**: Como pessoa montando um desenho (em qualquer modo), quero mover o canvas clicando e arrastando com um dedo, para não precisar de gesto de dois dedos.
+- **US-6**: Como pessoa montando um desenho, quero dar duplo clique num card e ver as propriedades dele na hora, para editar sem procurar o painel e a aba.
 
 ## 6. User Flows
 **Principal**
@@ -63,6 +65,8 @@ A mesma pessoa do modo estudo. Depois desta entrega, ela diz "coloca um cache na
 | FR-10 | Os nós novos aparecem em posições livres, sem sobrepor os existentes, perto do nó a que a proposta os conecta. | Should | US-1 | Teste: os nós adicionados não ocupam a mesma posição de nenhum nó existente (critério de `freeSpot`). |
 | FR-11 | O mentor só propõe quando a pessoa pede uma mudança; numa pergunta de entendimento, responde sem proposta. | Should | US-4 | Prompt revisado; roteiro §18 com 3 perguntas sem pedido de mudança → 0 propostas. |
 | FR-12 | Funciona nos dois provedores (assinatura e API), com o mesmo formato de proposta. | Must | US-1 | Testes com os dois provedores dublados; roteiro §18 com o provedor real disponível. |
+| FR-13 | Em todos os modos, clicar e arrastar com o botão principal no fundo do canvas move a vista. A seleção por retângulo passa a ser Shift + arrastar. Arrastar um card continua movendo o card. | Must | US-5 | e2e: arrastar com o botão esquerdo no fundo muda o viewport; Shift + arrastar seleciona os cards dentro do retângulo; arrastar um card move o card. |
+| FR-14 | Duplo clique num card seleciona o nó, expande o painel lateral se estiver recolhido e mostra as propriedades dele (na prática e no estudo, troca para a aba **Propriedades**). O duplo clique não dá zoom no canvas. | Must | US-6 | Testes: com o painel recolhido e a aba Requisitos ativa, duplo clique num card → painel expandido, aba Propriedades, o título do painel é o serviço do card; o zoom não muda. |
 
 ## 8. Non-Functional Requirements
 | ID | Category | Requirement | Acceptance criteria |
@@ -78,6 +82,7 @@ A mesma pessoa do modo estudo. Depois desta entrega, ela diz "coloca um cache na
 - Mudar a carga — travada no estudo, como para a pessoa.
 - Propor no modo prática ou no canvas livre — não há chat lá.
 - Aplicar parte de uma proposta, operação por operação — a proposta é um pacote; para mudar parte dela, a pessoa pede de novo.
+- Novos gestos além de FR-13/FR-14 (por exemplo, pinça para zoom no trackpad muda? não; continua como hoje).
 
 ## 10. Definition of Done
 - [ ] Todo requisito Must atende ao seu critério de aceite

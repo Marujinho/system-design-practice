@@ -217,6 +217,35 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 - **Check**: `pnpm --filter @archsim/app test -- chat` → verde
 - **Depends on**: T2, T5
 
+### T8 — Arrastar com um dedo move o canvas; Shift + arrastar seleciona
+- **Covers**: FR-13
+- **Files**: `apps/app/src/canvas/Canvas.tsx`, `apps/app/e2e/canvas-gestures.spec.ts` (new), os e2e que dependam do arrasto de seleção (conferir)
+- **Mirror**: as props atuais do `ReactFlow` (`Canvas.tsx:149-164`); os e2e com `page.mouse` (`apps/app/e2e/edge-remove.spec.ts:82-86`)
+- **Do**:
+  1. Trocar `selectionOnDrag` + `panOnDrag={[1, 2]}` por `panOnDrag` (botão principal) + `selectionKeyCode="Shift"`. O `multiSelectionKeyCode` passa a `['Meta', 'Control']`, para o Shift ser só o do retângulo. O Shift + clique num card continua somando seleção? Se o React Flow perder isso, manter `Shift` também em `multiSelectionKeyCode` e conferir no e2e.
+  2. O texto de ajuda, se existir, é atualizado.
+- **Tests** (e2e):
+  - arrastar o fundo com o botão esquerdo muda o `transform` do `.react-flow__viewport`;
+  - Shift + arrastar sobre dois cards seleciona os dois (`.selected`);
+  - arrastar um card muda a posição dele e não o viewport.
+- **Check**: `pnpm test:e2e` → verde
+- **Depends on**: —
+
+### T9 — Duplo clique num card abre as propriedades
+- **Covers**: FR-14
+- **Files**: `apps/app/src/workspace/layout-store.ts` (um pedido de "mostrar propriedades"), `apps/app/src/canvas/Canvas.tsx` (`onNodeDoubleClick`, `zoomOnDoubleClick={false}`), `apps/app/src/practice/ProblemView.tsx`, `apps/app/src/practice/StudyView.tsx` (a aba responde ao pedido), testes em `apps/app/src/workspace/layout-store.test.ts` e `apps/app/src/practice/practice.test.tsx`
+- **Mirror**: `useLayout.toggle` (`layout-store.ts`); as abas de `ProblemView.tsx:137-158`
+- **Do**:
+  1. O `layout-store` ganha `showProperties()`: se o lateral estiver recolhido, expande (e salva como o `toggle` faz) e incrementa um contador `propertiesRequest`.
+  2. `Canvas` ganha `onNodeDoubleClick={(_, n) => { select([n.id]); useLayout.getState().showProperties(); }}` e `zoomOnDoubleClick={false}`.
+  3. `ProblemView` e `StudyView` observam `propertiesRequest` num `useEffect` → `setTab('props')`. O canvas livre já mostra só as propriedades.
+- **Tests**:
+  - `showProperties` expande um lateral recolhido e incrementa o contador;
+  - no `ProblemView`, mudar o contador troca para a aba Propriedades;
+  - e2e: duplo clique num card com o lateral recolhido → painel aberto na aba Propriedades com o título do serviço, e o zoom (`transform`) inalterado.
+- **Check**: `pnpm --filter @archsim/app test -- layout practice` e `pnpm test:e2e` → verde
+- **Depends on**: —
+
 ### T7 — e2e e README
 - **Covers**: G1–G4 (automatizáveis), NFR-2, DoD README
 - **Files**: `apps/app/e2e/study-flow.spec.ts` (ou um novo `mentor-edits.spec.ts`), `apps/app/e2e/a11y.spec.ts`, `README.md`
@@ -265,6 +294,8 @@ Para o mentor conseguir propor certo, o contexto ganha as **conexões** do desen
 | §17 provedor falso com proposta | T4 |
 | §17 e2e | T7 |
 | DoD README | T7 |
+| FR-13 | T8 |
+| FR-14 | T9 |
 
 ## Risks
 | Risk | Where it bites | What to do if it does |
