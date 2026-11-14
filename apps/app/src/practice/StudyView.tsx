@@ -9,6 +9,8 @@ import { Workspace } from '../workspace/Workspace';
 import { api, ApiError } from './api';
 import { EvaluationPanel } from './EvaluationPanel';
 import { Brief } from './ProblemView';
+import { ChatPanel } from './ChatPanel';
+import { MentorLauncher } from './MentorLauncher';
 import { ResultScreen } from './ResultScreen';
 
 /**
@@ -54,6 +56,7 @@ export function StudyView({ problemId }: { problemId: string }) {
       <Workspace
         mode={{ kind: 'study', problemId: problem.id }}
         initial={() => problemStart(problem.load)}
+        chat={{ panel: <ChatPanel problemId={problem.id} />, launcher: <MentorLauncher /> }}
         topSummary={
           <>
             <strong>{problem.title}</strong> <span className="study-badge">Modo estudo</span>

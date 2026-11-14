@@ -17,7 +17,7 @@ describe('readLayout / storeLayout (FR-13, NFR-5, A06, A10)', () => {
   });
 
   it('round-trips a saved layout', () => {
-    const c = { palette: true, side: false, top: true, metrics: false };
+    const c = { palette: true, side: false, top: true, metrics: false, chat: false };
     storeLayout(c);
     expect(readLayout()).toEqual(c);
   });
@@ -54,10 +54,11 @@ describe('readLayout / storeLayout (FR-13, NFR-5, A06, A10)', () => {
     }).not.toThrow();
   });
 
-  it('writes only the four panels', () => {
+  it('writes only the five panels', () => {
     const withExtra = { ...EXPANDED, extra: true };
     storeLayout(withExtra);
     expect(Object.keys(JSON.parse(localStorage.getItem(KEY) ?? '{}') as object).sort()).toEqual([
+      'chat',
       'metrics',
       'palette',
       'side',
@@ -78,7 +79,13 @@ describe('useLayout (FR-12, FR-13, FR-14)', () => {
   it('focuses the canvas, then restores the layout from before', () => {
     l().toggle('side');
     l().focusCanvas();
-    expect(l().collapsed).toEqual({ palette: true, side: true, top: true, metrics: true });
+    expect(l().collapsed).toEqual({
+      palette: true,
+      side: true,
+      top: true,
+      metrics: true,
+      chat: true,
+    });
     l().focusCanvas();
     expect(l().collapsed).toEqual({ ...EXPANDED, side: true });
     expect(l().before).toBeNull();
@@ -89,7 +96,13 @@ describe('useLayout (FR-12, FR-13, FR-14)', () => {
     l().focusCanvas();
     l().toggle('palette');
     expect(l().before).toBeNull();
-    expect(l().collapsed).toEqual({ palette: false, side: true, top: true, metrics: true });
+    expect(l().collapsed).toEqual({
+      palette: false,
+      side: true,
+      top: true,
+      metrics: true,
+      chat: true,
+    });
   });
 
   it('never touches the diagram or its undo history', () => {

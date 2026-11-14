@@ -1,14 +1,30 @@
 import { create } from 'zustand';
 import { browserStorage } from '../theme/theme';
 
-export type PanelId = 'palette' | 'side' | 'top' | 'metrics';
-export const PANELS: readonly PanelId[] = ['palette', 'side', 'top', 'metrics'];
+export type PanelId = 'palette' | 'side' | 'top' | 'metrics' | 'chat';
+export const PANELS: readonly PanelId[] = ['palette', 'side', 'top', 'metrics', 'chat'];
 export type Collapsed = Record<PanelId, boolean>;
 
 const KEY = 'archsim:layout';
 
-export const EXPANDED: Collapsed = { palette: false, side: false, top: false, metrics: false };
-const ALL_COLLAPSED: Collapsed = { palette: true, side: true, top: true, metrics: true };
+/**
+ * The default layout: every panel open, except the mentor chat, which starts as
+ * a floating pill and opens when asked (study-mode FR-3).
+ */
+export const EXPANDED: Collapsed = {
+  palette: false,
+  side: false,
+  top: false,
+  metrics: false,
+  chat: true,
+};
+const ALL_COLLAPSED: Collapsed = {
+  palette: true,
+  side: true,
+  top: true,
+  metrics: true,
+  chat: true,
+};
 
 /** The saved panel layout; anything missing, malformed or unreadable means expanded (NFR-5). */
 export function readLayout(storage: Pick<Storage, 'getItem'> | null = browserStorage()): Collapsed {

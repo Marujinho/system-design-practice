@@ -335,3 +335,162 @@
 .achievements li.locked strong {
   color: var(--text-muted);
 }
+
+/* Mentor chat (study-mode FR-3–FR-15) */
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  min-height: 0;
+  height: 100%;
+}
+
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-head h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.chat-provider {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 10px 8px;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.chat-provider legend {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+.chat-provider label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-msg {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.chat-user {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+}
+
+.chat-mentor p {
+  margin: 0 0 6px;
+}
+
+.chat-mentor pre {
+  overflow-x: auto;
+  font-size: 12px;
+}
+
+.chat-suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 6px;
+}
+
+.chat-suggestions .button {
+  width: 100%;
+  text-align: left;
+}
+
+.chat-note {
+  margin: 0;
+  font-size: 11px;
+}
+
+.chat-error {
+  border: 1px solid var(--state-critical);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.chat-error p {
+  margin: 0 0 6px;
+}
+
+.chat-setup {
+  font-size: 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+.chat-setup p,
+.chat-setup ul {
+  margin: 0 0 4px;
+}
+
+.chat-form {
+  display: grid;
+  gap: 6px;
+}
+
+.chat-form textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+}
+
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-actions .button {
+  margin-left: auto;
+}
+
+.chat-count,
+.chat-usage {
+  font-size: 11px;
+  margin: 0;
+}
+
+.chat-clear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.chat-new {
+  align-self: flex-start;
+  font-size: 12px;
+}

@@ -29,7 +29,7 @@ export interface CanvasProps {
   onReady?: (api: { centre: () => { x: number; y: number } }) => void;
 }
 
-function isTyping(target: EventTarget | null): boolean {
+export function isTyping(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
     (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
