@@ -2,7 +2,7 @@
 import { catalog } from '@archsim/catalog';
 import { scoreAttempt, withProblemLoad, type MentorMessage } from '@archsim/problems';
 import { loadProblem, PROBLEMS_DIR, type LoadedProblem } from '@archsim/problems/load';
-import type { Diagram } from '@archsim/sim-engine';
+import { validateDiagram, type Diagram } from '@archsim/sim-engine';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { currentState, estimateTokens, systemPrompt, trimHistory } from './context';
@@ -13,14 +13,16 @@ const loaded: LoadedProblem = (() => {
   return r.value;
 })();
 
-/** The reference with the database shrunk until it saturates. */
+/** The reference without cache hits or read replicas, so the database saturates; a valid diagram. */
 function saturated(): Diagram {
   const d = structuredClone(loaded.reference);
   for (const n of d.nodes) {
     if (n.id === 'cache') n.props = { ...n.props, hitRatio: 0 };
-    if (n.id === 'db') n.props = { ...n.props, units: 1 };
+    if (n.id === 'db') n.props = { ...n.props, readReplicas: 0 };
   }
-  return d;
+  const checked = validateDiagram(d, catalog);
+  if (!checked.ok) throw new Error(`fixture inválido: ${checked.code}`);
+  return checked.diagram;
 }
 
 function stateOf(text: string): {
