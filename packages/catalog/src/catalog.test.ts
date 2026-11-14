@@ -449,3 +449,59 @@ describe('instance types (aws-instance-types)', () => {
     expect(catalog.catalogVersion).toBe('2026-11-13.2');
   });
 });
+
+describe('full names of acronyms (study-mode FR-17)', () => {
+  const FULL: Record<string, string> = {
+    'aws.alb': 'Application Load Balancer',
+    'aws.ec2': 'Elastic Compute Cloud',
+    'aws.rds-postgres': 'Relational Database Service',
+    'aws.nlb': 'Network Load Balancer',
+    'aws.nat-gateway': 'Network Address Translation Gateway',
+    'aws.waf': 'Web Application Firewall',
+    'aws.fargate': 'Elastic Container Service',
+    'aws.eks': 'Elastic Kubernetes Service',
+    'aws.s3': 'Simple Storage Service',
+    'aws.sqs': 'Simple Queue Service',
+    'aws.sns': 'Simple Notification Service',
+  };
+
+  it('spells out the 11 acronyms', () => {
+    for (const [id, name] of Object.entries(FULL)) {
+      expect(findService(catalog, id)?.fullName, id).toBe(name);
+    }
+  });
+
+  it('leaves names that are not acronyms alone', () => {
+    const others = catalog.services.filter((s) => !(s.id in FULL));
+    expect(others).toHaveLength(12);
+    for (const s of others) expect(s.fullName, s.id).toBeUndefined();
+  });
+
+  it('keeps every label as it was (the engine and the CLI print them)', () => {
+    expect(catalog.services.map((s) => s.label)).toEqual([
+      'Usuários / Internet',
+      'Route 53',
+      'CloudFront',
+      'ALB',
+      'EC2',
+      'Lambda',
+      'RDS PostgreSQL',
+      'ElastiCache (Valkey)',
+      'API Gateway',
+      'NLB',
+      'NAT Gateway',
+      'WAF',
+      'Fargate (ECS)',
+      'EKS',
+      'S3',
+      'DynamoDB',
+      'Aurora PostgreSQL',
+      'SQS',
+      'SNS',
+      'Kinesis Data Streams',
+      'EventBridge',
+      'OpenSearch',
+      'CloudWatch',
+    ]);
+  });
+});
