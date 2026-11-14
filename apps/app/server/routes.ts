@@ -23,6 +23,7 @@ import {
   Refusal,
   sendJson,
 } from './guard';
+import { mentorRoutes, type MentorOptions } from './mentor/chat-route';
 import { practiceStore } from './practice-store';
 
 export interface PracticeOptions {
@@ -31,6 +32,8 @@ export interface PracticeOptions {
   catalog: Catalog;
   now?: () => Date;
   log?: (line: string) => void;
+  /** The study-mode mentor; without it, no provider is available. */
+  mentor?: MentorOptions;
 }
 
 type Next = (err?: unknown) => void;
@@ -54,6 +57,15 @@ export function createPracticeHandler(options: PracticeOptions) {
     if (!p) throw new Refusal(404, 'problema não existe');
     return p;
   };
+
+  const mentor = mentorRoutes({
+    store,
+    problemOf,
+    catalog: options.catalog,
+    mentor: options.mentor,
+    now,
+    log,
+  });
 
   /** One history read per request, shared by every row. */
   const summary = (p: LoadedProblem, h: History): ProblemSummary => {
@@ -205,6 +217,17 @@ export function createPracticeHandler(options: PracticeOptions) {
           return;
         case 'study-score':
           await studyScore(req, res);
+          return;
+        case 'mentor':
+          if (parts[1] !== 'status' || parts.length !== 2)
+            throw new Refusal(404, 'rota desconhecida');
+          await mentor.status(req, res);
+          return;
+        case 'conversation':
+          mentor.conversation(req, res, parts[1]);
+          return;
+        case 'chat':
+          await mentor.chat(req, res);
           return;
         case 'reference':
           reference(req, res, parts[1]);

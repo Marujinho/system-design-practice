@@ -1,0 +1,338 @@
+// @vitest-environment node
+import { catalog } from '@archsim/catalog';
+import { Conversation, MentorEvent, MentorStatus } from '@archsim/problems';
+import { PROBLEMS_DIR } from '@archsim/problems/load';
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { createServer, request, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeProvider } from './mentor/fake-provider';
+import type { MentorProvider } from './mentor/provider';
+import { createPracticeHandler } from './routes';
+
+let server: Server;
+let port: number;
+let dir: string;
+let logs: string[];
+let api: ReturnType<typeof fakeProvider>;
+let subscription: ReturnType<typeof fakeProvider>;
+const FAKE_KEY = 'sk-ant-chave-falsa-de-teste';
+
+const reference = JSON.parse(
+  readFileSync(join(PROBLEMS_DIR, 'url-shortener', 'reference.archsim.json'), 'utf8'),
+) as unknown;
+
+function start(providers: MentorProvider[], idleMs?: number): Promise<void> {
+  const handler = createPracticeHandler({
+    practiceDir: dir,
+    problemsDir: PROBLEMS_DIR,
+    catalog,
+    now: () => new Date('2026-11-14T12:00:00.000Z'),
+    log: (line) => logs.push(line),
+    mentor: { providers, model: 'claude-opus-5-5', ...(idleMs === undefined ? {} : { idleMs }) },
+  });
+  server = createServer((req, res) => {
+    void handler(req, res, () => {
+      res.writeHead(404).end();
+    });
+  });
+  return new Promise((done) => {
+    server.listen(0, '127.0.0.1', () => {
+      port = (server.address() as AddressInfo).port;
+      done();
+    });
+  });
+}
+
+beforeEach(async () => {
+  dir = mkdtempSync(join(tmpdir(), 'archsim-chat-'));
+  logs = [];
+  vi.stubEnv('ANTHROPIC_API_KEY', FAKE_KEY);
+  api = fakeProvider('api', { delayMs: 1 });
+  subscription = fakeProvider('subscription', { available: false });
+  await start([subscription, api]);
+});
+
+afterEach(async () => {
+  vi.unstubAllEnvs();
+  await new Promise<void>((done) => {
+    server.close(() => {
+      done();
+    });
+    server.closeAllConnections();
+  });
+});
+
+interface Reply {
+  status: number;
+  headers: Record<string, string | string[] | undefined>;
+  body: string;
+}
+
+function call(
+  method: string,
+  path: string,
+  options: { headers?: Record<string, string>; body?: string; omitOrigin?: boolean } = {},
+): Promise<Reply> {
+  return new Promise((resolve, reject) => {
+    const headers: Record<string, string> = {
+      host: `127.0.0.1:${String(port)}`,
+      ...(options.omitOrigin ? {} : { origin: `http://127.0.0.1:${String(port)}` }),
+      ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
+      ...options.headers,
+    };
+    const req = request({ host: '127.0.0.1', port, method, path, headers }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (c: string) => (body += c));
+      res.on('end', () => {
+        resolve({ status: res.statusCode ?? 0, headers: res.headers, body });
+      });
+    });
+    req.on('error', reject);
+    req.end(options.body);
+  });
+}
+
+const chatBody = (message: string, over: Record<string, unknown> = {}) =>
+  JSON.stringify({
+    problemId: 'url-shortener',
+    provider: 'api',
+    message,
+    diagram: reference,
+    ...over,
+  });
+
+function events(body: string): MentorEvent[] {
+  return body
+    .split('\n\n')
+    .filter((b) => b.trim() !== '')
+    .map((b) => {
+      const data = b.split('\n').find((l) => l.startsWith('data: '));
+      return MentorEvent.parse(JSON.parse(data?.slice(6) ?? 'null'));
+    });
+}
+
+const saved = () =>
+  Conversation.parse(JSON.parse(readFileSync(join(dir, 'mentor-url-shortener.json'), 'utf8')));
+
+describe('mentor status (study-mode FR-6, A07)', () => {
+  it('says which providers can answer, without a credential and without calling a model', async () => {
+    const r = await call('GET', '/__archsim/mentor/status');
+    expect(r.status).toBe(200);
+    expect(MentorStatus.parse(JSON.parse(r.body))).toEqual({
+      subscription: false,
+      api: true,
+      model: 'claude-opus-5-5',
+    });
+    expect(r.body).not.toContain(FAKE_KEY);
+    expect(api.calls).toBe(0);
+  });
+});
+
+describe('chat stream (study-mode FR-4, FR-7, FR-8, FR-13)', () => {
+  it('streams the reply as server-sent events and keeps both turns', async () => {
+    const r = await call('POST', '/__archsim/chat', { body: chatBody('O que está saturando?') });
+    expect(r.status).toBe(200);
+    expect(r.headers['content-type']).toBe('text/event-stream; charset=utf-8');
+    expect(r.headers['cache-control']).toBe('no-store');
+    expect(r.headers['x-content-type-options']).toBe('nosniff');
+    const ev = events(r.body);
+    expect(ev[0]).toEqual({ type: 'start' });
+    expect(ev.at(-1)).toEqual({ type: 'done', interrupted: false });
+    const text = ev.map((e) => (e.type === 'delta' ? e.text : '')).join('');
+    expect(text).toContain('n1');
+    expect(ev.some((e) => e.type === 'usage')).toBe(true);
+    const c = saved();
+    expect(c.messages.map((m) => m.role)).toEqual(['user', 'mentor']);
+    expect(c.messages[1]).toMatchObject({ provider: 'api', text, usage: { outputTokens: 30 } });
+    const back = await call('GET', '/__archsim/conversation/url-shortener');
+    expect(Conversation.parse(JSON.parse(back.body))).toEqual(c);
+  });
+
+  it('sends a provider error as an event and keeps the conversation as it was', async () => {
+    const r = await call('POST', '/__archsim/chat', { body: chatBody('erro:auth') });
+    expect(events(r.body)).toContainEqual({ type: 'error', code: 'auth' });
+    expect(existsSync(join(dir, 'mentor-url-shortener.json'))).toBe(false);
+  });
+
+  it('refuses an unavailable provider, an unknown problem and an invalid diagram before streaming', async () => {
+    const unavailable = await call('POST', '/__archsim/chat', {
+      body: chatBody('oi', { provider: 'subscription' }),
+    });
+    expect(unavailable.status).toBe(409);
+    expect(
+      (await call('POST', '/__archsim/chat', { body: chatBody('oi', { problemId: 'nope' }) }))
+        .status,
+    ).toBe(404);
+    expect(
+      (await call('POST', '/__archsim/chat', { body: chatBody('oi', { diagram: { nodes: 'x' } }) }))
+        .status,
+    ).toBe(400);
+    expect(subscription.calls + api.calls).toBe(0);
+  });
+
+  it('clears the conversation with DELETE', async () => {
+    await call('POST', '/__archsim/chat', { body: chatBody('oi') });
+    const r = await call('DELETE', '/__archsim/conversation/url-shortener');
+    expect(r.status).toBe(204);
+    expect(existsSync(join(dir, 'mentor-url-shortener.json'))).toBe(false);
+  });
+});
+
+describe('A01: only the app may chat or clear', () => {
+  it('refuses another origin, a foreign host, and a DELETE without Origin', async () => {
+    const evil = { origin: 'https://evil.example' };
+    expect(
+      (await call('POST', '/__archsim/chat', { body: chatBody('oi'), headers: evil })).status,
+    ).toBe(403);
+    expect(
+      (
+        await call('POST', '/__archsim/chat', {
+          body: chatBody('oi'),
+          headers: { host: 'evil.example' },
+        })
+      ).status,
+    ).toBe(403);
+    await call('POST', '/__archsim/chat', { body: chatBody('oi') });
+    expect(
+      (await call('DELETE', '/__archsim/conversation/url-shortener', { omitOrigin: true })).status,
+    ).toBe(403);
+    expect(existsSync(join(dir, 'mentor-url-shortener.json'))).toBe(true);
+    expect(api.calls).toBe(1);
+  });
+
+  it('refuses a path-like id and writes nothing outside practice/', async () => {
+    expect((await call('GET', '/__archsim/conversation/..%2F..%2Fetc')).status).toBe(404);
+    expect((await call('DELETE', '/__archsim/conversation/..')).status).toBe(404);
+    expect(readdirSync(dir)).toEqual([]);
+  });
+});
+
+describe('A06: limits', () => {
+  it('refuses a question over 8000 characters with 413', async () => {
+    const r = await call('POST', '/__archsim/chat', { body: chatBody('x'.repeat(8001)) });
+    expect(r.status).toBe(413);
+    expect(api.calls).toBe(0);
+  });
+
+  it('refuses a second question while a reply is still streaming (409)', async () => {
+    const first = new Promise<void>((resolve) => {
+      const req = request(
+        {
+          host: '127.0.0.1',
+          port,
+          method: 'POST',
+          path: '/__archsim/chat',
+          headers: {
+            host: `127.0.0.1:${String(port)}`,
+            origin: `http://127.0.0.1:${String(port)}`,
+            'content-type': 'application/json',
+          },
+        },
+        (res) => {
+          res.once('data', () => {
+            resolve();
+          });
+        },
+      );
+      req.end(chatBody('lento'));
+    });
+    await first;
+    const second = await call('POST', '/__archsim/chat', { body: chatBody('oi') });
+    expect(second.status).toBe(409);
+    expect(JSON.parse(second.body)).toEqual({ error: 'já há uma resposta em andamento' });
+  });
+});
+
+describe('A10: stop, disconnect, time out', () => {
+  it('aborts the provider when the browser goes away and keeps what was said, marked interrupted', async () => {
+    let signal: AbortSignal | undefined;
+    const slow: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream(_input, s) {
+        signal = s;
+        yield { type: 'delta', text: 'Começando' };
+        await new Promise<void>((resolve) => {
+          s.addEventListener('abort', () => {
+            resolve();
+          });
+        });
+      },
+    };
+    await new Promise<void>((done) => {
+      server.close(() => {
+        done();
+      });
+      server.closeAllConnections();
+    });
+    await start([slow]);
+    await new Promise<void>((resolve) => {
+      const req = request(
+        {
+          host: '127.0.0.1',
+          port,
+          method: 'POST',
+          path: '/__archsim/chat',
+          headers: {
+            host: `127.0.0.1:${String(port)}`,
+            origin: `http://127.0.0.1:${String(port)}`,
+            'content-type': 'application/json',
+          },
+        },
+        (res) => {
+          res.once('data', () => {
+            req.destroy();
+            resolve();
+          });
+        },
+      );
+      req.on('error', () => undefined);
+      req.end(chatBody('oi'));
+    });
+    await vi.waitFor(() => {
+      expect(signal?.aborted).toBe(true);
+      expect(existsSync(join(dir, 'mentor-url-shortener.json'))).toBe(true);
+    });
+    expect(saved().messages[1]).toMatchObject({ text: 'Começando', interrupted: true });
+    await vi.waitFor(() => {
+      expect(logs.some((l) => l.includes('status=abortado'))).toBe(true);
+    });
+  });
+
+  it('cuts a reply that stops arriving with a timeout error', async () => {
+    await new Promise<void>((done) => {
+      server.close(() => {
+        done();
+      });
+      server.closeAllConnections();
+    });
+    await start([fakeProvider('api')], 50);
+    const r = await call('POST', '/__archsim/chat', { body: chatBody('trava') });
+    const ev = events(r.body);
+    expect(ev).toContainEqual({ type: 'error', code: 'timeout' });
+    expect(ev.at(-1)).toEqual({ type: 'done', interrupted: true });
+  });
+});
+
+describe('A09 / A04: what the log and the disk keep', () => {
+  it('logs one line per reply, without the question, the answer or the key', async () => {
+    const question = 'pergunta-secreta-que-nao-pode-ir-para-o-log';
+    await call('POST', '/__archsim/chat', { body: chatBody(question) });
+    const line = logs.find((l) => l.includes('mentor problema='));
+    expect(line).toMatch(
+      /^\[archsim\] mentor problema=url-shortener provedor=api status=ok ttft_ms=\d+ in=1200 out=30$/,
+    );
+    expect(logs.join('\n')).not.toContain(question);
+    expect(logs.join('\n')).not.toContain('Olhando o desenho');
+    expect(logs.join('\n')).not.toContain(FAKE_KEY);
+    for (const f of readdirSync(dir)) {
+      expect(readFileSync(join(dir, f), 'utf8')).not.toContain(FAKE_KEY);
+    }
+  });
+});
+
+vi.setConfig({ testTimeout: 20_000 });

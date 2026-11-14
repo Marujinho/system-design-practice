@@ -51,7 +51,8 @@ export function checkCaller(req: IncomingMessage, port: number): void {
   const host = req.headers.host ?? '';
   if (!allowedHosts(port).has(host)) throw new Refusal(403, 'host não permitido');
   const origin = req.headers.origin;
-  if (req.method === 'POST') {
+  // Anything that changes state (POST, DELETE) must carry this app's Origin (CSRF).
+  if (req.method !== 'GET') {
     if (origin === undefined || !allowedOrigins(port).has(origin))
       throw new Refusal(403, 'origem não permitida');
     return;
@@ -61,8 +62,9 @@ export function checkCaller(req: IncomingMessage, port: number): void {
   if (!sameSite && !sameOrigin) throw new Refusal(403, 'origem não permitida');
 }
 
-export function checkMethod(req: IncomingMessage, allowed: 'GET' | 'POST'): void {
-  if (req.method !== allowed) throw new Refusal(405, `método ${clean(req.method)} não permitido`);
+export function checkMethod(req: IncomingMessage, ...allowed: ('GET' | 'POST' | 'DELETE')[]): void {
+  if (!allowed.some((m) => m === req.method))
+    throw new Refusal(405, `método ${clean(req.method)} não permitido`);
 }
 
 /** Reads a JSON body, refusing other content types and anything past 5 MB (A02, A06). */
