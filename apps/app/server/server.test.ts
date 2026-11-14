@@ -319,6 +319,61 @@ describe('finalize (FR-47, FR-59)', () => {
   });
 });
 
+describe('study-score: scores without recording (study-mode FR-9, FR-10, A06)', () => {
+  const files = () =>
+    ['history.json', 'session.json'].map((f) =>
+      existsSync(join(dir, f)) ? readFileSync(join(dir, f), 'utf8') : null,
+    );
+
+  it('answers the same score as practice and writes nothing when no attempt exists yet', async () => {
+    const r = await call('POST', '/__archsim/study-score', { body: finalizeBody() });
+    expect(r.status).toBe(200);
+    const answer = FinalizeResponse.parse(JSON.parse(r.body));
+    expect(answer.score.total).toBeGreaterThanOrEqual(90);
+    expect(answer.isRecord).toBe(false);
+    expect(answer.previousRecord).toBeNull();
+    expect(answer.score.solutionSeen).toBe(false);
+    expect(files()).toEqual([null, null]);
+    // the solution stays locked for practice: studying is not a finalized attempt (FR-11)
+    expect((await call('GET', '/__archsim/reference/url-shortener')).status).toBe(403);
+  });
+
+  it('leaves history, session, record and the problem list byte for byte as they were', async () => {
+    await call('POST', '/__archsim/finalize', { body: finalizeBody() });
+    const before = files();
+    const problems = (await call('GET', '/__archsim/problems')).body;
+    const history = (await call('GET', '/__archsim/history')).body;
+    const weak = JSON.parse(JSON.stringify(reference)) as {
+      nodes: { id: string; props: Record<string, number> }[];
+    };
+    const app = weak.nodes.find((n) => n.id === 'app');
+    if (app) app.props.units = 25;
+    expect(
+      (await call('POST', '/__archsim/study-score', { body: finalizeBody(weak) })).status,
+    ).toBe(200);
+    expect((await call('POST', '/__archsim/study-score', { body: finalizeBody() })).status).toBe(
+      200,
+    );
+    expect(files()).toEqual(before);
+    expect((await call('GET', '/__archsim/problems')).body).toBe(problems);
+    expect((await call('GET', '/__archsim/history')).body).toBe(history);
+  });
+
+  it('refuses like finalize: foreign origin, wrong method, invalid diagram', async () => {
+    const foreign = await call('POST', '/__archsim/study-score', {
+      body: finalizeBody(),
+      headers: { origin: 'https://evil.example' },
+    });
+    expect(foreign.status).toBe(403);
+    expect((await call('GET', '/__archsim/study-score')).status).toBe(405);
+    const invalid = await call('POST', '/__archsim/study-score', {
+      body: finalizeBody({ nodes: 'x' }),
+    });
+    expect(invalid.status).toBe(400);
+    expect(files()).toEqual([null, null]);
+  });
+});
+
 describe('FR-54: attempts stay out of git', () => {
   it('ignores practice/session.json and history.json', () => {
     const root = join(PROBLEMS_DIR, '..');
