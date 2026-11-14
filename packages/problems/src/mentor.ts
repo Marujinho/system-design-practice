@@ -26,6 +26,71 @@ const UserMessage = z
   })
   .strict();
 
+export const MAX_PROPOSAL_OPS = 50;
+
+/** A node name the mentor may write: the diagram's own limit, and never markup (A05). */
+const Label = z
+  .string()
+  .min(1)
+  .max(80)
+  .regex(/^[^<>]+$/);
+/** An existing node: a neutral id (`n3`) from the mentor, a real id once translated. */
+const NodeRef = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}$/);
+/** A node this proposal creates: `novo1` … `novo50`. */
+export const NewRef = z.string().regex(/^novo([1-9]|[1-4]\d|50)$/);
+const AnyRef = z.union([NewRef, NodeRef]);
+const Id = z.string().min(1).max(64);
+
+/** One change to the diagram, as the person could make it by hand (mentor-edits FR-2). */
+export const ProposalOp = z.discriminatedUnion('op', [
+  z
+    .object({
+      op: z.literal('add'),
+      ref: NewRef,
+      service: Id,
+      variant: Id.optional(),
+      props: z.record(z.string().max(32), z.number()).optional(),
+      label: Label.optional(),
+    })
+    .strict(),
+  z.object({ op: z.literal('remove'), node: NodeRef }).strict(),
+  z.object({ op: z.literal('connect'), from: AnyRef, to: AnyRef }).strict(),
+  z.object({ op: z.literal('disconnect'), from: NodeRef, to: NodeRef }).strict(),
+  z.object({ op: z.literal('set_variant'), node: AnyRef, variant: Id }).strict(),
+  z
+    .object({
+      op: z.literal('set_prop'),
+      node: AnyRef,
+      key: z.string().max(32),
+      value: z.number(),
+    })
+    .strict(),
+  z.object({ op: z.literal('rename'), node: AnyRef, label: Label }).strict(),
+]);
+export type ProposalOp = z.infer<typeof ProposalOp>;
+
+/** What the mentor sends through the `propor_mudancas` tool. */
+export const ProposalInput = z
+  .object({
+    summary: z.string().min(1).max(300),
+    ops: z.array(ProposalOp).min(1).max(MAX_PROPOSAL_OPS),
+  })
+  .strict();
+export type ProposalInput = z.infer<typeof ProposalInput>;
+
+export const ProposalStatus = z.enum(['pending', 'applied', 'discarded']);
+export type ProposalStatus = z.infer<typeof ProposalStatus>;
+
+/** A validated proposal, with real node ids, as the card shows it and the conversation keeps it. */
+export const Proposal = ProposalInput.extend({ id: z.uuid(), status: ProposalStatus }).strict();
+export type Proposal = z.infer<typeof Proposal>;
+
+/** `POST /__archsim/proposal`: the person applied, discarded or undid a proposal (FR-9). */
+export const ProposalStatusRequest = z
+  .object({ problemId: z.string().regex(PROBLEM_ID), proposalId: z.uuid(), status: ProposalStatus })
+  .strict();
+export type ProposalStatusRequest = z.infer<typeof ProposalStatusRequest>;
+
 const MentorReply = z
   .object({
     role: z.literal('mentor'),
@@ -34,6 +99,7 @@ const MentorReply = z
     provider: MentorProviderId,
     interrupted: z.literal(true).optional(),
     usage: MentorUsage.optional(),
+    proposal: Proposal.optional(),
   })
   .strict();
 
@@ -82,7 +148,7 @@ export const MentorErrorCode = z.enum([
 ]);
 export type MentorErrorCode = z.infer<typeof MentorErrorCode>;
 
-/** One server-sent event of a chat reply, in order: start, trimmed?, delta*, usage?, error?, done. */
+/** One server-sent event of a chat reply, in order: start, trimmed?, delta*, proposal?, usage?, error?, done. */
 export const MentorEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start') }).strict(),
   z.object({ type: z.literal('trimmed') }).strict(),
@@ -90,5 +156,7 @@ export const MentorEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('usage'), usage: MentorUsage }).strict(),
   z.object({ type: z.literal('error'), code: MentorErrorCode }).strict(),
   z.object({ type: z.literal('done'), interrupted: z.boolean() }).strict(),
+  z.object({ type: z.literal('proposal'), proposal: Proposal }).strict(),
+  z.object({ type: z.literal('proposal_rejected'), reason: z.string().max(200) }).strict(),
 ]);
 export type MentorEvent = z.infer<typeof MentorEvent>;
