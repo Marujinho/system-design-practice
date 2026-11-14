@@ -129,7 +129,7 @@ export function mentorRoutes(deps: {
         system = systemPrompt(loaded, deps.catalog);
         systems.set(problemId, system);
       }
-      const state = currentState(loaded, checked.diagram, deps.catalog);
+      const state = currentState(loaded, checked.diagram, deps.catalog).text;
       const question: MentorMessage = {
         role: 'user',
         text: request.message,
