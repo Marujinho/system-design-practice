@@ -247,6 +247,89 @@ describe('A06: limits', () => {
   });
 });
 
+describe('review fixes: clearing mid-reply, thinking, very long replies', () => {
+  async function restart(providers: MentorProvider[], idleMs?: number) {
+    await new Promise<void>((done) => {
+      server.close(() => {
+        done();
+      });
+      server.closeAllConnections();
+    });
+    await start(providers, idleMs);
+  }
+
+  function openStream(message: string): Promise<void> {
+    return new Promise((resolve) => {
+      const req = request(
+        {
+          host: '127.0.0.1',
+          port,
+          method: 'POST',
+          path: '/__archsim/chat',
+          headers: {
+            host: `127.0.0.1:${String(port)}`,
+            origin: `http://127.0.0.1:${String(port)}`,
+            'content-type': 'application/json',
+          },
+        },
+        (res) => {
+          res.once('data', () => {
+            resolve();
+          });
+        },
+      );
+      req.end(chatBody(message));
+    });
+  }
+
+  it('refuses to clear a conversation while a reply is streaming (409)', async () => {
+    await openStream('lento');
+    const r = await call('DELETE', '/__archsim/conversation/url-shortener');
+    expect(r.status).toBe(409);
+  });
+
+  it('keeps a reply alive while the model thinks longer than the idle limit', async () => {
+    const thinker: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream() {
+        for (let i = 0; i < 6; i += 1) {
+          await new Promise((r) => setTimeout(r, 20));
+          yield { type: 'heartbeat' };
+        }
+        yield { type: 'delta', text: 'pensei' };
+      },
+    };
+    await restart([thinker], 50);
+    const ev = events((await call('POST', '/__archsim/chat', { body: chatBody('oi') })).body);
+    expect(ev).toContainEqual({ type: 'delta', text: 'pensei' });
+    expect(ev.some((e) => e.type === 'error')).toBe(false);
+    expect(JSON.stringify(ev)).not.toContain('heartbeat');
+  });
+
+  it('cuts a reply at what a conversation file holds and keeps it, interrupted', async () => {
+    let seen: AbortSignal | undefined;
+    const talker: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream(_i, signal) {
+        seen = signal;
+        for (let i = 0; i < 30 && !signal.aborted; i += 1) {
+          await Promise.resolve();
+          yield { type: 'delta', text: 'x'.repeat(5000) };
+        }
+      },
+    };
+    await restart([talker]);
+    const ev = events((await call('POST', '/__archsim/chat', { body: chatBody('oi') })).body);
+    const text = ev.map((e) => (e.type === 'delta' ? e.text : '')).join('');
+    expect(text).toHaveLength(100_000);
+    expect(ev.at(-1)).toEqual({ type: 'done', interrupted: true });
+    expect(seen?.aborted).toBe(true);
+    expect(saved().messages[1]).toMatchObject({ interrupted: true });
+  });
+});
+
 describe('A10: stop, disconnect, time out', () => {
   it('aborts the provider when the browser goes away and keeps what was said, marked interrupted', async () => {
     let signal: AbortSignal | undefined;

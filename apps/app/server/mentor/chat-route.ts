@@ -2,6 +2,7 @@ import type { Catalog } from '@archsim/catalog';
 import {
   ChatRequest,
   MAX_MESSAGE_CHARS,
+  MAX_REPLY_CHARS,
   MentorStatus,
   type MentorErrorCode,
   type MentorEvent,
@@ -62,6 +63,8 @@ export function mentorRoutes(deps: {
     checkMethod(req, 'GET', 'DELETE');
     const problemId = deps.problemOf(id).problem.id;
     if (req.method === 'DELETE') {
+      // A reply in flight would write the old messages back when it ends.
+      if (inFlight.has(problemId)) throw new Refusal(409, 'já há uma resposta em andamento');
       deps.store.clearConversation(problemId);
       res.writeHead(204, { 'Cache-Control': 'no-store' }).end();
       return;
@@ -147,10 +150,15 @@ export function mentorRoutes(deps: {
       const input = { system, history: kept, state, message: request.message, model };
       for await (const chunk of provider.stream(input, controller.signal)) {
         armIdle();
+        if (chunk.type === 'heartbeat') continue;
         if (chunk.type === 'delta') {
           ttft ??= Date.now() - started;
-          text += chunk.text;
-          send(chunk);
+          // Beyond what a conversation file holds, the reply is cut and kept (NFR-4, A06).
+          const room = MAX_REPLY_CHARS - text.length;
+          const piece = chunk.text.slice(0, room);
+          text += piece;
+          send({ type: 'delta', text: piece });
+          if (piece.length < chunk.text.length) controller.abort();
         } else if (chunk.type === 'usage') {
           usage = chunk.usage;
           send(chunk);

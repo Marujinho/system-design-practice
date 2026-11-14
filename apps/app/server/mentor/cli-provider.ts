@@ -1,6 +1,7 @@
 import type { MentorErrorCode } from '@archsim/problems';
 import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -20,7 +21,7 @@ import {
  * servers, no slash commands or skills, and no settings or CLAUDE.md
  * (study-mode FR-12, A02).
  */
-export function cliArgs(model: string): string[] {
+export function cliArgs(model: string, systemFile: string): string[] {
   return [
     '-p',
     '--tools',
@@ -39,7 +40,7 @@ export function cliArgs(model: string): string[] {
     '--effort',
     'medium',
     '--system-prompt-file',
-    'system.txt',
+    systemFile,
     '--output-format',
     'stream-json',
     '--include-partial-messages',
@@ -71,7 +72,7 @@ function errorFromStatus(status: unknown): MentorErrorCode {
   return 'unknown';
 }
 
-/** One stream-json line → what the chat needs from it; everything else is ignored. */
+/** One stream-json line → what the chat needs from it; any other event is only a sign of life. */
 export function chunkOf(line: string): ProviderChunk | 'result' | null {
   let m: Record<string, unknown>;
   try {
@@ -87,13 +88,13 @@ export function chunkOf(line: string): ProviderChunk | 'result' | null {
       typeof e.delta.text === 'string'
     )
       return { type: 'delta', text: e.delta.text };
-    return null;
+    return { type: 'heartbeat' };
   }
   if (m.type === 'result') {
     if (m.is_error === true) return { type: 'error', code: errorFromStatus(m.api_error_status) };
     return 'result';
   }
-  return null;
+  return { type: 'heartbeat' };
 }
 
 function usageOf(line: string): ProviderChunk | null {
@@ -142,7 +143,10 @@ export function cliProvider(
     env?: NodeJS.ProcessEnv;
     spawn?: SpawnFn;
     exec?: ExecFn;
-    /** A fixed, empty working directory: no CLAUDE.md, no AGENTS.md, one project entry at most. */
+    /**
+     * The working directory: empty, so no CLAUDE.md or AGENTS.md. By default a private one
+     * (mkdtemp, mode 0700) created once per server, never a predictable shared path.
+     */
     cwd?: string;
     now?: () => number;
   } = {},
@@ -150,7 +154,16 @@ export function cliProvider(
   const env = subscriptionEnv(options.env ?? process.env);
   const run = options.spawn ?? ((c, a, o) => spawn(c, a, { ...o, stdio: 'pipe' }));
   const exec = options.exec ?? defaultExec;
-  const cwd = options.cwd ?? join(tmpdir(), 'archsim-mentor');
+  let dir: string | null = null;
+  const workDir = (): string => {
+    if (dir !== null) return dir;
+    if (options.cwd === undefined) dir = mkdtempSync(join(tmpdir(), 'archsim-mentor-'));
+    else {
+      mkdirSync(options.cwd, { recursive: true, mode: 0o700 });
+      dir = options.cwd;
+    }
+    return dir;
+  };
   const now = options.now ?? Date.now;
   let cached: { at: number; value: boolean } | null = null;
 
@@ -170,12 +183,18 @@ export function cliProvider(
       return value;
     },
     async *stream(input: ProviderInput, signal: AbortSignal): AsyncIterable<ProviderChunk> {
-      mkdirSync(cwd, { recursive: true, mode: 0o700 });
-      writeAtomic(join(cwd, 'system.txt'), input.system);
+      const cwd = workDir();
+      // One file per reply: two problems asked at once never read each other's prompt.
+      const systemFile = `system-${randomUUID()}.txt`;
+      writeAtomic(join(cwd, systemFile), input.system);
+      const removeSystem = () => {
+        rmSync(join(cwd, systemFile), { force: true });
+      };
       let child: ChildProcessWithoutNullStreams;
       try {
-        child = run('claude', cliArgs(input.model), { cwd, env });
+        child = run('claude', cliArgs(input.model, systemFile), { cwd, env });
       } catch {
+        removeSystem();
         yield { type: 'error', code: 'unknown' };
         return;
       }
@@ -210,13 +229,13 @@ export function cliProvider(
             yield c;
           }
         }
-        const code = await exited;
-        if (!signal.aborted && !sawResult && code !== 0) {
-          yield { type: 'error', code: 'unknown' };
-        }
+        await exited;
+        // No result line means no answer, whatever the exit code says.
+        if (!signal.aborted && !sawResult) yield { type: 'error', code: 'unknown' };
       } finally {
         signal.removeEventListener('abort', kill);
         if (child.exitCode === null) kill();
+        removeSystem();
       }
     },
   };

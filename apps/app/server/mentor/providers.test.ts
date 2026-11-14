@@ -3,9 +3,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { BetaRawMessageStreamEvent } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { describe, expect, it, vi } from 'vitest';
 import { apiErrorCode, apiParams, apiProvider, type ApiStream } from './api-provider';
@@ -61,7 +61,7 @@ const RESULT = JSON.stringify({
 
 describe('subscription provider: the installed claude, with nothing but talk (FR-12, A02, A04)', () => {
   it('starts claude with no tools, settings, MCP, commands, sessions or permissions to grant', () => {
-    const args = cliArgs('claude-opus-5-5');
+    const args = cliArgs('claude-opus-5-5', 'system-x.txt');
     const after = (flag: string) => args[args.indexOf(flag) + 1];
     expect(args[0]).toBe('-p');
     expect(after('--tools')).toBe('');
@@ -69,6 +69,7 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
     expect(after('--permission-mode')).toBe('dontAsk');
     expect(after('--max-turns')).toBe('1');
     expect(after('--model')).toBe('claude-opus-5-5');
+    expect(after('--system-prompt-file')).toBe('system-x.txt');
     for (const flag of [
       '--strict-mcp-config',
       '--disable-slash-commands',
@@ -124,10 +125,17 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
     expect(await cliProvider({ exec }).available()).toBe(false);
   });
 
-  it('reads text deltas and the result, and ignores everything else', () => {
+  it('reads text deltas and the result; any other event is only a sign of life', () => {
     expect(chunkOf(DELTA('Olá'))).toEqual({ type: 'delta', text: 'Olá' });
     expect(chunkOf(RESULT)).toBe('result');
-    expect(chunkOf(JSON.stringify({ type: 'system', subtype: 'init', tools: [] }))).toBeNull();
+    expect(chunkOf(JSON.stringify({ type: 'system', subtype: 'init', tools: [] }))).toEqual({
+      type: 'heartbeat',
+    });
+    const thinking = JSON.stringify({
+      type: 'stream_event',
+      event: { type: 'content_block_delta', delta: { type: 'thinking_delta', thinking: '' } },
+    });
+    expect(chunkOf(thinking)).toEqual({ type: 'heartbeat' });
     expect(chunkOf('garbage')).toBeNull();
     expect(
       chunkOf(JSON.stringify({ type: 'result', is_error: true, api_error_status: 401 })),
@@ -171,7 +179,12 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
   it('streams the reply, the usage, and runs in its own empty directory', async () => {
     const f = fakeChild();
     const cwd = mkdtempSync(join(tmpdir(), 'archsim-mentor-test-'));
-    const spawn = vi.fn<SpawnFn>(() => {
+    let systemSeen = '';
+    const spawn = vi.fn<SpawnFn>((_c, args, o) => {
+      systemSeen = readFileSync(
+        join(o.cwd, args[args.indexOf('--system-prompt-file') + 1] ?? ''),
+        'utf8',
+      );
       setImmediate(() => {
         f.child.stdout.write(`${DELTA('O RDS ')}\n${DELTA('está a 140%.')}\n${RESULT}\n`);
         f.exit(0);
@@ -187,9 +200,13 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
     ]);
     const [command, args, options] = spawn.mock.calls[0] ?? [];
     expect(command).toBe('claude');
-    expect(args).toEqual(cliArgs('claude-opus-5-5'));
+    const file = args?.[args.indexOf('--system-prompt-file') + 1] ?? '';
+    expect(file).toMatch(/^system-[0-9a-f-]{36}\.txt$/);
+    expect(args).toEqual(cliArgs('claude-opus-5-5', file));
     expect(options).toEqual({ cwd, env: { PATH: '/bin' } });
-    expect(readFileSync(join(cwd, 'system.txt'), 'utf8')).toBe(input.system);
+    expect(systemSeen).toBe(input.system);
+    // the prompt file is gone once the reply ends
+    expect(existsSync(join(cwd, file))).toBe(false);
     expect(f.stdin()).toContain('<conversa_anterior>');
     expect(f.stdin()).toContain('[mentor]\nPela carga.');
     expect(f.stdin()).toContain(input.state);
@@ -211,6 +228,43 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
     }
     expect(f.child.kill).toHaveBeenCalled();
     expect(chunks).toEqual([{ type: 'delta', text: 'Começo' }]);
+  });
+
+  it('gives two replies at once their own prompt file, in a private directory', async () => {
+    const files: string[] = [];
+    const spawn: SpawnFn = (_c, args, o) => {
+      files.push(join(o.cwd, args[args.indexOf('--system-prompt-file') + 1] ?? ''));
+      const f = fakeChild();
+      setImmediate(() => {
+        f.child.stdout.write(`${RESULT}\n`);
+        f.exit(0);
+      });
+      return f.child as unknown as ChildProcessWithoutNullStreams;
+    };
+    const p = cliProvider({ spawn });
+    await Promise.all([
+      collect(p.stream({ ...input, system: 'A' }, new AbortController().signal)),
+      collect(p.stream({ ...input, system: 'B' }, new AbortController().signal)),
+    ]);
+    expect(new Set(files).size).toBe(2);
+    const dir = dirname(files[0] ?? '');
+    expect(dirname(files[1] ?? '')).toBe(dir);
+    expect(dir.startsWith(join(tmpdir(), 'archsim-mentor-'))).toBe(true);
+    expect(statSync(dir).mode & 0o777).toBe(0o700);
+  });
+
+  it('reports an exit with code 0 but no result as an error', async () => {
+    const f = fakeChild();
+    const spawn: SpawnFn = () => {
+      setImmediate(() => {
+        f.exit(0);
+      });
+      return f.child as unknown as ChildProcessWithoutNullStreams;
+    };
+    const p = cliProvider({ spawn, cwd: mkdtempSync(join(tmpdir(), 'archsim-mentor-test-')) });
+    expect(await collect(p.stream(input, new AbortController().signal))).toEqual([
+      { type: 'error', code: 'unknown' },
+    ]);
   });
 
   it('reports an exit without a result as an error', async () => {
@@ -279,9 +333,34 @@ describe('API provider (FR-12, FR-13, FR-15, A07)', () => {
       { type: 'delta', text: 'O RDS ' },
       { type: 'delta', text: 'satura.' },
     ]);
+    // cache reads at 0.1× the input price
     expect(chunks[2]).toEqual({
       type: 'usage',
-      usage: { inputTokens: 3000, outputTokens: 50, costUsd: (3000 * 4 + 50 * 20) / 1e6 },
+      usage: {
+        inputTokens: 3000,
+        outputTokens: 50,
+        costUsd: (1000 * 4 + 2000 * 0.4 + 50 * 20) / 1e6,
+      },
+    });
+  });
+
+  it('turns thinking into heartbeats, and gives no cost for a model it has no prices for', async () => {
+    const thinking = {
+      type: 'content_block_delta',
+      index: 0,
+      delta: { type: 'thinking_delta', thinking: '' },
+    } as BetaRawMessageStreamEvent;
+    const p = apiProvider({
+      env: { ANTHROPIC_API_KEY: 'k' },
+      stream: () => streamOf([thinking, delta('ok')]),
+    });
+    const chunks = await collect(
+      p.stream({ ...input, model: 'claude-sonnet-5-5' }, new AbortController().signal),
+    );
+    expect(chunks[0]).toEqual({ type: 'heartbeat' });
+    expect(chunks.at(-1)).toEqual({
+      type: 'usage',
+      usage: { inputTokens: 3000, outputTokens: 50 },
     });
   });
 

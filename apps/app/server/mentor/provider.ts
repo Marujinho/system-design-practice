@@ -16,6 +16,8 @@ export interface ProviderInput {
 
 export type ProviderChunk =
   | { type: 'delta'; text: string }
+  /** Upstream is alive (thinking, a ping): keeps the idle timer from firing, never shown. */
+  | { type: 'heartbeat' }
   | { type: 'usage'; usage: MentorUsage }
   | { type: 'error'; code: MentorErrorCode };
 
@@ -38,8 +40,14 @@ export const CREDENTIAL_VARS = [
   'CLAUDE_CODE_OAUTH_TOKEN',
 ];
 
-/** API list prices of the default model, US$ per million tokens (Claude Opus 5.5, 2026-11). */
-export const PRICE_PER_MTOK = { input: 4, output: 20 };
+/** The model the API prices below belong to; another model gets no cost estimate. */
+export const PRICED_MODEL = 'claude-opus-5-5';
+
+/**
+ * API list prices of PRICED_MODEL, US$ per million tokens (Claude Opus 5.5, 2026-11):
+ * cache writes cost 1.25× input, cache reads 0.1×.
+ */
+export const PRICE_PER_MTOK = { input: 4, cacheWrite: 5, cacheRead: 0.4, output: 20 };
 
 /** The previous turns as plain text, for providers that take a single prompt. */
 export function transcript(history: readonly MentorMessage[]): string {

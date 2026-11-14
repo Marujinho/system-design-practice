@@ -6,7 +6,7 @@ import type {
   BetaRawMessageStreamEvent,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import type { MentorErrorCode } from '@archsim/problems';
-import { PRICE_PER_MTOK, type MentorProvider, type ProviderChunk } from './provider';
+import { PRICE_PER_MTOK, PRICED_MODEL, type MentorProvider, type ProviderChunk } from './provider';
 
 /** What the provider needs from a stream: the raw events, then the final message. */
 export interface ApiStream extends AsyncIterable<BetaRawMessageStreamEvent> {
@@ -71,19 +71,30 @@ export function apiProvider(
         for await (const event of stream) {
           if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
             yield { type: 'delta', text: event.delta.text };
+          } else {
+            yield { type: 'heartbeat' }; // thinking and other events: alive, nothing to show
           }
         }
         const final = await stream.finalMessage();
         const u = final.usage;
-        const inputTokens =
-          u.input_tokens + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0);
+        const write = u.cache_creation_input_tokens ?? 0;
+        const read = u.cache_read_input_tokens ?? 0;
+        const inputTokens = u.input_tokens + write + read;
         yield {
           type: 'usage',
           usage: {
             inputTokens,
             outputTokens: u.output_tokens,
-            costUsd:
-              (inputTokens * PRICE_PER_MTOK.input + u.output_tokens * PRICE_PER_MTOK.output) / 1e6,
+            ...(input.model === PRICED_MODEL
+              ? {
+                  costUsd:
+                    (u.input_tokens * PRICE_PER_MTOK.input +
+                      write * PRICE_PER_MTOK.cacheWrite +
+                      read * PRICE_PER_MTOK.cacheRead +
+                      u.output_tokens * PRICE_PER_MTOK.output) /
+                    1e6,
+                }
+              : {}),
           },
         };
         if (final.stop_reason === 'refusal') yield { type: 'error', code: 'refusal' };

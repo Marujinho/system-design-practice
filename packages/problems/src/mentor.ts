@@ -3,7 +3,7 @@ import { z } from 'zod';
 /** Contracts of the study-mode mentor chat, shared by the local server and the app (study-mode PRD). */
 
 export const MAX_MESSAGE_CHARS = 8000;
-const MAX_REPLY_CHARS = 100_000;
+export const MAX_REPLY_CHARS = 100_000;
 const PROBLEM_ID = /^[a-z][a-z0-9-]{0,63}$/;
 
 export const MentorProviderId = z.enum(['subscription', 'api']);
