@@ -12,6 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
     "@archsim/catalog": "workspace:*",
     "@archsim/cli": "workspace:*",
     "@archsim/icons": "workspace:*",

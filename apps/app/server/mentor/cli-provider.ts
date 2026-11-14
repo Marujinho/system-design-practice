@@ -1,0 +1,223 @@
+import type { MentorErrorCode } from '@archsim/problems';
+import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createInterface } from 'node:readline';
+import { writeAtomic } from '../atomic-write';
+import {
+  CREDENTIAL_VARS,
+  transcript,
+  type MentorProvider,
+  type ProviderChunk,
+  type ProviderInput,
+} from './provider';
+
+/**
+ * The person's own Claude subscription, through the `claude` they already have
+ * installed and logged in — the unmodified Claude Code binary, in print mode.
+ * Verified on 2.1.325: these flags start a session with no tools, no MCP
+ * servers, no slash commands or skills, and no settings or CLAUDE.md
+ * (study-mode FR-12, A02).
+ */
+export function cliArgs(model: string): string[] {
+  return [
+    '-p',
+    '--tools',
+    '',
+    '--setting-sources',
+    '',
+    '--strict-mcp-config',
+    '--disable-slash-commands',
+    '--no-session-persistence',
+    '--permission-mode',
+    'dontAsk',
+    '--max-turns',
+    '1',
+    '--model',
+    model,
+    '--effort',
+    'medium',
+    '--system-prompt-file',
+    'system.txt',
+    '--output-format',
+    'stream-json',
+    '--include-partial-messages',
+    '--verbose',
+  ];
+}
+
+/** The environment without API credentials, so `claude` uses the subscription login (A04). */
+export function subscriptionEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out = { ...env };
+  for (const k of CREDENTIAL_VARS) Reflect.deleteProperty(out, k);
+  return out;
+}
+
+/** `claude auth status --json`, reduced to one boolean on the spot: it also carries email and org. */
+export function loggedInWithSubscription(json: string): boolean {
+  try {
+    const status = JSON.parse(json) as { loggedIn?: unknown; authMethod?: unknown };
+    return status.loggedIn === true && status.authMethod === 'claude.ai';
+  } catch {
+    return false;
+  }
+}
+
+function errorFromStatus(status: unknown): MentorErrorCode {
+  if (status === 401 || status === 403) return 'auth';
+  if (status === 429) return 'rate_limit';
+  if (status === 529 || status === 503) return 'overloaded';
+  return 'unknown';
+}
+
+/** One stream-json line → what the chat needs from it; everything else is ignored. */
+export function chunkOf(line: string): ProviderChunk | 'result' | null {
+  let m: Record<string, unknown>;
+  try {
+    m = JSON.parse(line) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  if (m.type === 'stream_event') {
+    const e = m.event as { type?: unknown; delta?: { type?: unknown; text?: unknown } } | undefined;
+    if (
+      e?.type === 'content_block_delta' &&
+      e.delta?.type === 'text_delta' &&
+      typeof e.delta.text === 'string'
+    )
+      return { type: 'delta', text: e.delta.text };
+    return null;
+  }
+  if (m.type === 'result') {
+    if (m.is_error === true) return { type: 'error', code: errorFromStatus(m.api_error_status) };
+    return 'result';
+  }
+  return null;
+}
+
+function usageOf(line: string): ProviderChunk | null {
+  const m = JSON.parse(line) as {
+    usage?: Record<string, unknown>;
+    total_cost_usd?: unknown;
+  };
+  const u = m.usage ?? {};
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : 0);
+  const inputTokens =
+    n(u.input_tokens) + n(u.cache_creation_input_tokens) + n(u.cache_read_input_tokens);
+  return {
+    type: 'usage',
+    usage: {
+      inputTokens,
+      outputTokens: n(u.output_tokens),
+      ...(typeof m.total_cost_usd === 'number' ? { costUsd: m.total_cost_usd } : {}),
+    },
+  };
+}
+
+export type SpawnFn = (
+  command: string,
+  args: string[],
+  options: { cwd: string; env: NodeJS.ProcessEnv },
+) => ChildProcessWithoutNullStreams;
+
+export type ExecFn = (
+  command: string,
+  args: string[],
+  options: { env: NodeJS.ProcessEnv; timeout: number },
+) => Promise<string>;
+
+const defaultExec: ExecFn = (command, args, options) =>
+  new Promise((resolve, reject) => {
+    execFile(command, args, { ...options, encoding: 'utf8' }, (error, stdout) => {
+      if (error) reject(new Error('claude auth status falhou', { cause: error }));
+      else resolve(stdout);
+    });
+  });
+
+const STATUS_TTL_MS = 60_000;
+
+export function cliProvider(
+  options: {
+    env?: NodeJS.ProcessEnv;
+    spawn?: SpawnFn;
+    exec?: ExecFn;
+    /** A fixed, empty working directory: no CLAUDE.md, no AGENTS.md, one project entry at most. */
+    cwd?: string;
+    now?: () => number;
+  } = {},
+): MentorProvider {
+  const env = subscriptionEnv(options.env ?? process.env);
+  const run = options.spawn ?? ((c, a, o) => spawn(c, a, { ...o, stdio: 'pipe' }));
+  const exec = options.exec ?? defaultExec;
+  const cwd = options.cwd ?? join(tmpdir(), 'archsim-mentor');
+  const now = options.now ?? Date.now;
+  let cached: { at: number; value: boolean } | null = null;
+
+  return {
+    id: 'subscription',
+    async available() {
+      if (cached && now() - cached.at < STATUS_TTL_MS) return cached.value;
+      let value: boolean;
+      try {
+        value = loggedInWithSubscription(
+          await exec('claude', ['auth', 'status', '--json'], { env, timeout: 5000 }),
+        );
+      } catch {
+        value = false; // not installed (ENOENT), timed out, or not logged in
+      }
+      cached = { at: now(), value };
+      return value;
+    },
+    async *stream(input: ProviderInput, signal: AbortSignal): AsyncIterable<ProviderChunk> {
+      mkdirSync(cwd, { recursive: true, mode: 0o700 });
+      writeAtomic(join(cwd, 'system.txt'), input.system);
+      let child: ChildProcessWithoutNullStreams;
+      try {
+        child = run('claude', cliArgs(input.model), { cwd, env });
+      } catch {
+        yield { type: 'error', code: 'unknown' };
+        return;
+      }
+      const kill = () => child.kill('SIGTERM');
+      signal.addEventListener('abort', kill, { once: true });
+      // A failed spawn (claude not installed) also closes with a non-zero code; this only keeps
+      // the 'error' event from crashing the server.
+      child.on('error', () => undefined);
+      const exited = new Promise<number | null>((resolve) => {
+        child.on('close', (code) => {
+          resolve(code);
+        });
+      });
+      child.stderr.resume(); // drained, never logged: it can echo the prompt
+      const prompt = [transcript(input.history), input.state, `[pessoa]\n${input.message}`]
+        .filter((p) => p !== '')
+        .join('\n\n');
+      child.stdin.on('error', () => undefined);
+      child.stdin.end(prompt);
+
+      let sawResult = false;
+      try {
+        for await (const line of createInterface({ input: child.stdout })) {
+          const c = chunkOf(line);
+          if (c === null) continue;
+          if (c === 'result') {
+            sawResult = true;
+            const u = usageOf(line);
+            if (u) yield u;
+          } else {
+            if (c.type === 'error') sawResult = true;
+            yield c;
+          }
+        }
+        const code = await exited;
+        if (!signal.aborted && !sawResult && code !== 0) {
+          yield { type: 'error', code: 'unknown' };
+        }
+      } finally {
+        signal.removeEventListener('abort', kill);
+        if (child.exitCode === null) kill();
+      }
+    },
+  };
+}
