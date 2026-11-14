@@ -155,9 +155,11 @@ function CanvasInner({ decorate, decorateEdges, overlay, onReady }: CanvasProps)
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         deleteKeyCode={['Delete', 'Backspace']}
-        multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
-        selectionOnDrag
-        panOnDrag={[1, 2]}
+        // A plain drag on the background moves the view; Shift + drag draws a selection box,
+        // and Cmd/Ctrl + click adds to the selection (mentor-edits FR-13).
+        multiSelectionKeyCode={['Meta', 'Control']}
+        panOnDrag
+        selectionKeyCode="Shift"
         fitView
         minZoom={0.2}
         maxZoom={2}
