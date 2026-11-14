@@ -1,6 +1,6 @@
 /*
  * Hairline palette (README of @lucasmarkes/hairline): plate, hi, edge, mid, lo
- * and a 0.9 px stroke. Colour appears only for state: amber and red.
+ * and a 0.9 px stroke. Colour appears only for state: green, amber and red.
  */
 :root,
 :root[data-theme='dark'] {
@@ -20,6 +20,7 @@
   --line-strong: var(--hairline-mid);
   --focus: var(--hairline-hi);
 
+  --state-healthy: #22c55e;
   --state-pressured: #f59e0b;
   --state-critical: #ef4444;
   --state-ok: var(--hairline-edge);
@@ -38,6 +39,7 @@
   --hairline-lo: #e4e4e7;
 
   --bg: #ffffff;
+  --state-healthy: #15803d;
   --state-pressured: #b45309;
   --state-critical: #dc2626;
 }

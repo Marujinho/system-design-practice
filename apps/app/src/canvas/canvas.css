@@ -470,6 +470,11 @@
   border-style: dashed;
 }
 
+.health-badge.healthy {
+  border-color: var(--state-healthy);
+  color: var(--state-healthy);
+}
+
 .health-badge.pressured {
   border-color: var(--state-pressured);
   color: var(--state-pressured);
