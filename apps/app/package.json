@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@archsim/catalog": "workspace:*",
+    "@archsim/cli": "workspace:*",
     "@archsim/icons": "workspace:*",
     "@archsim/problems": "workspace:*",
     "@archsim/sim-engine": "workspace:*",

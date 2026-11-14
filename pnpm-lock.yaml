@@ -65,6 +65,9 @@ importers:
       '@archsim/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
+      '@archsim/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@archsim/icons':
         specifier: workspace:*
         version: link:../../packages/icons
