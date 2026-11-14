@@ -1,4 +1,10 @@
-import { Conversation, MentorEvent, MentorStatus, type MentorProviderId } from '@archsim/problems';
+import {
+  Conversation,
+  MentorEvent,
+  MentorStatus,
+  type MentorProviderId,
+  type ProposalStatus,
+} from '@archsim/problems';
 import type { Diagram } from '@archsim/sim-engine';
 import { create } from 'zustand';
 import { ApiError } from './api';
@@ -42,6 +48,13 @@ export const mentorApi = {
   status: () => json((v) => MentorStatus.parse(v), 'mentor/status'),
   conversation: (problemId: string) =>
     json((v) => Conversation.parse(v), `conversation/${encodeURIComponent(problemId)}`),
+  /** The person applied, discarded or undid a proposal (mentor-edits FR-9). */
+  proposalStatus: (problemId: string, proposalId: string, status: ProposalStatus) =>
+    json((v) => Conversation.parse(v), 'proposal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ problemId, proposalId, status }),
+    }),
   clear: (problemId: string) =>
     json(() => undefined, `conversation/${encodeURIComponent(problemId)}`, { method: 'DELETE' }),
 

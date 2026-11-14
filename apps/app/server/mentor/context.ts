@@ -34,6 +34,28 @@ function catalogFacts(diagram: Diagram, catalog: Catalog) {
   return facts;
 }
 
+/** The connections, in neutral ids, so the mentor knows the topology it may change (mentor-edits FR-1). */
+function edgesOf(d: Diagram) {
+  return d.edges.map((e) => ({ id: e.id, from: e.source, to: e.target, protocol: e.protocol }));
+}
+
+/**
+ * What the mentor may add: every service with its types and editable params,
+ * so a proposal names only things the simulator knows (mentor-edits FR-1, FR-6).
+ */
+function catalogDigest(catalog: Catalog) {
+  return catalog.services
+    .filter((s) => s.kind !== 'entry')
+    .map((s) => ({
+      id: s.id,
+      label: s.label,
+      ...(s.fullName === undefined ? {} : { fullName: s.fullName }),
+      kind: s.kind,
+      types: s.variants.map((v) => v.id),
+      params: s.params.map((p) => ({ key: p.key, label: p.label, min: p.min, max: p.max })),
+    }));
+}
+
 /** The engine's view of a diagram under the problem's load, with neutral ids (A05, A08). */
 function engineView(loaded: LoadedProblem, diagram: Diagram, catalog: Catalog, scored: boolean) {
   const neutral = neutralIds(diagram);
@@ -42,6 +64,7 @@ function engineView(loaded: LoadedProblem, diagram: Diagram, catalog: Catalog, s
     const sim = simulateSteady(d, catalog, { ticks: SIM_TICKS });
     return {
       ...summarize({ diagram: d, catalog, sim, ticks: SIM_TICKS, loadMultiplier: 1 }),
+      edges: edgesOf(d),
       catalog: catalogFacts(d, catalog),
     };
   }
@@ -63,6 +86,7 @@ function engineView(loaded: LoadedProblem, diagram: Diagram, catalog: Catalog, s
       score,
       findings: score.findings,
     }),
+    edges: edgesOf(d),
     catalog: catalogFacts(d, catalog),
   };
 }
@@ -88,16 +112,26 @@ export function systemPrompt(loaded: LoadedProblem, catalog: Catalog): string {
     MENTOR_PROMPT,
     `<enunciado>\n${JSON.stringify(brief, null, 2)}\n</enunciado>`,
     `<referencia>\nA solução de referência do problema, simulada com a carga dele:\n${JSON.stringify(reference)}\n</referencia>`,
+    `<catalogo>\nOs serviços que existem no simulador, com os tipos e os parâmetros editáveis:\n${JSON.stringify(catalogDigest(catalog))}\n</catalogo>`,
   ].join('\n\n');
 }
 
 /**
  * The diagram on screen right now, recomputed on the server from the validated
- * diagram — never metrics sent by the browser (study-mode FR-4, A08).
+ * diagram — never metrics sent by the browser (study-mode FR-4, A08). `ids`
+ * maps the neutral ids the mentor sees back to the diagram's own, so a proposal
+ * can be translated (mentor-edits §13).
  */
-export function currentState(loaded: LoadedProblem, diagram: Diagram, catalog: Catalog): string {
+export function currentState(
+  loaded: LoadedProblem,
+  diagram: Diagram,
+  catalog: Catalog,
+): { text: string; ids: Record<string, string> } {
   const view = engineView(loaded, diagram, catalog, true);
-  return `<desenho_atual>\n${JSON.stringify(view)}\n</desenho_atual>`;
+  return {
+    text: `<desenho_atual>\n${JSON.stringify(view)}\n</desenho_atual>`,
+    ids: neutralIds(diagram).ids,
+  };
 }
 
 /** A rough token count: about four characters per token. */

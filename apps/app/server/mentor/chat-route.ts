@@ -4,14 +4,21 @@ import {
   MAX_MESSAGE_CHARS,
   MAX_REPLY_CHARS,
   MentorStatus,
+  NewRef,
+  ProposalInput,
+  ProposalStatusRequest,
   type MentorErrorCode,
   type MentorEvent,
   type MentorMessage,
   type MentorUsage,
+  type Proposal,
+  type ProposalOp,
 } from '@archsim/problems';
 import type { LoadedProblem } from '@archsim/problems/load';
 import { safeJsonParse, validateDiagram } from '@archsim/sim-engine';
+import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { applyProposal } from '../../src/store/proposal';
 import { checkMethod, readJsonBody, Refusal, sendJson } from '../guard';
 import type { PracticeStore } from '../practice-store';
 import { currentState, systemPrompt, trimHistory } from './context';
@@ -25,6 +32,48 @@ export interface MentorOptions {
 }
 
 const CHAT_BODY_LIMIT = 1024 * 1024;
+
+class Rejected extends Error {}
+
+/**
+ * The mentor's neutral ids (n3) back to the diagram's own, with the map of the
+ * question it answered; novoN refs stay. Anything else — a real id the model
+ * guessed, an n# that wasn't on screen — rejects the proposal (mentor-edits A08).
+ */
+export function translateOps(
+  ops: readonly ProposalOp[],
+  ids: Record<string, string>,
+): ProposalOp[] {
+  const real = (ref: string, allowNew: boolean): string => {
+    if (NewRef.safeParse(ref).success) {
+      if (allowNew) return ref;
+      throw new Rejected('um nó novo não pode ser desconectado');
+    }
+    const id = /^n\d+$/.test(ref) ? ids[ref] : undefined;
+    if (id === undefined) throw new Rejected(`o nó ${ref.slice(0, 16)} não está no desenho`);
+    return id;
+  };
+  return ops.map((op): ProposalOp => {
+    switch (op.op) {
+      case 'add':
+        return op;
+      case 'remove':
+        return { ...op, node: real(op.node, false) };
+      case 'connect':
+        return { ...op, from: real(op.from, true), to: real(op.to, true) };
+      case 'disconnect':
+        return { ...op, from: real(op.from, false), to: real(op.to, false) };
+      case 'set_variant':
+      case 'set_prop':
+      case 'rename':
+        return { ...op, node: real(op.node, true) };
+    }
+  });
+}
+
+/** Server-side ids for the dry run; the browser makes its own when the person applies. */
+const dryRunId = (serviceId: string, i: number) =>
+  `${serviceId.split('.')[1] ?? 'node'}-p${String(i)}`;
 const DEFAULT_IDLE_MS = 60_000;
 
 /**
@@ -103,6 +152,8 @@ export function mentorRoutes(deps: {
     // Set from the idle timer; an object so the flow analysis sees it change.
     const idleState = { timedOut: false };
     let text = '';
+    let proposal: Proposal | undefined;
+    let rejected = 0;
     const controller = new AbortController();
     const onClose = () => {
       if (!res.writableEnded) controller.abort();
@@ -129,7 +180,8 @@ export function mentorRoutes(deps: {
         system = systemPrompt(loaded, deps.catalog);
         systems.set(problemId, system);
       }
-      const state = currentState(loaded, checked.diagram, deps.catalog);
+      const seen = currentState(loaded, checked.diagram, deps.catalog);
+      const state = seen.text;
       const question: MentorMessage = {
         role: 'user',
         text: request.message,
@@ -147,10 +199,36 @@ export function mentorRoutes(deps: {
       if (trimmed) send({ type: 'trimmed' });
 
       armIdle();
-      const input = { system, history: kept, state, message: request.message, model };
+      const input = {
+        system,
+        history: kept,
+        state,
+        message: request.message,
+        model,
+        check: (raw: unknown) => {
+          const r = validateProposal(raw, seen.ids, checked.diagram);
+          return r.ok ? null : r.reason;
+        },
+      };
       for await (const chunk of provider.stream(input, controller.signal)) {
         armIdle();
         if (chunk.type === 'heartbeat') continue;
+        if (chunk.type === 'proposal') {
+          // One proposal per reply: the first that holds up; the rest only count in the log.
+          if (proposal !== undefined) {
+            rejected += 1;
+            continue;
+          }
+          const checkedProposal = validateProposal(chunk.input, seen.ids, checked.diagram);
+          if (checkedProposal.ok) {
+            proposal = checkedProposal.proposal;
+            send({ type: 'proposal', proposal });
+          } else {
+            rejected += 1;
+            send({ type: 'proposal_rejected', reason: checkedProposal.reason });
+          }
+          continue;
+        }
         if (chunk.type === 'delta') {
           ttft ??= Date.now() - started;
           // Beyond what a conversation file holds, the reply is cut and kept (NFR-4, A06).
@@ -173,8 +251,10 @@ export function mentorRoutes(deps: {
         send({ type: 'error', code: 'timeout' });
       }
       const interrupted = controller.signal.aborted;
+      // An interrupted reply never keeps a proposal (mentor-edits A10).
+      const keptProposal = interrupted ? undefined : proposal;
       // The question is kept with its answer; a failure with no answer leaves the conversation as it was.
-      if (text.length > 0) {
+      if (text.length > 0 || keptProposal !== undefined) {
         const reply: MentorMessage = {
           role: 'mentor',
           text,
@@ -182,6 +262,7 @@ export function mentorRoutes(deps: {
           provider: provider.id,
           ...(interrupted ? { interrupted: true as const } : {}),
           ...(usage === undefined ? {} : { usage }),
+          ...(keptProposal === undefined ? {} : { proposal: keptProposal }),
         };
         deps.store.writeConversation({ ...saved, messages: [...saved.messages, question, reply] });
       }
@@ -208,10 +289,64 @@ export function mentorRoutes(deps: {
       deps.log(
         `[archsim] mentor problema=${problemId} provedor=${provider.id} status=${outcome} ` +
           `ttft_ms=${ttft === null ? '-' : String(ttft)} in=${String(usage?.inputTokens ?? 0)} ` +
-          `out=${String(usage?.outputTokens ?? 0)}`,
+          `out=${String(usage?.outputTokens ?? 0)} propostas=${proposal === undefined ? '0' : '1'} ` +
+          `rejeitadas=${String(rejected)}`,
       );
     }
   }
 
-  return { status, conversation, chat };
+  /** Checks a tool input against the diagram the mentor saw; never trusts its ids (FR-6, A08). */
+  function validateProposal(
+    input: unknown,
+    ids: Record<string, string>,
+    seenDiagram: Parameters<typeof applyProposal>[0],
+  ): { ok: true; proposal: Proposal } | { ok: false; reason: string } {
+    const parsed = ProposalInput.safeParse(input);
+    if (!parsed.success) return { ok: false, reason: 'a proposta não segue o formato esperado' };
+    let ops: ProposalOp[];
+    try {
+      ops = translateOps(parsed.data.ops, ids);
+    } catch (error) {
+      if (error instanceof Rejected) return { ok: false, reason: error.message };
+      throw error;
+    }
+    const dry = applyProposal(seenDiagram, ops, { catalog: deps.catalog, newId: dryRunId });
+    if (!dry.ok) return { ok: false, reason: dry.message.slice(0, 200) };
+    return {
+      ok: true,
+      proposal: { summary: parsed.data.summary, ops, id: randomUUID(), status: 'pending' },
+    };
+  }
+
+  /** `POST proposal`: the person applied, discarded or undid a proposal (FR-9). */
+  async function proposalStatus(req: IncomingMessage, res: ServerResponse) {
+    checkMethod(req, 'POST');
+    let body: unknown;
+    try {
+      body = safeJsonParse(await readJsonBody(req, 4096));
+    } catch (error) {
+      if (error instanceof Refusal) throw error;
+      throw new Refusal(400, 'JSON inválido');
+    }
+    const parsed = ProposalStatusRequest.safeParse(body);
+    if (!parsed.success) throw new Refusal(400, 'pedido inválido');
+    const problemId = deps.problemOf(parsed.data.problemId).problem.id;
+    if (inFlight.has(problemId)) throw new Refusal(409, 'já há uma resposta em andamento');
+    const conversation = deps.store.readConversation(problemId);
+    const message = conversation.messages.find(
+      (m) => m.role === 'mentor' && m.proposal?.id === parsed.data.proposalId,
+    );
+    if (message?.role !== 'mentor' || message.proposal === undefined)
+      throw new Refusal(404, 'proposta não encontrada');
+    // pending ↔ applied, pending → discarded; a discarded proposal stays discarded.
+    if (message.proposal.status === 'discarded')
+      throw new Refusal(409, 'a proposta já foi descartada');
+    if (message.proposal.status === 'applied' && parsed.data.status === 'discarded')
+      throw new Refusal(409, 'desfaça a proposta antes de descartá-la');
+    message.proposal = { ...message.proposal, status: parsed.data.status };
+    deps.store.writeConversation(conversation);
+    sendJson(res, 200, conversation);
+  }
+
+  return { status, conversation, chat, proposalStatus };
 }

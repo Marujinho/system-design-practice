@@ -4,6 +4,7 @@ import type {
   MentorProviderId,
   MentorStatus,
   MentorUsage,
+  Proposal,
 } from '@archsim/problems';
 import { MAX_MESSAGE_CHARS } from '@archsim/problems';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -13,6 +14,7 @@ import { browserStorage } from '../theme/theme';
 import { useLayout } from '../workspace/layout-store';
 import { ApiError } from './api';
 import { mentorApi, preview, useMentorUi } from './mentor-api';
+import { ProposalCard } from './ProposalCard';
 
 /** Markdown without raw HTML, images or anything that loads; links open apart (NFR-7, A05). */
 const ALLOWED = [
@@ -118,6 +120,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
   const [live, setLive] = useState<Live | null>(null);
   const [failure, setFailure] = useState<{ text: string; question: string } | null>(null);
   const [trimmed, setTrimmed] = useState(false);
+  const [rejected, setRejected] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const controller = useRef<AbortController | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -164,7 +167,10 @@ export function ChatPanel({ problemId }: { problemId: string }) {
     let usage: MentorUsage | undefined;
     let error: MentorErrorCode | null = null;
     let interrupted = false;
+    let proposal: Proposal | undefined;
+    let sawDone = false;
     setLive({ question: text, text: '', provider });
+    setRejected(false);
     setUi({ streaming: true, unread: null });
 
     const finish = () => {
@@ -172,7 +178,11 @@ export function ChatPanel({ problemId }: { problemId: string }) {
       setLive(null);
       setUi({ streaming: false });
       const at = new Date().toISOString();
-      if (reply.length > 0) {
+      // A stream that ended without done was cut: the server kept no proposal either (L1).
+      if (!sawDone) interrupted = true;
+      const kept = interrupted ? undefined : proposal;
+      if (kept !== undefined) setRejected(false); // one proposal made it: no warning (L6)
+      if (reply.length > 0 || kept !== undefined) {
         setMessages((m) => [
           ...m,
           { role: 'user', text, at },
@@ -183,6 +193,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
             provider,
             ...(interrupted ? { interrupted: true as const } : {}),
             ...(usage === undefined ? {} : { usage }),
+            ...(kept === undefined ? {} : { proposal: kept }),
           },
         ]);
         if (useLayout.getState().collapsed.chat) setUi({ unread: preview(reply) });
@@ -208,7 +219,11 @@ export function ChatPanel({ problemId }: { problemId: string }) {
           } else if (e.type === 'usage') usage = e.usage;
           else if (e.type === 'trimmed') setTrimmed(true);
           else if (e.type === 'error') error = e.code;
-          else if (e.type === 'done') interrupted = e.interrupted;
+          else if (e.type === 'done') {
+            sawDone = true;
+            interrupted = e.interrupted;
+          } else if (e.type === 'proposal') proposal = e.proposal;
+          else if (e.type === 'proposal_rejected') setRejected(true);
         },
       )
       .then(
@@ -348,6 +363,21 @@ export function ChatPanel({ problemId }: { problemId: string }) {
             <div key={`${String(i)}-m`} className="chat-msg chat-mentor">
               <Reply text={m.text} />
               {m.interrupted && <p className="chat-note muted">resposta interrompida</p>}
+              {m.proposal && (
+                <ProposalCard
+                  problemId={problemId}
+                  proposal={m.proposal}
+                  onChange={(next) => {
+                    setMessages((all) =>
+                      all.map((x) =>
+                        x.role === 'mentor' && x.proposal?.id === next.id
+                          ? { ...x, proposal: next }
+                          : x,
+                      ),
+                    );
+                  }}
+                />
+              )}
             </div>
           ),
         )}
@@ -365,6 +395,11 @@ export function ChatPanel({ problemId }: { problemId: string }) {
         )}
       </div>
 
+      {rejected && (
+        <p className="chat-note muted" role="status">
+          O mentor propôs uma mudança que o simulador não aceita; peça de outro jeito.
+        </p>
+      )}
       {trimmed && (
         <p className="chat-note muted" role="status">
           O início da conversa ficou de fora do contexto.

@@ -12,12 +12,19 @@ export interface ProviderInput {
   state: string;
   message: string;
   model: string;
+  /**
+   * Checks a propor_mudancas input the way the route will: null when it holds,
+   * else the reason. A provider that can answer the tool call tells the model (M5).
+   */
+  check?: (proposal: unknown) => string | null;
 }
 
 export type ProviderChunk =
   | { type: 'delta'; text: string }
   /** Upstream is alive (thinking, a ping): keeps the idle timer from firing, never shown. */
   | { type: 'heartbeat' }
+  /** The mentor called propor_mudancas; the input is unchecked until the route validates it. */
+  | { type: 'proposal'; input: unknown }
   | { type: 'usage'; usage: MentorUsage }
   | { type: 'error'; code: MentorErrorCode };
 

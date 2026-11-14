@@ -6,6 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { writeAtomic } from '../atomic-write';
+import { mcpServerSource } from './mcp-server';
+import { MCP_SERVER_NAME, MCP_TOOL_NAME, toolInputSchema } from './proposal-tool';
 import {
   CREDENTIAL_VARS,
   transcript,
@@ -21,11 +23,16 @@ import {
  * servers, no slash commands or skills, and no settings or CLAUDE.md
  * (study-mode FR-12, A02).
  */
-export function cliArgs(model: string, systemFile: string): string[] {
+export function cliArgs(model: string, systemFile: string, mcpConfig: string): string[] {
   return [
     '-p',
     '--tools',
     '',
+    // One MCP server of ours with one tool; built-in tools stay off (mentor-edits A02).
+    '--mcp-config',
+    mcpConfig,
+    '--allowedTools',
+    MCP_TOOL_NAME,
     '--setting-sources',
     '',
     '--strict-mcp-config',
@@ -33,8 +40,9 @@ export function cliArgs(model: string, systemFile: string): string[] {
     '--no-session-persistence',
     '--permission-mode',
     'dontAsk',
+    // The tool call, its result, and the closing text.
     '--max-turns',
-    '1',
+    '3',
     '--model',
     model,
     '--effort',
@@ -89,6 +97,15 @@ export function chunkOf(line: string): ProviderChunk | 'result' | null {
     )
       return { type: 'delta', text: e.delta.text };
     return { type: 'heartbeat' };
+  }
+  if (m.type === 'assistant') {
+    const content = (m.message as { content?: unknown } | undefined)?.content;
+    const call = Array.isArray(content)
+      ? (content as { type?: unknown; name?: unknown; input?: unknown }[]).find(
+          (b) => b.type === 'tool_use' && b.name === MCP_TOOL_NAME,
+        )
+      : undefined;
+    return call ? { type: 'proposal', input: call.input } : { type: 'heartbeat' };
   }
   if (m.type === 'result') {
     if (m.is_error === true) return { type: 'error', code: errorFromStatus(m.api_error_status) };
@@ -186,13 +203,26 @@ export function cliProvider(
       const cwd = workDir();
       // One file per reply: two problems asked at once never read each other's prompt.
       const systemFile = `system-${randomUUID()}.txt`;
-      writeAtomic(join(cwd, systemFile), input.system);
+      const mcpFile = join(cwd, `mcp-${randomUUID()}.mjs`);
+      // Cleanup is ready before the first write, so a failed write leaves nothing behind.
       const removeSystem = () => {
         rmSync(join(cwd, systemFile), { force: true });
+        rmSync(mcpFile, { force: true });
       };
+      try {
+        writeAtomic(join(cwd, systemFile), input.system);
+        writeAtomic(mcpFile, mcpServerSource(toolInputSchema()));
+      } catch {
+        removeSystem();
+        yield { type: 'error', code: 'unknown' };
+        return;
+      }
+      const mcpConfig = JSON.stringify({
+        mcpServers: { [MCP_SERVER_NAME]: { command: process.execPath, args: [mcpFile] } },
+      });
       let child: ChildProcessWithoutNullStreams;
       try {
-        child = run('claude', cliArgs(input.model, systemFile), { cwd, env });
+        child = run('claude', cliArgs(input.model, systemFile, mcpConfig), { cwd, env });
       } catch {
         removeSystem();
         yield { type: 'error', code: 'unknown' };

@@ -12,6 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from 'react';
 import { useDiagram } from '../store/diagram-store';
+import { useLayout } from '../workspace/layout-store';
 import { protocolFor } from './connection-rules';
 import { FlowEdge, type FlowFlowEdge } from './FlowEdge';
 import { toFlow, withMeasured } from './flow-model';
@@ -155,9 +156,17 @@ function CanvasInner({ decorate, decorateEdges, overlay, onReady }: CanvasProps)
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         deleteKeyCode={['Delete', 'Backspace']}
-        multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
-        selectionOnDrag
-        panOnDrag={[1, 2]}
+        // A plain drag on the background moves the view; Shift + drag draws a selection box,
+        // and Cmd/Ctrl + click adds to the selection (mentor-edits FR-13).
+        multiSelectionKeyCode={['Meta', 'Control']}
+        // Double click on a card opens its properties; on the canvas it no longer zooms (FR-14).
+        zoomOnDoubleClick={false}
+        onNodeDoubleClick={(_, node) => {
+          useDiagram.getState().select([node.id]);
+          useLayout.getState().showProperties();
+        }}
+        panOnDrag
+        selectionKeyCode="Shift"
         fitView
         minZoom={0.2}
         maxZoom={2}

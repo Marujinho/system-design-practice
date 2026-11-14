@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeSpot } from './Workspace';
+import { freeSpot } from '../canvas/place';
 
 describe('freeSpot', () => {
   it('returns the centre when it is free', () => {

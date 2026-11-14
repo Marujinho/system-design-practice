@@ -1,10 +1,11 @@
 import type { FinalizeResponse, PublicProblem } from '@archsim/problems';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LoadPanel } from '../panels/LoadPanel';
 import { PropertiesPanel } from '../panels/PropertiesPanel';
 import { hrefOf } from '../routes';
 import { problemStart } from '../store/defaults';
 import { useDiagram } from '../store/diagram-store';
+import { useLayout } from '../workspace/layout-store';
 import { Workspace } from '../workspace/Workspace';
 import { api, ApiError } from './api';
 import { EvaluationPanel } from './EvaluationPanel';
@@ -21,6 +22,13 @@ export function StudyView({ problemId }: { problemId: string }) {
   const [problem, setProblem] = useState<PublicProblem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'req' | 'props'>('req');
+  // A double click on a card asks for its properties (mentor-edits FR-14).
+  // Only requests made after this screen opened count, not one left from another screen.
+  const propertiesRequest = useLayout((s) => s.propertiesRequest);
+  const requestAtMount = useRef(propertiesRequest);
+  useEffect(() => {
+    if (propertiesRequest !== requestAtMount.current) setTab('props');
+  }, [propertiesRequest]);
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [result, setResult] = useState<FinalizeResponse | null>(null);

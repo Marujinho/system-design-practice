@@ -8,7 +8,7 @@ import {
 } from '@archsim/problems';
 import { loadProblem, PROBLEMS_DIR } from '@archsim/problems/load';
 import { initialState, step } from '@archsim/sim-engine';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -242,6 +242,40 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
   });
 });
 
+describe('double click asks for properties (mentor-edits FR-14)', () => {
+  const routesFor: Route = (url) => {
+    if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem);
+    if (url.endsWith('/problems')) return [summary()];
+    return undefined;
+  };
+
+  it('switches to Propriedades when a request comes after the screen opened', async () => {
+    mockFetch(routesFor);
+    render(<ProblemView problemId="url-shortener" />);
+    const req = await screen.findByRole('tab', { name: 'Requisitos' });
+    expect(req).toHaveAttribute('aria-selected', 'true');
+    act(() => {
+      useLayout.getState().showProperties();
+    });
+    expect(screen.getByRole('tab', { name: 'Propriedades' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('ignores a request left from before the screen opened', async () => {
+    act(() => {
+      useLayout.getState().showProperties();
+    });
+    mockFetch(routesFor);
+    render(<ProblemView problemId="url-shortener" />);
+    expect(await screen.findByRole('tab', { name: 'Requisitos' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+});
+
 describe('EvaluationPanel (FR-45)', () => {
   it('turns the p99 requirement red when the cache is removed', () => {
     const run = (d: typeof loaded.reference) => {
@@ -343,7 +377,10 @@ describe('study mode (study-mode FR-1, FR-9)', () => {
     render(<StudyView problemId="url-shortener" />);
     expect((await screen.findAllByText('Modo estudo')).length).toBeGreaterThan(0);
     expect(screen.getByRole('note').textContent).toContain('não conta para a nota');
-    expect(useDiagram.getState().mode).toEqual({ kind: 'study', problemId: 'url-shortener' });
+    // the workspace starts its mode in an effect, right after the first paint
+    await waitFor(() => {
+      expect(useDiagram.getState().mode).toEqual({ kind: 'study', problemId: 'url-shortener' });
+    });
     await userEvent.click(screen.getByRole('button', { name: 'Finalizar e pontuar' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('estudo · não registrado')).toBeTruthy();

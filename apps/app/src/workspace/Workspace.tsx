@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { Canvas } from '../canvas/Canvas';
+import { freeSpot } from '../canvas/place';
 import { Palette } from '../canvas/Palette';
 import { useSimulation } from '../sim/useSimulation';
 import { createAutosave, loadSaved } from '../store/autosave';
@@ -11,23 +12,6 @@ import { emptyDiagram } from '../store/defaults';
 import { useDiagram, type Mode } from '../store/diagram-store';
 import { Collapsible } from './Collapsible';
 import { useLayout } from './layout-store';
-
-const STEP_X = 170;
-const STEP_Y = 30;
-
-/** The first spot near `at` that no node already occupies, stepping right (and a little down). */
-export function freeSpot(
-  at: { x: number; y: number },
-  taken: { x: number; y: number }[],
-): { x: number; y: number } {
-  for (let k = 0; k < 50; k += 1) {
-    const p = { x: at.x + k * STEP_X, y: at.y + k * STEP_Y };
-    const near = (t: { x: number; y: number }) =>
-      Math.abs(t.x - p.x) < STEP_X / 2 && Math.abs(t.y - p.y) < STEP_X / 2;
-    if (!taken.some(near)) return p;
-  }
-  return at;
-}
 
 export interface WorkspaceProps {
   mode: Mode;

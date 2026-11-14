@@ -65,12 +65,27 @@ export interface LayoutState {
   before: Collapsed | null;
   toggle(id: PanelId): void;
   focusCanvas(): void;
+  /** Bumped on every request to show a node's properties; screens with tabs follow it. */
+  propertiesRequest: number;
+  /** Open the side panel (if folded) and ask for the properties tab (mentor-edits FR-14). */
+  showProperties(): void;
 }
 
 /** Which panels around the canvas are collapsed: UI state, never part of the diagram. */
 export const useLayout = create<LayoutState>()((set, get) => ({
   collapsed: readLayout(),
   before: null,
+  propertiesRequest: 0,
+
+  showProperties: () => {
+    const { collapsed, propertiesRequest } = get();
+    if (collapsed.side) {
+      const next = { ...collapsed, side: false };
+      set({ collapsed: next, before: null });
+      storeLayout(next);
+    }
+    set({ propertiesRequest: propertiesRequest + 1 });
+  },
 
   toggle: (id) => {
     const { collapsed } = get();

@@ -63,6 +63,10 @@ test('no serious or critical accessibility violations: estudo com o mentor abert
     await expect(log).toContainText(`Pergunta ${String(i)}`);
     await expect(page.getByRole('button', { name: 'Enviar' })).toBeVisible();
   }
+  // and a proposal card (mentor-edits NFR-2)
+  await question.fill('proponha:ec2');
+  await question.press('Enter');
+  await expect(page.getByRole('region', { name: 'Proposta do mentor' })).toBeVisible();
   await page.waitForTimeout(500);
   const results = await new AxeBuilder({ page }).analyze();
   const bad = results.violations

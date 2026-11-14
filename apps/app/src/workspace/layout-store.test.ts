@@ -115,3 +115,24 @@ describe('useLayout (FR-12, FR-13, FR-14)', () => {
     expect(useDiagram.getState().history).toBe(history);
   });
 });
+
+describe('showProperties (mentor-edits FR-14)', () => {
+  it('opens a folded side panel and asks for the properties tab', () => {
+    useLayout.setState({
+      collapsed: { ...EXPANDED, side: true },
+      before: null,
+      propertiesRequest: 0,
+    });
+    useLayout.getState().showProperties();
+    expect(useLayout.getState().collapsed.side).toBe(false);
+    expect(readLayout().side).toBe(false);
+    expect(useLayout.getState().propertiesRequest).toBe(1);
+  });
+
+  it('only asks again when the side panel is already open', () => {
+    useLayout.setState({ collapsed: { ...EXPANDED }, before: null, propertiesRequest: 3 });
+    useLayout.getState().showProperties();
+    expect(useLayout.getState().collapsed).toEqual(EXPANDED);
+    expect(useLayout.getState().propertiesRequest).toBe(4);
+  });
+});
