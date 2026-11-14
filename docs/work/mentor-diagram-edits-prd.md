@@ -82,7 +82,7 @@ A mesma pessoa do modo estudo. Depois desta entrega, ela diz "coloca um cache na
 - Mudar a carga — travada no estudo, como para a pessoa.
 - Propor no modo prática ou no canvas livre — não há chat lá.
 - Aplicar parte de uma proposta, operação por operação — a proposta é um pacote; para mudar parte dela, a pessoa pede de novo.
-- Novos gestos além de FR-13/FR-14 (por exemplo, pinça para zoom no trackpad muda? não; continua como hoje).
+- Outros gestos além de FR-13/FR-14: zoom por pinça e pela roda continuam como hoje.
 
 ## 10. Definition of Done
 - [ ] Todo requisito Must atende ao seu critério de aceite
