@@ -18,6 +18,8 @@ export type ProviderChunk =
   | { type: 'delta'; text: string }
   /** Upstream is alive (thinking, a ping): keeps the idle timer from firing, never shown. */
   | { type: 'heartbeat' }
+  /** The mentor called propor_mudancas; the input is unchecked until the route validates it. */
+  | { type: 'proposal'; input: unknown }
   | { type: 'usage'; usage: MentorUsage }
   | { type: 'error'; code: MentorErrorCode };
 

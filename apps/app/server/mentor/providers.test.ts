@@ -1,9 +1,14 @@
 // @vitest-environment node
 import Anthropic from '@anthropic-ai/sdk';
-import type { BetaRawMessageStreamEvent } from '@anthropic-ai/sdk/resources/beta/messages/messages';
+import type {
+  BetaMessageStreamParams,
+  BetaRawMessageStreamEvent,
+} from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import { spawn as nodeSpawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { createInterface } from 'node:readline';
+import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -18,6 +23,8 @@ import {
   type SpawnFn,
 } from './cli-provider';
 import { fakeProvider } from './fake-provider';
+import { mcpServerSource } from './mcp-server';
+import { TOOL_RESULT, toolInputSchema } from './proposal-tool';
 import type { ProviderChunk, ProviderInput } from './provider';
 
 const input: ProviderInput = {
@@ -60,14 +67,17 @@ const RESULT = JSON.stringify({
 });
 
 describe('subscription provider: the installed claude, with nothing but talk (FR-12, A02, A04)', () => {
-  it('starts claude with no tools, settings, MCP, commands, sessions or permissions to grant', () => {
-    const args = cliArgs('claude-opus-5-5', 'system-x.txt');
+  it('starts claude with only our proposal tool: no built-ins, settings, other MCP, commands or sessions', () => {
+    const args = cliArgs('claude-opus-5-5', 'system-x.txt', '{"mcpServers":{}}');
     const after = (flag: string) => args[args.indexOf(flag) + 1];
     expect(args[0]).toBe('-p');
     expect(after('--tools')).toBe('');
     expect(after('--setting-sources')).toBe('');
     expect(after('--permission-mode')).toBe('dontAsk');
-    expect(after('--max-turns')).toBe('1');
+    expect(after('--max-turns')).toBe('3');
+    expect(after('--allowedTools')).toBe('mcp__archsim__propor_mudancas');
+    expect(after('--mcp-config')).toBe('{"mcpServers":{}}');
+    expect(args.filter((a) => a === '--allowedTools')).toHaveLength(1);
     expect(after('--model')).toBe('claude-opus-5-5');
     expect(after('--system-prompt-file')).toBe('system-x.txt');
     for (const flag of [
@@ -76,7 +86,7 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
       '--no-session-persistence',
     ])
       expect(args).toContain(flag);
-    expect(args.join(' ')).not.toMatch(/bypass|dangerously|--add-dir|--mcp-config/);
+    expect(args.join(' ')).not.toMatch(/bypass|dangerously|--add-dir/);
   });
 
   it('drops every API credential from the child environment', () => {
@@ -202,7 +212,14 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
     expect(command).toBe('claude');
     const file = args?.[args.indexOf('--system-prompt-file') + 1] ?? '';
     expect(file).toMatch(/^system-[0-9a-f-]{36}\.txt$/);
-    expect(args).toEqual(cliArgs('claude-opus-5-5', file));
+    const mcp = args?.[args.indexOf('--mcp-config') + 1] ?? '';
+    expect(args).toEqual(cliArgs('claude-opus-5-5', file, mcp));
+    const server = (
+      JSON.parse(mcp) as { mcpServers: Record<string, { command: string; args: string[] }> }
+    ).mcpServers.archsim;
+    expect(server?.command).toBe(process.execPath);
+    expect(server?.args[0]?.startsWith(cwd)).toBe(true);
+    expect(existsSync(server?.args[0] ?? '')).toBe(false); // removed with the reply
     expect(options).toEqual({ cwd, env: { PATH: '/bin' } });
     expect(systemSeen).toBe(input.system);
     // the prompt file is gone once the reply ends
@@ -283,7 +300,11 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
 });
 
 describe('API provider (FR-12, FR-13, FR-15, A07)', () => {
-  function streamOf(events: BetaRawMessageStreamEvent[], stopReason = 'end_turn'): ApiStream {
+  function streamOf(
+    events: BetaRawMessageStreamEvent[],
+    stopReason = 'end_turn',
+    content: unknown[] = [],
+  ): ApiStream {
     return {
       async *[Symbol.asyncIterator]() {
         for (const e of events) {
@@ -294,6 +315,7 @@ describe('API provider (FR-12, FR-13, FR-15, A07)', () => {
       finalMessage: () =>
         Promise.resolve({
           stop_reason: stopReason,
+          content,
           usage: {
             input_tokens: 1000,
             output_tokens: 50,
@@ -310,9 +332,9 @@ describe('API provider (FR-12, FR-13, FR-15, A07)', () => {
       delta: { type: 'text_delta', text },
     }) as BetaRawMessageStreamEvent;
 
-  it('sends no tools, caches the stable prefix and puts the diagram in the last turn', () => {
+  it('sends only the proposal tool, caches the stable prefix and puts the diagram in the last turn', () => {
     const params = apiParams(input);
-    expect(params).not.toHaveProperty('tools');
+    expect(params.tools?.map((t) => ('name' in t ? t.name : ''))).toEqual(['propor_mudancas']);
     expect(params.model).toBe('claude-opus-5-5');
     expect(params.system).toEqual([
       { type: 'text', text: input.system, cache_control: { type: 'ephemeral' } },
@@ -410,3 +432,133 @@ describe('fake provider (test double)', () => {
     expect(seen).toHaveLength(1);
   });
 });
+
+describe('the proposal tool (mentor-edits FR-1, FR-12, A02)', () => {
+  it('the MCP server answers initialize, lists exactly our tool, and accepts its call', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'archsim-mcp-test-'));
+    const file = join(dir, 'mcp.mjs');
+    writeFileSync(file, mcpServerSource(toolInputSchema()));
+    const child = nodeSpawn(process.execPath, [file], { stdio: 'pipe' });
+    const lines = createInterface({ input: child.stdout });
+    const replies: Record<number, unknown> = {};
+    lines.on('line', (l) => {
+      const m = JSON.parse(l) as { id: number };
+      replies[m.id] = m;
+    });
+    const ask = (id: number, method: string, params: unknown = {}) => {
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+    };
+    ask(1, 'initialize', { protocolVersion: '2025-06-18' });
+    child.stdin.write(
+      `${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`,
+    );
+    ask(2, 'tools/list');
+    ask(3, 'tools/call', { name: 'propor_mudancas', arguments: { summary: 's', ops: [] } });
+    ask(4, 'tools/call', { name: 'Bash', arguments: {} });
+    await vi.waitFor(() => {
+      expect(Object.keys(replies)).toHaveLength(4);
+    });
+    child.kill();
+    expect(replies[1]).toMatchObject({ result: { capabilities: { tools: {} } } });
+    const tools = (replies[2] as { result: { tools: { name: string; inputSchema: unknown }[] } })
+      .result.tools;
+    expect(tools.map((t) => t.name)).toEqual(['propor_mudancas']);
+    expect(tools[0]?.inputSchema).toEqual(toolInputSchema());
+    expect(replies[3]).toMatchObject({
+      result: { content: [{ type: 'text', text: TOOL_RESULT }] },
+    });
+    expect(replies[4]).toMatchObject({ error: { code: -32602 } });
+  });
+
+  it('reads the proposal from claude’s stream, and nothing from another tool', () => {
+    const line = (name: string) =>
+      JSON.stringify({
+        type: 'assistant',
+        message: {
+          content: [{ type: 'tool_use', id: 't1', name, input: { summary: 's', ops: [] } }],
+        },
+      });
+    expect(chunkOf(line('mcp__archsim__propor_mudancas'))).toEqual({
+      type: 'proposal',
+      input: { summary: 's', ops: [] },
+    });
+    expect(chunkOf(line('Bash'))).toEqual({ type: 'heartbeat' });
+  });
+
+  it('gives the API exactly one tool and closes the reply after the call', async () => {
+    const calls: BetaMessageStreamParams[] = [];
+    const tool = {
+      type: 'tool_use',
+      id: 'toolu_1',
+      name: 'propor_mudancas',
+      input: { summary: 's', ops: [] },
+    };
+    const rounds = [
+      () => streamOfFor([deltaEvent('Proponho isto. ')], 'tool_use', [tool]),
+      () => streamOfFor([deltaEvent('Você decide.')], 'end_turn', []),
+    ];
+    const p = apiProvider({
+      env: { ANTHROPIC_API_KEY: 'k' },
+      stream: (params) => {
+        calls.push(params);
+        const next = rounds[calls.length - 1];
+        if (!next) throw new Error('rodada a mais');
+        return next();
+      },
+    });
+    const chunks: ProviderChunk[] = [];
+    for await (const c of p.stream(input, new AbortController().signal)) chunks.push(c);
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.tools?.map((t) => ('name' in t ? t.name : ''))).toEqual(['propor_mudancas']);
+    expect(chunks.filter((c) => c.type === 'proposal')).toEqual([
+      { type: 'proposal', input: { summary: 's', ops: [] } },
+    ]);
+    expect(chunks.flatMap((c) => (c.type === 'delta' ? [c.text] : []))).toEqual([
+      'Proponho isto. ',
+      'Você decide.',
+    ]);
+    const last = calls[1]?.messages.at(-1);
+    expect(last).toEqual({
+      role: 'user',
+      content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: TOOL_RESULT }],
+    });
+    expect(chunks.at(-1)).toMatchObject({
+      type: 'usage',
+      usage: { inputTokens: 6000, outputTokens: 100 },
+    });
+  });
+});
+
+function deltaEvent(text: string) {
+  return {
+    type: 'content_block_delta',
+    index: 0,
+    delta: { type: 'text_delta', text },
+  } as BetaRawMessageStreamEvent;
+}
+
+function streamOfFor(
+  events: BetaRawMessageStreamEvent[],
+  stopReason: string,
+  content: unknown[],
+): ApiStream {
+  return {
+    async *[Symbol.asyncIterator]() {
+      for (const e of events) {
+        await Promise.resolve();
+        yield e;
+      }
+    },
+    finalMessage: () =>
+      Promise.resolve({
+        stop_reason: stopReason,
+        content,
+        usage: {
+          input_tokens: 1000,
+          output_tokens: 50,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 2000,
+        },
+      } as Awaited<ReturnType<ApiStream['finalMessage']>>),
+  };
+}

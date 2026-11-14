@@ -8,7 +8,7 @@ import {
 } from '@archsim/problems';
 import { loadProblem, PROBLEMS_DIR } from '@archsim/problems/load';
 import { initialState, step } from '@archsim/sim-engine';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -343,7 +343,10 @@ describe('study mode (study-mode FR-1, FR-9)', () => {
     render(<StudyView problemId="url-shortener" />);
     expect((await screen.findAllByText('Modo estudo')).length).toBeGreaterThan(0);
     expect(screen.getByRole('note').textContent).toContain('não conta para a nota');
-    expect(useDiagram.getState().mode).toEqual({ kind: 'study', problemId: 'url-shortener' });
+    // the workspace starts its mode in an effect, right after the first paint
+    await waitFor(() => {
+      expect(useDiagram.getState().mode).toEqual({ kind: 'study', problemId: 'url-shortener' });
+    });
     await userEvent.click(screen.getByRole('button', { name: 'Finalizar e pontuar' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('estudo · não registrado')).toBeTruthy();

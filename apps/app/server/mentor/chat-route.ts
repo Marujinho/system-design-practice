@@ -151,6 +151,7 @@ export function mentorRoutes(deps: {
       for await (const chunk of provider.stream(input, controller.signal)) {
         armIdle();
         if (chunk.type === 'heartbeat') continue;
+        if (chunk.type === 'proposal') continue; // validated and emitted from T5 on
         if (chunk.type === 'delta') {
           ttft ??= Date.now() - started;
           // Beyond what a conversation file holds, the reply is cut and kept (NFR-4, A06).

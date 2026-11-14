@@ -7,6 +7,7 @@ import type { MentorProvider, ProviderChunk } from './provider';
  * - "erro:auth" / "erro:429" → that error;
  * - "lento" → a first chunk, then waits until aborted;
  * - "trava" → never answers;
+ * - "proponha:ec2" → a valid proposal (an EC2 'API' connected from n1); "proponha:invalida" → one with a service that doesn't exist;
  * - anything else → three chunks naming the first node in the diagram.
  */
 export function fakeProvider(
@@ -46,6 +47,24 @@ export function fakeProvider(
       }
       if (q === 'erro:429') {
         yield { type: 'error', code: 'rate_limit' };
+        return;
+      }
+      if (q === 'proponha:ec2' || q === 'proponha:invalida') {
+        yield { type: 'delta', text: 'Proponho uma API atrás dos Usuários. ' };
+        yield {
+          type: 'proposal',
+          input: {
+            summary: 'API atrás dos Usuários',
+            ops:
+              q === 'proponha:ec2'
+                ? [
+                    { op: 'add', ref: 'novo1', service: 'aws.ec2', label: 'API' },
+                    { op: 'connect', from: 'n1', to: 'novo1' },
+                  ]
+                : [{ op: 'add', ref: 'novo1', service: 'aws.nao-existe' }],
+          },
+        };
+        yield { type: 'delta', text: 'Você decide se aplica.' };
         return;
       }
       if (q === 'trava') {
