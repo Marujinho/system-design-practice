@@ -7,7 +7,7 @@ test('pick a bigger EC2 type in the panel: the card and the cost follow (aws-ins
   const problems = watchConsole(page);
   await page.goto('/#/free');
   await page.getByRole('button', { name: 'Usuários / Internet' }).click();
-  await page.getByRole('button', { name: 'EC2', exact: true }).click();
+  await page.getByRole('button', { name: 'EC2 Elastic Compute Cloud', exact: true }).click();
 
   const ec2 = page.locator('.service-node', { hasText: 'EC2' });
   // a new node starts on the catalog's first type, as before

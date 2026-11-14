@@ -35,7 +35,7 @@ test('keyboard only: open the free canvas, add a service, edit it, read the resu
   await page.keyboard.press('Enter');
   await tabTo(page, (e) => e.name === 'Buscar serviço');
   await page.keyboard.type('ec2');
-  await tabTo(page, (e) => e.name === 'EC2');
+  await tabTo(page, (e) => e.name === 'EC2 Elastic Compute Cloud');
   await page.keyboard.press('Enter');
   await expect(page.locator('.service-node')).toHaveCount(1);
   await expect(page.getByRole('heading', { name: 'EC2' })).toBeVisible();
@@ -61,5 +61,7 @@ test('keyboard only: collapse and expand the palette (edge-hover NFR-2)', async 
   await page.keyboard.press('Enter');
   await tabTo(page, (e) => e.name === 'Buscar serviço');
   await page.keyboard.type('ec2');
-  await expect(page.getByRole('button', { name: 'EC2', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'EC2 Elastic Compute Cloud', exact: true }),
+  ).toBeVisible();
 });

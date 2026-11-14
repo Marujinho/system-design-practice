@@ -18,15 +18,22 @@ export type ServiceFlowNode = Node<ServiceNodeData, 'service'>;
 function ServiceNodeView({ data, selected }: NodeProps<ServiceFlowNode>) {
   const service = findService(catalog, data.serviceId);
   const name = service?.label ?? data.serviceId;
+  const fullName = service?.fullName;
   const variant =
     service && service.variants.length > 1 ? findVariant(service, data.variantId) : undefined;
   return (
     <div
       className={`service-node${selected ? ' selected' : ''}`}
       data-health={data.health ?? 'healthy'}
+      // The acronym spelled out on hover, without growing the card (study-mode FR-20).
+      {...(fullName === undefined ? {} : { title: fullName })}
     >
       {service?.kind !== 'entry' && <Handle type="target" position={Position.Left} />}
-      <ServiceFigure serviceId={data.serviceId} label={name} className="service-figure" />
+      <ServiceFigure
+        serviceId={data.serviceId}
+        label={fullName === undefined ? name : `${name} (${fullName})`}
+        className="service-figure"
+      />
       <div className="service-node-text">
         <span className="service-node-label">{data.label}</span>
         {data.label !== name && <span className="service-node-kind">{name}</span>}

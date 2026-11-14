@@ -43,6 +43,7 @@ function NodePanel({ node }: { node: DiagramNode }) {
     <div className="panel" aria-label={`Propriedades de ${node.label}`}>
       <header>
         <h2>{service.label}</h2>
+        {service.fullName !== undefined && <p className="service-full-name">{service.fullName}</p>}
         <p className="muted">{service.description}</p>
       </header>
 

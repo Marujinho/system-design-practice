@@ -37,7 +37,7 @@ test('free canvas: adds a service from the palette and simulates it', async ({ p
   await page.goto('/#/free');
   await expect(page.getByText('Arraste um serviço ou comece por Usuários.')).toBeVisible();
   await page.getByRole('button', { name: 'Usuários / Internet' }).click();
-  await page.getByRole('button', { name: 'EC2', exact: true }).click();
+  await page.getByRole('button', { name: 'EC2 Elastic Compute Cloud', exact: true }).click();
   await expect(page.locator('.service-node')).toHaveCount(2);
   expect(problems).toEqual([]);
 });
