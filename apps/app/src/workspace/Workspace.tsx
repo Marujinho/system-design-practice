@@ -74,7 +74,7 @@ function SelectionBadge() {
 /** Palette, canvas and side panel around the diagram store, with autosave per mode. */
 export function Workspace({ mode, initial, side, top, topSummary }: WorkspaceProps) {
   const centre = useRef<() => { x: number; y: number }>(() => ({ x: 0, y: 0 }));
-  const modeKey = mode.kind === 'free' ? 'free' : mode.problemId;
+  const modeKey = mode.kind === 'free' ? 'free' : `${mode.kind}:${mode.problemId}`;
 
   useEffect(() => {
     useDiagram.getState().start(mode, loadSaved(mode) ?? (initial ? initial() : emptyDiagram()));

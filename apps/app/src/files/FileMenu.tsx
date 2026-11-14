@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useDiagram } from '../store/diagram-store';
+import { hasProblem, useDiagram } from '../store/diagram-store';
 import { downloadDiagram, readDiagramFile } from './save-open';
 
 export function FileMenu() {
@@ -45,7 +45,7 @@ export function FileMenu() {
             const s = useDiagram.getState();
             // In a problem, the problem's load always wins over the file's (FR-44).
             s.replaceDiagram(
-              s.mode.kind === 'problem' ? { ...r.diagram, load: s.diagram.load } : r.diagram,
+              hasProblem(s.mode) ? { ...r.diagram, load: s.diagram.load } : r.diagram,
             );
           });
         }}
