@@ -207,6 +207,10 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     const fetchMock = mockFetch(routes(false));
     render(<ProblemView problemId="url-shortener" />);
     await screen.findByText('Encurtador de URL');
+    // the workspace starts the problem in an effect: add the node only after that
+    await waitFor(() => {
+      expect(useDiagram.getState().mode).toEqual({ kind: 'problem', problemId: 'url-shortener' });
+    });
     useDiagram.getState().addNode('aws.ec2', { x: 200, y: 0 });
     const before = structuredClone(useDiagram.getState().diagram);
 

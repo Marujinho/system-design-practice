@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { latency, monthlyCost, saturate, SECONDS_PER_MONTH } from '../queueing';
-import { ctxFor } from '../test-helpers';
+import { ctxFor, READ, WRITE } from '../test-helpers';
 import { handlers } from './index';
 import type { KindHandler } from './types';
 
@@ -117,6 +117,15 @@ describe('cdn and cache (FR-13)', () => {
     const out = handler('cdn').process({ read: 10_000, write: 100 }, ctx);
     expect(out.forward.read).toBeCloseTo(1000, 9);
     expect(out.forward.write).toBeCloseTo(100, 9);
+  });
+
+  it('bills uploads through CloudFront as transfer to the origin, not out to the internet (cost-model FR-4)', () => {
+    const upload = { ...WRITE, payloadKB: 2048 };
+    const ctx = ctxFor('aws.cloudfront', 'distribution', { classes: [READ, upload] });
+    const out = handler('cdn').process({ write: 50 }, ctx);
+    const gb = (50 * 2048 * SECONDS_PER_MONTH) / 1e6;
+    const requests = (50 * SECONDS_PER_MONTH) / 1e6;
+    expect(out.costMonth).toBeCloseTo(gb * 0.02 + requests * 1.0, 4);
   });
 
   it('ElastiCache forwards only misses of cacheable reads', () => {
