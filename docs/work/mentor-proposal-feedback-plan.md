@@ -147,3 +147,16 @@ Baseline: 705 testes unitários e 62 e2e. No fim: 713 unitários e 62 e2e, verde
 
 ### Inherited failures
 Nenhuma.
+
+### Review fixes
+A revisão independente das partes de socket, script gerado e laço da API não achou nada Critical nem High. Foram corrigidos:
+- **M1:** a API passou a parar em 3 chamadas, como o MCP.
+- **M2:** a verificação da rota virou a decisão única sobre a proposta da resposta.
+- **L3:** o buffer do socket ganhou limite e o UTF-8 passou a ser lido inteiro.
+- **L5:** uma proposta que não muda nada passou a ser recusada.
+- **L6:** o aviso de recusa não fica velho depois de uma interrupção.
+
+Em aberto (Low):
+- **L4:** com um `TMPDIR` muito longo, o socket não abre, e o mentor de assinatura responde só "erro desconhecido".
+
+716 testes unitários e 62 e2e verdes.
