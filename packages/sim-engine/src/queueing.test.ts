@@ -32,6 +32,10 @@ describe('tiered prices (cost-model FR-1, A10)', () => {
     expect(tieredCost(-5, rest)).toBe(0);
   });
 
+  it('passes NaN through, as a flat price does, so the step can flag it', () => {
+    expect(tieredCost(Number.NaN, rest)).toBeNaN();
+  });
+
   it('crosses a boundary exactly', () => {
     expect(tieredCost(333, rest)).toBeCloseTo(333 * 3.5, 9);
     expect(tieredCost(1000, rest)).toBeCloseTo(333 * 3.5 + 667 * 2.8, 9);

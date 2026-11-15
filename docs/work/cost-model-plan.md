@@ -100,3 +100,13 @@ O ticketing sobe pelo I/O do Aurora: ≈ 1.500 escritas/s dão ≈ 3,9 bilhões 
 
 ### Inherited failures
 Nenhuma nos testes. O aviso do audit (`minimatch`) é anterior ao branch.
+
+### Review fixes
+A revisão independente não achou nada Critical, High ou Medium. Foram corrigidos:
+- **L1:** `tieredCost(NaN)` com faixas devolvia 0 em silêncio. Agora devolve NaN, como um preço sem faixas, e o guard do `step` sinaliza.
+- **L3:** o FR-3 só era testado passando `fromInternet` direto. Ganhou testes pelo `step()`: Users → S3 contra Users → Lambda → S3, e a divisão meio a meio.
+
+Em aberto (Low):
+- **L2:** o JSON Schema exportado aceita faixas malformadas. Só o zod, que o app usa ao carregar o catálogo, aplica as regras.
+
+744 testes unitários e 64 e2e verdes.

@@ -78,6 +78,8 @@ export function gbPerMonth(rps: number, payloadKB: number): number {
  */
 /** The cost of a monthly quantity, tier by tier when the price has volume tiers (cost-model FR-1). */
 export function tieredCost(quantity: number, price: Price): number {
+  // a NaN must reach the step's guard as NaN, not slip through the tiers as 0
+  if (Number.isNaN(quantity)) return Number.NaN;
   if (quantity <= 0) return 0;
   if (!price.tiers) return price.amountUsd * quantity;
   let total = 0;
