@@ -115,8 +115,8 @@ export function applyProposal(
             // The canvas gives Users no input: nothing can connect into it (mentor-edits FR-6).
             if (serviceOf(to.serviceId).kind === 'entry')
               throw new Refused('invalid', 'nada se conecta em Usuários; Usuários só envia');
-            if (d.edges.some((e) => e.source === from.id && e.target === to.id))
-              throw new Refused('invalid', `${from.label} já está conectado a ${to.label}`);
+            // Already connected: the end state the mentor wants is there (feedback FR-4).
+            if (d.edges.some((e) => e.source === from.id && e.target === to.id)) break;
             if (d.edges.length >= LIMITS.maxEdges)
               throw new Refused('invalid', `o desenho já tem ${String(LIMITS.maxEdges)} conexões`);
             const protocol = defaultProtocol(

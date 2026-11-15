@@ -90,7 +90,17 @@ describe('applyProposal (mentor-edits FR-2, FR-6, FR-7, FR-10)', () => {
       ok: false,
     });
     expect(apply([{ op: 'connect', from: 'app', to: 'app' }])).toMatchObject({ ok: false });
-    expect(apply([{ op: 'connect', from: 'users', to: 'alb' }])).toMatchObject({ ok: false });
+  });
+
+  it('counts a connection that already exists as done, and applies the rest (feedback FR-4)', () => {
+    const r = apply([
+      { op: 'connect', from: 'app', to: 'db' },
+      { op: 'set_prop', node: 'app', key: 'units', value: 25 },
+    ]);
+    if (!r.ok) throw new Error(r.message);
+    expect(r.diagram.edges.filter((e) => e.source === 'app' && e.target === 'db')).toHaveLength(1);
+    expect(r.diagram.edges).toHaveLength(reference.edges.length);
+    expect(r.diagram.nodes.find((n) => n.id === 'app')?.props.units).toBe(25);
   });
 
   it('refuses a connection into Users, which the canvas can’t draw (review M4)', () => {
