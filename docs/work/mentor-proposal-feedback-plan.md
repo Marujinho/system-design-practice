@@ -112,3 +112,38 @@ A rota já tem a validação completa (`validateProposal`, exposta aos provedore
 
 ## Verification
 Os comandos do PRD §18 e o roteiro com a assinatura real (os 3 pedidos), no preview com um diretório de prática temporário.
+
+## Implementation
+
+**Branch**: `fix/mentor-proposal-feedback` · **Base**: `master` · **Date**: 2026-11-15
+
+| Task | Commit | Check | Lint / Types / Tests |
+|---|---|---|---|
+| T1 | `33a8c86` | ✅ | ✅ ✅ ✅ (706) |
+| T2 | `2283313` | ✅ | ✅ ✅ ✅ (706) |
+| T3 | `2ac7b19` | ✅ (+ smoke com o `claude` real) | ✅ ✅ ✅ (710) |
+| T4 | `228be49` | ✅ | ✅ ✅ ✅ (713) |
+| T5 | `d99a268` | ✅ | ✅ ✅ ✅ (713) |
+
+Baseline: 705 testes unitários e 62 e2e. No fim: 713 unitários e 62 e2e, verdes. `pnpm audit` limpo, nenhuma dependência nova.
+
+### Deviations
+- **T1** — saiu a asserção antiga que esperava erro ao conectar Usuários → ALB de novo. Era o comportamento que o FR-4 muda.
+- **T2** — o primeiro commit foi sem o teste novo, porque a edição do teste não casou o texto. Corrigido com `--amend` antes do push.
+- **T3** — `fakeChild` foi para o nível do módulo nos testes, para os dois blocos usarem.
+
+### Definition of Done
+- [x] Todo requisito Must atende ao seu critério de aceite: FR-1 a FR-4 com testes, FR-5 no prompt e testado.
+- [x] Roteiro §18 com a assinatura real (preview, diretório temporário, navegador):
+  - "Conecta a API no banco e sobe para 25" → card aplicado (o mentor anotou que a conexão já existia);
+  - `aws.mongodb` → sem card e sem afirmação falsa, com o motivo e a alternativa;
+  - "Faz aí como você faria essa arquitetura" → card com 6 operações, aplicado.
+  - Smoke de recusa pelo socket: o `claude` recebeu o motivo e disse que não havia card.
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test` (713), `pnpm test:e2e` (62) e `pnpm audit` passam.
+
+### Verification
+- O log das 3 respostas reais: `propostas=1/0/1 rejeitadas=0`.
+- O tempo até o primeiro token foi de 12,8 s, 3,2 s e 24,1 s. O de 24 s foi a resposta grande, com 6 operações. O achado de latência do PR #5 continua aberto.
+
+### Inherited failures
+Nenhuma.
