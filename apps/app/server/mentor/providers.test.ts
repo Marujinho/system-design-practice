@@ -26,6 +26,7 @@ import {
   chunkOf,
   cliArgs,
   cliProvider,
+  openValidator,
   loggedInWithSubscription,
   subscriptionEnv,
   type SpawnFn,
@@ -50,6 +51,37 @@ async function collect(it: AsyncIterable<ProviderChunk>): Promise<ProviderChunk[
   const out: ProviderChunk[] = [];
   for await (const c of it) out.push(c);
   return out;
+}
+
+/** A child process double: the test writes its stdout and decides how it exits. */
+function fakeChild() {
+  const child = new EventEmitter() as EventEmitter & {
+    stdin: PassThrough;
+    stdout: PassThrough;
+    stderr: PassThrough;
+    exitCode: number | null;
+    kill: ReturnType<typeof vi.fn>;
+  };
+  child.stdin = new PassThrough();
+  child.stdout = new PassThrough();
+  child.stderr = new PassThrough();
+  child.exitCode = null;
+  child.kill = vi.fn(() => {
+    child.stdout.end();
+    child.exitCode = 143;
+    child.emit('close', 143);
+    return true;
+  });
+  let stdin = '';
+  child.stdin.on('data', (b: Buffer) => {
+    stdin += b.toString();
+  });
+  const exit = (code: number) => {
+    child.stdout.end();
+    child.exitCode = code;
+    setImmediate(() => child.emit('close', code));
+  };
+  return { child, exit, stdin: () => stdin };
 }
 
 /** Lines in the shape `claude -p --output-format stream-json` printed on 2.1.325. */
@@ -82,7 +114,7 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
     expect(after('--tools')).toBe('');
     expect(after('--setting-sources')).toBe('');
     expect(after('--permission-mode')).toBe('dontAsk');
-    expect(after('--max-turns')).toBe('3');
+    expect(after('--max-turns')).toBe('5');
     expect(after('--allowedTools')).toBe('mcp__archsim__propor_mudancas');
     expect(after('--mcp-config')).toBe('{"mcpServers":{}}');
     expect(args.filter((a) => a === '--allowedTools')).toHaveLength(1);
@@ -162,37 +194,6 @@ describe('subscription provider: the installed claude, with nothing but talk (FR
       chunkOf(JSON.stringify({ type: 'result', is_error: true, api_error_status: 429 })),
     ).toEqual({ type: 'error', code: 'rate_limit' });
   });
-
-  /** A child process double: the test writes its stdout and decides how it exits. */
-  function fakeChild() {
-    const child = new EventEmitter() as EventEmitter & {
-      stdin: PassThrough;
-      stdout: PassThrough;
-      stderr: PassThrough;
-      exitCode: number | null;
-      kill: ReturnType<typeof vi.fn>;
-    };
-    child.stdin = new PassThrough();
-    child.stdout = new PassThrough();
-    child.stderr = new PassThrough();
-    child.exitCode = null;
-    child.kill = vi.fn(() => {
-      child.stdout.end();
-      child.exitCode = 143;
-      child.emit('close', 143);
-      return true;
-    });
-    let stdin = '';
-    child.stdin.on('data', (b: Buffer) => {
-      stdin += b.toString();
-    });
-    const exit = (code: number) => {
-      child.stdout.end();
-      child.exitCode = code;
-      setImmediate(() => child.emit('close', code));
-    };
-    return { child, exit, stdin: () => stdin };
-  }
 
   it('streams the reply, the usage, and runs in its own empty directory', async () => {
     const f = fakeChild();
@@ -442,31 +443,49 @@ describe('fake provider (test double)', () => {
 });
 
 describe('the proposal tool (mentor-edits FR-1, FR-12, A02)', () => {
-  it('the MCP server answers initialize, lists exactly our tool, and accepts its call', async () => {
+  /** Spawns the generated MCP server for real and sends it JSON-RPC requests. */
+  async function runMcp(socketPath: string, requests: [string, unknown][]) {
     const dir = mkdtempSync(join(tmpdir(), 'archsim-mcp-test-'));
     const file = join(dir, 'mcp.mjs');
-    writeFileSync(file, mcpServerSource(toolInputSchema()));
+    writeFileSync(file, mcpServerSource(toolInputSchema(), socketPath));
     const child = nodeSpawn(process.execPath, [file], { stdio: 'pipe' });
-    const lines = createInterface({ input: child.stdout });
     const replies: Record<number, unknown> = {};
-    lines.on('line', (l) => {
+    createInterface({ input: child.stdout }).on('line', (l) => {
       const m = JSON.parse(l) as { id: number };
       replies[m.id] = m;
     });
-    const ask = (id: number, method: string, params: unknown = {}) => {
-      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
-    };
-    ask(1, 'initialize', { protocolVersion: '2025-06-18' });
-    child.stdin.write(
-      `${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`,
-    );
-    ask(2, 'tools/list');
-    ask(3, 'tools/call', { name: 'propor_mudancas', arguments: { summary: 's', ops: [] } });
-    ask(4, 'tools/call', { name: 'Bash', arguments: {} });
-    await vi.waitFor(() => {
-      expect(Object.keys(replies)).toHaveLength(4);
+    requests.forEach(([method, params], i) => {
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: i + 1, method, params })}\n`);
     });
+    await vi.waitFor(
+      () => {
+        expect(Object.keys(replies)).toHaveLength(requests.length);
+      },
+      { timeout: 8000 },
+    );
     child.kill();
+    return replies;
+  }
+  const proposalCall = (n = 0): [string, unknown] => [
+    'tools/call',
+    { name: 'propor_mudancas', arguments: { summary: `s${String(n)}`, ops: [] } },
+  ];
+  const socketIn = () => join(mkdtempSync(join(tmpdir(), 'mcp-s-')), 'c.sock');
+
+  it('the MCP server answers initialize, lists exactly our tool, and accepts a call the server validates', async () => {
+    const path = socketIn();
+    const seen: unknown[] = [];
+    const server = await openValidator(path, (input) => {
+      seen.push(input);
+      return null;
+    });
+    const replies = await runMcp(path, [
+      ['initialize', { protocolVersion: '2025-06-18' }],
+      ['tools/list', {}],
+      proposalCall(),
+      ['tools/call', { name: 'Bash', arguments: {} }],
+    ]);
+    server.close();
     expect(replies[1]).toMatchObject({ result: { capabilities: { tools: {} } } });
     const tools = (replies[2] as { result: { tools: { name: string; inputSchema: unknown }[] } })
       .result.tools;
@@ -475,7 +494,87 @@ describe('the proposal tool (mentor-edits FR-1, FR-12, A02)', () => {
     expect(replies[3]).toMatchObject({
       result: { content: [{ type: 'text', text: TOOL_RESULT }] },
     });
+    expect(replies[3]).not.toHaveProperty('result.isError');
     expect(replies[4]).toMatchObject({ error: { code: -32602 } });
+    expect(seen).toEqual([{ summary: 's0', ops: [] }]);
+  });
+
+  it('tells the model why the simulator refused, as a tool error (feedback FR-2)', async () => {
+    const path = socketIn();
+    const server = await openValidator(path, () => 'o nó n9 não está no desenho');
+    const replies = await runMcp(path, [proposalCall()]);
+    server.close();
+    expect(replies[1]).toMatchObject({
+      result: {
+        isError: true,
+        content: [
+          { type: 'text', text: expect.stringContaining('o nó n9 não está no desenho') as unknown },
+        ],
+      },
+    });
+  });
+
+  it('answers an error, and keeps going, when it cannot reach the validator (feedback NFR-1)', async () => {
+    const replies = await runMcp(join(tmpdir(), 'nao-existe.sock'), [
+      proposalCall(),
+      ['tools/list', {}],
+    ]);
+    expect(replies[1]).toMatchObject({
+      result: {
+        isError: true,
+        content: [
+          { type: 'text', text: expect.stringContaining('Não consegui validar') as unknown },
+        ],
+      },
+    });
+    expect(replies[2]).toMatchObject({ result: { tools: [{ name: 'propor_mudancas' }] } });
+  });
+
+  it('refuses a fourth call in the same reply (feedback NFR-2)', async () => {
+    const path = socketIn();
+    const server = await openValidator(path, () => 'não');
+    const replies = await runMcp(path, [
+      proposalCall(1),
+      proposalCall(2),
+      proposalCall(3),
+      proposalCall(4),
+    ]);
+    server.close();
+    expect(replies[4]).toMatchObject({
+      result: {
+        isError: true,
+        content: [
+          { type: 'text', text: expect.stringContaining('Limite de propostas') as unknown },
+        ],
+      },
+    });
+  });
+
+  it('opens the validation socket in the private directory for the reply only (feedback A01)', async () => {
+    // An object the spawn double fills in, so the flow analysis sees it change.
+    const during = { path: '', existed: false };
+    const f = fakeChild();
+    const spawn: SpawnFn = (_c, args) => {
+      const mcp = JSON.parse(args[args.indexOf('--mcp-config') + 1] ?? '{}') as {
+        mcpServers: Record<string, { args: string[] }>;
+      };
+      const script = readFileSync(mcp.mcpServers.archsim?.args[0] ?? '', 'utf8');
+      const path = /const SOCKET = "([^"]+)"/.exec(script)?.[1] ?? '';
+      during.path = path;
+      during.existed = existsSync(path);
+      setImmediate(() => {
+        f.child.stdout.write(`${RESULT}\n`);
+        f.exit(0);
+      });
+      return f.child as unknown as ChildProcessWithoutNullStreams;
+    };
+    const p = cliProvider({ spawn });
+    await collect(p.stream({ ...input, check: () => null }, new AbortController().signal));
+    const { path, existed } = during;
+    expect(existed).toBe(true);
+    expect(path.length).toBeLessThan(100);
+    expect(path.startsWith(join(tmpdir(), 'archsim-mentor-'))).toBe(true);
+    expect(existsSync(path)).toBe(false);
   });
 
   it('reads the proposal from claude’s stream, and nothing from another tool', () => {
