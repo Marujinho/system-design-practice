@@ -734,3 +734,62 @@ describe('review fixes in the providers (M5, L5, L7)', () => {
     }
   });
 });
+
+describe('the API accepts a corrected proposal (feedback FR-3, NFR-2)', () => {
+  const call = (id: string, service: string) => ({
+    type: 'tool_use',
+    id,
+    name: 'propor_mudancas',
+    input: { summary: 's', ops: [{ op: 'add', ref: 'novo1', service }] },
+  });
+
+  it('answers the refusal, takes the corrected call, then closes the reply', async () => {
+    const calls: BetaMessageStreamParams[] = [];
+    const rounds = [
+      () => streamOfFor([deltaEvent('Vou propor.')], 'tool_use', [call('t1', 'aws.mongodb')]),
+      () => streamOfFor([], 'tool_use', [call('t2', 'aws.dynamodb')]),
+      () => streamOfFor([deltaEvent('Pronto, está no card.')], 'end_turn', []),
+    ];
+    const p = apiProvider({
+      env: { ANTHROPIC_API_KEY: 'k' },
+      stream: (params) => {
+        calls.push(params);
+        const next = rounds[calls.length - 1];
+        if (!next) throw new Error('rodada a mais');
+        return next();
+      },
+    });
+    const chunks: ProviderChunk[] = [];
+    const check = (raw: unknown) =>
+      JSON.stringify(raw).includes('mongodb') ? 'serviço desconhecido: aws.mongodb' : null;
+    for await (const c of p.stream({ ...input, check }, new AbortController().signal))
+      chunks.push(c);
+    expect(calls).toHaveLength(3);
+    expect(chunks.filter((c) => c.type === 'proposal')).toHaveLength(2);
+    const second = calls[2]?.messages.at(-1);
+    expect(second).toEqual({
+      role: 'user',
+      content: [{ type: 'tool_result', tool_use_id: 't2', content: TOOL_RESULT }],
+    });
+    const first = calls[1]?.messages.at(-1) as { content: { is_error?: boolean }[] };
+    expect(first.content[0]?.is_error).toBe(true);
+  });
+
+  it('stops answering proposals after three calls in one reply', async () => {
+    const calls: BetaMessageStreamParams[] = [];
+    const p = apiProvider({
+      env: { ANTHROPIC_API_KEY: 'k' },
+      stream: (params) => {
+        calls.push(params);
+        return streamOfFor([], 'tool_use', [call(`t${String(calls.length)}`, 'aws.mongodb')]);
+      },
+    });
+    const chunks: ProviderChunk[] = [];
+    for await (const c of p.stream({ ...input, check: () => 'não' }, new AbortController().signal))
+      chunks.push(c);
+    expect(calls).toHaveLength(4);
+    const third = calls[3]?.messages.at(-1) as { content: { content: string }[] };
+    expect(third.content[0]?.content).toContain('não');
+    expect(chunks.at(-1)).toMatchObject({ type: 'usage' });
+  });
+});

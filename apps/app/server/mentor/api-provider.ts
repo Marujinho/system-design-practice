@@ -8,6 +8,7 @@ import type {
   BetaToolResultBlockParam,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import type { MentorErrorCode } from '@archsim/problems';
+import { MAX_TOOL_CALLS } from './mcp-server';
 import {
   TOOL_DESCRIPTION,
   TOOL_NAME,
@@ -108,9 +109,11 @@ export function apiProvider(
       const total = { input: 0, write: 0, read: 0, output: 0 };
       try {
         let params = apiParams(input);
-        // At most two rounds: the reply (maybe with a proposal), then its closing text.
+        // A proposal, up to MAX_TOOL_CALLS corrections, then the closing text (feedback FR-3).
         let wrote = false;
-        for (let round = 0; round < 2; round += 1) {
+        let calls = 0;
+        const lastRound = MAX_TOOL_CALLS;
+        for (let round = 0; round <= lastRound; round += 1) {
           const stream = open(params, signal);
           let gap = round > 0 && wrote; // keep the closing text apart from what came before
           for await (const event of stream) {
@@ -137,18 +140,22 @@ export function apiProvider(
             return;
           }
           const call = final.content.find((b) => b.type === 'tool_use' && b.name === TOOL_NAME);
-          if (round === 0 && call?.type === 'tool_use')
+          if (call?.type === 'tool_use') {
+            calls += 1;
             yield { type: 'proposal', input: call.input };
-          if (final.stop_reason !== 'tool_use' || round === 1) break;
+          }
+          if (final.stop_reason !== 'tool_use' || round === lastRound) break;
           // Answer every tool call — with the simulator's reason when it refuses — and let the
           // model close its reply knowing whether there is a card (M5).
           const results: BetaToolResultBlockParam[] = [];
           for (const b of final.content) {
             if (b.type !== 'tool_use') continue;
             const reason =
-              call?.type === 'tool_use' && b.id === call.id
-                ? (input.check?.(b.input) ?? null)
-                : 'só uma proposta por resposta';
+              call?.type !== 'tool_use' || b.id !== call.id
+                ? 'só uma proposta por chamada'
+                : calls > MAX_TOOL_CALLS
+                  ? 'limite de propostas nesta resposta; explique à pessoa o que faltou'
+                  : (input.check?.(b.input) ?? null);
             results.push(
               reason === null
                 ? { type: 'tool_result', tool_use_id: b.id, content: TOOL_RESULT }

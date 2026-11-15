@@ -441,6 +441,37 @@ describe('proposals (mentor-edits FR-1, FR-6, FR-9, A01, A08, A09, A10)', () => 
     expect(seen).toContain('serviço desconhecido');
   });
 
+  it('keeps the corrected proposal when the first one was refused (feedback FR-3)', async () => {
+    const twice: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream() {
+        await Promise.resolve();
+        yield {
+          type: 'proposal',
+          input: { summary: 's', ops: [{ op: 'add', ref: 'novo1', service: 'aws.nope' }] },
+        };
+        yield {
+          type: 'proposal',
+          input: { summary: 's', ops: [{ op: 'set_prop', node: 'n3', key: 'units', value: 2 }] },
+        };
+        yield { type: 'delta', text: 'Corrigi.' };
+      },
+    };
+    await restart([twice]);
+    const ev = events((await call('POST', '/__archsim/chat', { body: chatBody('oi') })).body);
+    expect(ev.map((e) => e.type)).toEqual([
+      'start',
+      'proposal_rejected',
+      'proposal',
+      'delta',
+      'done',
+    ]);
+    expect(saved().messages[1]).toMatchObject({
+      proposal: { ops: [{ op: 'set_prop', node: 'app', key: 'units', value: 2 }] },
+    });
+  });
+
   it('drops the proposal of an interrupted reply', async () => {
     const slow: MentorProvider = {
       id: 'api',
