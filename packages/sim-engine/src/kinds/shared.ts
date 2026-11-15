@@ -44,6 +44,20 @@ export function misses(ctx: NodeContext, processed: ClassRates, hitRatio: number
   return out;
 }
 
+/**
+ * The share of `processed` that answers the internet: per class, in the
+ * proportion its input came straight from the Users node (cost-model FR-3).
+ */
+export function toInternet(ctx: NodeContext, input: ClassRates, processed: ClassRates): ClassRates {
+  const out: ClassRates = {};
+  for (const [cls, rps] of Object.entries(processed)) {
+    const total = input[cls] ?? 0;
+    const direct = ctx.fromInternet[cls] ?? 0;
+    out[cls] = total > 0 ? rps * Math.min(1, direct / total) : 0;
+  }
+  return out;
+}
+
 export function reads(ctx: NodeContext, rates: ClassRates): ClassRates {
   return pick(rates, (cls) => !isWrite(ctx, cls));
 }

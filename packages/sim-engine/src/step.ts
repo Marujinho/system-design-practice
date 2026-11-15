@@ -155,6 +155,7 @@ export function step(
       classes,
       dtMs,
       state: state.nodes[id] ?? {},
+      fromInternet: fromEntry.get(id) ?? {},
       outDegree: graph.outEdges.get(id)?.length ?? 0,
       outKinds: (graph.outEdges.get(id) ?? []).flatMap((e) => {
         const kind = resolved.get(e.target)?.service.kind;
@@ -180,6 +181,8 @@ export function step(
   };
 
   const inputs = new Map<string, ClassRates>();
+  /** What each node receives straight from the Users node (cost-model FR-3). */
+  const fromEntry = new Map<string, ClassRates>();
   if (entry) {
     const load: ClassRates = {};
     for (const c of diagram.load.classes) load[c.name] = rpsOf(c);
@@ -227,6 +230,7 @@ export function step(
     for (const e of edges) {
       const rates = edgeFlow.get(e.id) ?? {};
       inputs.set(e.target, add(inputs.get(e.target) ?? {}, rates));
+      if (id === entry?.id) fromEntry.set(e.target, add(fromEntry.get(e.target) ?? {}, rates));
     }
   }
 

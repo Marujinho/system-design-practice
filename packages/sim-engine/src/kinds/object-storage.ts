@@ -1,5 +1,5 @@
 import { add, latency, monthlyCost, requestsMillionsPerMonth, saturate, sum } from '../queueing';
-import { gbMonth, reads, writes } from './shared';
+import { gbMonth, reads, toInternet, writes } from './shared';
 import type { KindHandler } from './types';
 
 /**
@@ -26,7 +26,9 @@ export const objectStorage: KindHandler = {
       p99,
       costMonth: monthlyCost(
         ctx.variant.prices,
-        { gb: gbMonth(ctx, get.processed) },
+        // Reads leave AWS only when the internet asked for them; to CloudFront or to a
+        // service in the region, S3 transfer is free (cost-model FR-3).
+        { gb: gbMonth(ctx, toInternet(ctx, input, get.processed)) },
         {
           getRequests: requestsMillionsPerMonth(sum(get.processed)),
           putRequests: requestsMillionsPerMonth(sum(put.processed)),

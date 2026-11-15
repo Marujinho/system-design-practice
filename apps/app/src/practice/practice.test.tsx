@@ -8,7 +8,7 @@ import {
 } from '@archsim/problems';
 import { loadProblem, PROBLEMS_DIR } from '@archsim/problems/load';
 import { initialState, step } from '@archsim/sim-engine';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -109,6 +109,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Unmount before the stubs go: hooks run in reverse, and React Flow still uses
+  // ResizeObserver while it unmounts.
+  cleanup();
   useSim.getState().stop();
   vi.unstubAllGlobals();
 });

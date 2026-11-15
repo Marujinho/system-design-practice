@@ -24,12 +24,29 @@ describe('object storage (FR-21)', () => {
     expect(out.errors.write).toBeCloseTo(500, 9);
   });
 
-  it('bills GETs, PUTs and transfer', () => {
-    const ctx = ctxFor('aws.s3', 'standard', { classes: [{ ...READ, payloadKB: 100 }, WRITE] });
+  const classes = [{ ...READ, payloadKB: 100 }, WRITE];
+  const m = (rps: number) => (rps * SECONDS_PER_MONTH) / 1e6;
+  const gb = (rps: number) => (rps * 100 * SECONDS_PER_MONTH) / 1e6;
+
+  it('bills GETs, PUTs, and transfer out for reads the internet asked for', () => {
+    const ctx = ctxFor('aws.s3', 'standard', { classes, fromInternet: { read: 10 } });
+    const out = handlers['object-storage'].process({ read: 10, write: 10 }, ctx);
+    const transfer = gb(10);
+    // 2,628 GB: within the first 10 TB tier, at 0.09
+    expect(transfer).toBeLessThan(10_240);
+    expect(out.costMonth).toBeCloseTo(0.4 * m(10) + 5 * m(10) + 0.09 * transfer, 6);
+  });
+
+  it('bills no transfer for reads that come from CloudFront or a service in the region (cost-model FR-3)', () => {
+    const ctx = ctxFor('aws.s3', 'standard', { classes });
     const out = handlers['object-storage'].process({ read: 100, write: 10 }, ctx);
-    const m = (rps: number) => (rps * SECONDS_PER_MONTH) / 1e6;
-    const expected = 0.4 * m(100) + 5 * m(10) + 0.09 * ((100 * 100 * SECONDS_PER_MONTH) / 1e6);
-    expect(out.costMonth).toBeCloseTo(expected, 6);
+    expect(out.costMonth).toBeCloseTo(0.4 * m(100) + 5 * m(10), 6);
+  });
+
+  it('bills transfer only on the share that came straight from the internet', () => {
+    const ctx = ctxFor('aws.s3', 'standard', { classes, fromInternet: { read: 10 } });
+    const out = handlers['object-storage'].process({ read: 20 }, ctx);
+    expect(out.costMonth).toBeCloseTo(0.4 * m(20) + 0.09 * gb(10), 6);
   });
 });
 

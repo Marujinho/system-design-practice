@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emptyDiagram } from '../store/defaults';
@@ -28,6 +28,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Unmount before the stubs go: hooks run in reverse, and React Flow still uses
+  // ResizeObserver while it unmounts.
+  cleanup();
   vi.unstubAllGlobals();
 });
 
