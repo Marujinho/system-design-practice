@@ -97,10 +97,15 @@ Cada número que a simulação usa é marcado no painel de propriedades:
   instância EC2 aguenta ou a latência base de um serviço. Depende do seu código; aqui é uma
   estimativa didática. Você pode editar cada uma e restaurar o padrão.
 
-Preços: on-demand em us-east-1, conferidos em 13/11/2026, cada um com a fonte. A AWS muda preços;
-não use estes números em proposta real. Simplificações conhecidas: instâncias T simulam a
-capacidade em burst (créditos de CPU ainda não modelados), não há auto scaling nem falhas de AZ,
-e a carga é constante.
+Preços: on-demand em us-east-1, conferidos em 15/11/2026, cada um com a fonte. A AWS muda preços;
+não use estes números em proposta real. Os preços com faixas de volume (API Gateway, transferência
+para a internet, CloudFront, armazenamento do S3) aplicam as faixas a cada nó, como se cada um fosse
+a única conta. O S3 cobra a saída só da parte que vai para a internet: para o CloudFront e dentro da
+região é grátis. O I/O do Aurora Standard conta ⌈payload / 4 KB⌉ por escrita; leituras saem do cache
+do buffer. Simplificações conhecidas: instâncias T simulam a capacidade em burst (créditos de CPU
+ainda não modelados), não há auto scaling nem falhas de AZ, a carga é constante, não há free tier
+nem Savings Plans, e a saída para a internet da EC2 e do ALB, e a transferência entre AZs, ainda não
+são cobradas.
 
 ## Estrutura
 
