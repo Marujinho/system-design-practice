@@ -1,7 +1,8 @@
 import type { MentorErrorCode } from '@archsim/problems';
 import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -42,7 +43,7 @@ export function cliArgs(model: string, systemFile: string, mcpConfig: string): s
     'dontAsk',
     // The tool call, its result, and the closing text.
     '--max-turns',
-    '3',
+    '5',
     '--model',
     model,
     '--effort',
@@ -133,6 +134,50 @@ function usageOf(line: string): ProviderChunk | null {
   };
 }
 
+/**
+ * The private channel the MCP process uses to ask whether a proposal holds up,
+ * with the route's own validation (feedback FR-2). A Unix socket inside the
+ * 0700 directory, one per reply: nothing on a port, nothing the browser reaches.
+ * It only answers ok or the reason; it never applies or stores anything.
+ */
+/** A proposal is at most 50 short operations; anything near this is not one. */
+const VALIDATOR_MAX_BYTES = 256 * 1024;
+
+export function openValidator(socketPath: string, check: ProviderInput['check']): Promise<Server> {
+  const server = createServer((conn) => {
+    let buf = '';
+    let answered = false;
+    conn.setEncoding('utf8'); // a multibyte character split across chunks stays whole
+    conn.on('error', () => undefined);
+    conn.on('data', (d: string) => {
+      if (answered) return; // one question per connection
+      buf += d;
+      if (buf.length > VALIDATOR_MAX_BYTES) {
+        answered = true;
+        conn.end(`${JSON.stringify({ ok: false, reason: 'proposta grande demais' })}\n`);
+        return;
+      }
+      const i = buf.indexOf('\n');
+      if (i < 0) return;
+      answered = true;
+      let reason: string | null;
+      try {
+        const { input } = JSON.parse(buf.slice(0, i)) as { input?: unknown };
+        reason = check?.(input) ?? null;
+      } catch {
+        reason = 'não consegui ler a proposta';
+      }
+      conn.end(`${JSON.stringify(reason === null ? { ok: true } : { ok: false, reason })}\n`);
+    });
+  });
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(socketPath, () => {
+      resolve(server);
+    });
+  });
+}
+
 export type SpawnFn = (
   command: string,
   args: string[],
@@ -204,14 +249,20 @@ export function cliProvider(
       // One file per reply: two problems asked at once never read each other's prompt.
       const systemFile = `system-${randomUUID()}.txt`;
       const mcpFile = join(cwd, `mcp-${randomUUID()}.mjs`);
+      // Short name: a Unix socket path is limited to ~104 characters on macOS.
+      const socketPath = join(cwd, `c-${randomBytes(4).toString('hex')}.sock`);
+      let validator: Server | null = null;
       // Cleanup is ready before the first write, so a failed write leaves nothing behind.
       const removeSystem = () => {
         rmSync(join(cwd, systemFile), { force: true });
         rmSync(mcpFile, { force: true });
+        validator?.close();
+        rmSync(socketPath, { force: true });
       };
       try {
         writeAtomic(join(cwd, systemFile), input.system);
-        writeAtomic(mcpFile, mcpServerSource(toolInputSchema()));
+        validator = await openValidator(socketPath, input.check);
+        writeAtomic(mcpFile, mcpServerSource(toolInputSchema(), socketPath));
       } catch {
         removeSystem();
         yield { type: 'error', code: 'unknown' };

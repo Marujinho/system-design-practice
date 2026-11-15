@@ -441,6 +441,86 @@ describe('proposals (mentor-edits FR-1, FR-6, FR-9, A01, A08, A09, A10)', () => 
     expect(seen).toContain('serviço desconhecido');
   });
 
+  it('keeps the corrected proposal when the first one was refused (feedback FR-3)', async () => {
+    const twice: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream() {
+        await Promise.resolve();
+        yield {
+          type: 'proposal',
+          input: { summary: 's', ops: [{ op: 'add', ref: 'novo1', service: 'aws.nope' }] },
+        };
+        yield {
+          type: 'proposal',
+          input: { summary: 's', ops: [{ op: 'set_prop', node: 'n3', key: 'units', value: 2 }] },
+        };
+        yield { type: 'delta', text: 'Corrigi.' };
+      },
+    };
+    await restart([twice]);
+    const ev = events((await call('POST', '/__archsim/chat', { body: chatBody('oi') })).body);
+    // decided at the end of the reply: the valid one, no warning for the refused one
+    expect(ev.map((e) => e.type)).toEqual(['start', 'delta', 'proposal', 'done']);
+    expect(saved().messages[1]).toMatchObject({
+      proposal: { ops: [{ op: 'set_prop', node: 'app', key: 'units', value: 2 }] },
+    });
+  });
+
+  it('decides with the check the provider asked: later valid proposals are told they do not count (review M2)', async () => {
+    const answers: (string | null)[] = [];
+    const asker: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream(input) {
+        await Promise.resolve();
+        const first = {
+          summary: 'a',
+          ops: [{ op: 'set_prop', node: 'n3', key: 'units', value: 2 }],
+        };
+        const second = {
+          summary: 'b',
+          ops: [{ op: 'set_prop', node: 'n3', key: 'units', value: 3 }],
+        };
+        answers.push(input.check?.(first) ?? null, input.check?.(second) ?? null);
+        yield { type: 'proposal', input: first };
+        yield { type: 'proposal', input: second };
+        yield { type: 'delta', text: 'ok' };
+      },
+    };
+    await restart([asker]);
+    const ev = events((await call('POST', '/__archsim/chat', { body: chatBody('oi') })).body);
+    expect(answers[0]).toBeNull();
+    expect(answers[1]).toContain('já há uma proposta registrada');
+    expect(ev.find((e) => e.type === 'proposal')).toMatchObject({ proposal: { summary: 'a' } });
+    expect(ev.filter((e) => e.type === 'proposal')).toHaveLength(1);
+  });
+
+  it('ignores a proposal the provider never got validated, once it asks for others (review M2)', async () => {
+    const partial: MentorProvider = {
+      id: 'api',
+      available: () => Promise.resolve(true),
+      async *stream(input) {
+        await Promise.resolve();
+        const refused = { summary: 'x', ops: [{ op: 'add', ref: 'novo1', service: 'aws.nope' }] };
+        input.check?.(refused);
+        yield { type: 'proposal', input: refused };
+        // a call the model was told could not be validated: never checked, never a card
+        yield {
+          type: 'proposal',
+          input: { summary: 'y', ops: [{ op: 'set_prop', node: 'n3', key: 'units', value: 2 }] },
+        };
+        yield { type: 'delta', text: 'ok' };
+      },
+    };
+    await restart([partial]);
+    const ev = events((await call('POST', '/__archsim/chat', { body: chatBody('oi') })).body);
+    expect(ev.some((e) => e.type === 'proposal')).toBe(false);
+    expect(ev.find((e) => e.type === 'proposal_rejected')).toMatchObject({
+      reason: expect.stringContaining('serviço desconhecido') as unknown,
+    });
+  });
+
   it('drops the proposal of an interrupted reply', async () => {
     const slow: MentorProvider = {
       id: 'api',
@@ -476,7 +556,7 @@ describe('proposals (mentor-edits FR-1, FR-6, FR-9, A01, A08, A09, A10)', () => 
           let seen = '';
           res.on('data', (c: Buffer) => {
             seen += c.toString();
-            if (seen.includes('event: proposal')) {
+            if (seen.includes('event: delta')) {
               req.destroy();
               resolve();
             }

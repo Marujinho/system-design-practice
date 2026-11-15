@@ -525,19 +525,22 @@ describe('proposals in the chat (mentor-edits FR-3–FR-9, NFR-2, A05)', () => {
         streamed([
           { type: 'start' },
           { type: 'delta', text: 'Tentei.' },
-          { type: 'proposal_rejected', reason: 'x' },
+          { type: 'proposal_rejected', reason: 'serviço desconhecido: <b>aws.x</b>' },
           { type: 'done', interrupted: false },
         ])(s),
     });
-    render(<ChatPanel problemId="url-shortener" />);
+    const { container } = render(<ChatPanel problemId="url-shortener" />);
     const box = await screen.findByRole('textbox', { name: 'Pergunta para o mentor' });
     await waitFor(() => {
       expect(box).toBeEnabled();
     });
     await userEvent.type(box, 'põe uma API{Enter}');
-    expect(
-      await screen.findByText(/O mentor propôs uma mudança que o simulador não aceita/),
-    ).toBeTruthy();
+    const notice = await screen.findByText(
+      /O mentor propôs uma mudança que o simulador não aceita/,
+    );
+    // the reason comes along, as text (feedback FR-1, A05)
+    expect(notice.textContent).toContain('serviço desconhecido: <b>aws.x</b>');
+    expect(container.querySelector('.chat-note b')).toBeNull();
   });
 
   it('keeps no proposal from a stream that ended without done (review L1)', async () => {

@@ -147,5 +147,7 @@ describe('what the mentor needs to propose changes (mentor-edits FR-1, FR-11)', 
     expect(system).toContain('propor_mudancas');
     expect(system).toContain('só quando a pessoa pedir uma mudança');
     expect(system).not.toContain('Você não edita o desenho');
+    // what to do with a refusal (feedback FR-5)
+    expect(system).toContain('Se a ferramenta responder erro, a proposta não virou card');
   });
 });
