@@ -103,6 +103,13 @@ describe('applyProposal (mentor-edits FR-2, FR-6, FR-7, FR-10)', () => {
     expect(r.diagram.nodes.find((n) => n.id === 'app')?.props.units).toBe(25);
   });
 
+  it('refuses a proposal that changes nothing (review L5)', () => {
+    expect(apply([{ op: 'connect', from: 'app', to: 'db' }])).toMatchObject({
+      ok: false,
+      message: 'a proposta não muda nada no desenho',
+    });
+  });
+
   it('refuses a connection into Users, which the canvas can’t draw (review M4)', () => {
     expect(apply([{ op: 'connect', from: 'app', to: 'users' }])).toMatchObject({
       ok: false,

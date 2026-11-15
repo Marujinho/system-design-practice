@@ -28,11 +28,13 @@ function check(input) {
     let buf = '';
     let settled = false;
     const s = connect(SOCKET);
+    s.setEncoding('utf8');
     const done = (v) => { if (settled) return; settled = true; clearTimeout(timer); s.destroy(); resolve(v); };
     const timer = setTimeout(() => done(null), 5000);
     s.on('error', () => done(null));
     s.on('data', (d) => {
       buf += d;
+      if (buf.length > 65536) { done(null); return; }
       const i = buf.indexOf('\\n');
       if (i < 0) return;
       try { done(JSON.parse(buf.slice(0, i))); } catch { done(null); }

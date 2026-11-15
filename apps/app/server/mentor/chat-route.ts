@@ -199,34 +199,30 @@ export function mentorRoutes(deps: {
       if (trimmed) send({ type: 'trimmed' });
 
       armIdle();
-      const input = {
-        system,
-        history: kept,
-        state,
-        message: request.message,
-        model,
-        check: (raw: unknown) => {
-          const r = validateProposal(raw, seen.ids, checked.diagram);
-          return r.ok ? null : r.reason;
-        },
+      // The single decision about the reply's proposal (review M2): the first that holds up
+      // counts; the model is told the others don't. Providers ask it before answering the tool.
+      const verdict = { asked: false, lastReason: undefined as string | undefined };
+      const check = (raw: unknown): string | null => {
+        verdict.asked = true;
+        if (proposal !== undefined)
+          return 'já há uma proposta registrada nesta resposta; ela é a que vale';
+        const r = validateProposal(raw, seen.ids, checked.diagram);
+        if (r.ok) {
+          proposal = r.proposal;
+          return null;
+        }
+        rejected += 1;
+        verdict.lastReason = r.reason;
+        return r.reason;
       };
+      const unchecked: unknown[] = [];
+      const input = { system, history: kept, state, message: request.message, model, check };
       for await (const chunk of provider.stream(input, controller.signal)) {
         armIdle();
         if (chunk.type === 'heartbeat') continue;
         if (chunk.type === 'proposal') {
-          // One proposal per reply: the first that holds up; the rest only count in the log.
-          if (proposal !== undefined) {
-            rejected += 1;
-            continue;
-          }
-          const checkedProposal = validateProposal(chunk.input, seen.ids, checked.diagram);
-          if (checkedProposal.ok) {
-            proposal = checkedProposal.proposal;
-            send({ type: 'proposal', proposal });
-          } else {
-            rejected += 1;
-            send({ type: 'proposal_rejected', reason: checkedProposal.reason });
-          }
+          // Decided at the end: by the verdict when the provider asked it, else in order.
+          unchecked.push(chunk.input);
           continue;
         }
         if (chunk.type === 'delta') {
@@ -251,6 +247,14 @@ export function mentorRoutes(deps: {
         send({ type: 'error', code: 'timeout' });
       }
       const interrupted = controller.signal.aborted;
+      // A provider that never asked (none of ours today, but a test double may not):
+      // the first proposal that holds up, in order — still the route's own validation (A08).
+      if (!verdict.asked) for (const raw of unchecked) check(raw);
+      if (!interrupted) {
+        if (proposal !== undefined) send({ type: 'proposal', proposal });
+        else if (verdict.lastReason !== undefined)
+          send({ type: 'proposal_rejected', reason: verdict.lastReason });
+      }
       // An interrupted reply never keeps a proposal (mentor-edits A10).
       const keptProposal = interrupted ? undefined : proposal;
       // The question is kept with its answer; a failure with no answer leaves the conversation as it was.

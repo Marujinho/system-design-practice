@@ -140,14 +140,26 @@ function usageOf(line: string): ProviderChunk | null {
  * 0700 directory, one per reply: nothing on a port, nothing the browser reaches.
  * It only answers ok or the reason; it never applies or stores anything.
  */
+/** A proposal is at most 50 short operations; anything near this is not one. */
+const VALIDATOR_MAX_BYTES = 256 * 1024;
+
 export function openValidator(socketPath: string, check: ProviderInput['check']): Promise<Server> {
   const server = createServer((conn) => {
     let buf = '';
+    let answered = false;
+    conn.setEncoding('utf8'); // a multibyte character split across chunks stays whole
     conn.on('error', () => undefined);
-    conn.on('data', (d: Buffer) => {
-      buf += d.toString();
+    conn.on('data', (d: string) => {
+      if (answered) return; // one question per connection
+      buf += d;
+      if (buf.length > VALIDATOR_MAX_BYTES) {
+        answered = true;
+        conn.end(`${JSON.stringify({ ok: false, reason: 'proposta grande demais' })}\n`);
+        return;
+      }
       const i = buf.indexOf('\n');
       if (i < 0) return;
+      answered = true;
       let reason: string | null;
       try {
         const { input } = JSON.parse(buf.slice(0, i)) as { input?: unknown };

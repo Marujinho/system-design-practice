@@ -181,6 +181,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
       const at = new Date().toISOString();
       // A stream that ended without done was cut: the server kept no proposal either (L1).
       if (!sawDone) interrupted = true;
+      if (interrupted) setRejected(null); // what happened is the interruption (review L6)
       const kept = interrupted ? undefined : proposal;
       if (kept !== undefined) setRejected(null); // one proposal made it: no warning (L6)
       if (reply.length > 0 || kept !== undefined) {

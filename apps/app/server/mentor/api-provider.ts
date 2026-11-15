@@ -142,7 +142,8 @@ export function apiProvider(
           const call = final.content.find((b) => b.type === 'tool_use' && b.name === TOOL_NAME);
           if (call?.type === 'tool_use') {
             calls += 1;
-            yield { type: 'proposal', input: call.input };
+            // Past the limit a call is neither answered nor offered to the route (review M1).
+            if (calls <= MAX_TOOL_CALLS) yield { type: 'proposal', input: call.input };
           }
           if (final.stop_reason !== 'tool_use' || round === lastRound) break;
           // Answer every tool call — with the simulator's reason when it refuses — and let the
