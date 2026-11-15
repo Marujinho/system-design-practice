@@ -1,5 +1,5 @@
 import type { ClassRates } from '../graph';
-import { latency, pick, saturate, sum } from '../queueing';
+import { latency, pick, requestsMillionsPerMonth, saturate, sum } from '../queueing';
 import type { NodeContext, NodeOutput } from './types';
 
 export function isWrite(ctx: NodeContext, cls: string): boolean {
@@ -56,6 +56,15 @@ export function toInternet(ctx: NodeContext, input: ClassRates, processed: Class
     out[cls] = total > 0 ? rps * Math.min(1, direct / total) : 0;
   }
   return out;
+}
+
+/** Units of `unitKB` each request needs: ⌈payload / unit⌉, at least 1 (cost-model FR-7, FR-8). */
+export function unitsPerMonthMillions(ctx: NodeContext, rates: ClassRates, unitKB: number): number {
+  let perSecond = 0;
+  for (const [cls, rps] of Object.entries(rates)) {
+    perSecond += rps * Math.max(1, Math.ceil(payloadKB(ctx, cls) / unitKB));
+  }
+  return requestsMillionsPerMonth(perSecond);
 }
 
 export function reads(ctx: NodeContext, rates: ClassRates): ClassRates {

@@ -1,5 +1,5 @@
 import { add, HOURS_PER_MONTH, latency, monthlyCost, saturate, sum } from '../queueing';
-import { reads, writes } from './shared';
+import { reads, unitsPerMonthMillions, writes } from './shared';
 import type { KindHandler } from './types';
 
 /**
@@ -39,7 +39,18 @@ export const sqlDatabase: KindHandler = {
       utilization: rho,
       p50,
       p99,
-      costMonth: monthlyCost(ctx.variant.prices, { 'unit-hour': (1 + replicas) * HOURS_PER_MONTH }),
+      costMonth: monthlyCost(
+        ctx.variant.prices,
+        { 'unit-hour': (1 + replicas) * HOURS_PER_MONTH },
+        {
+          // a volume per instance, or one for the whole cluster, as the catalog prices it
+          // (cost-model FR-6, FR-7)
+          storage: ctx.param('storageGb') * (1 + replicas),
+          clusterStorage: ctx.param('storageGb'),
+          // I/O, a premise: each write takes ⌈payload/4 KB⌉ I/Os; reads come from the buffer cache.
+          io: unitsPerMonthMillions(ctx, writes(ctx, processed), 4),
+        },
+      ),
       nextState: {},
       warnings: [],
     };

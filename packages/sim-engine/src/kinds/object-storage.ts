@@ -28,7 +28,10 @@ export const objectStorage: KindHandler = {
         ctx.variant.prices,
         // Reads leave AWS only when the internet asked for them; to CloudFront or to a
         // service in the region, S3 transfer is free (cost-model FR-3).
-        { gb: gbMonth(ctx, toInternet(ctx, input, get.processed)) },
+        {
+          gb: gbMonth(ctx, toInternet(ctx, input, get.processed)),
+          'gb-month': ctx.param('storageGb'), // cost-model FR-5
+        },
         {
           getRequests: requestsMillionsPerMonth(sum(get.processed)),
           putRequests: requestsMillionsPerMonth(sum(put.processed)),

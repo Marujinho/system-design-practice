@@ -565,7 +565,7 @@ describe('cost model: tiers and the dimensions that were missing (cost-model FR-
       ).toMatchObject({ amountUsd: 0.115, per: 'gb-month' });
     for (const v of findService(catalog, 'aws.aurora-postgres')?.variants ?? []) {
       expect(
-        v.prices.find((p) => p.id === 'storage'),
+        v.prices.find((p) => p.id === 'clusterStorage'),
         v.id,
       ).toMatchObject({ amountUsd: 0.1 });
       expect(

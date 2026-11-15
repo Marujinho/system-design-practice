@@ -172,7 +172,16 @@ describe('sql database (FR-23 basis)', () => {
     const out = handler('sql-database').process({ read: 3000, write: 200 }, ctx);
     expect(out.errors.read).toBe(0);
     expect(out.utilization).toBeCloseTo(0.5, 9);
-    expect(out.costMonth).toBeCloseTo(3 * 0.168 * 730, 6);
+    // 3 instances, each with its own 20 GB gp3 volume (cost-model FR-6)
+    expect(out.costMonth).toBeCloseTo(3 * 0.168 * 730 + 3 * 20 * 0.115, 6);
+  });
+
+  it('bills RDS storage per instance, at the size set', () => {
+    const ctx = ctxFor('aws.rds-postgres', 'db.m7g.large', {
+      props: { readReplicas: 2, storageGb: 100 },
+    });
+    const out = handler('sql-database').process({}, ctx);
+    expect(out.costMonth).toBeCloseTo(3 * 0.168 * 730 + 3 * 100 * 0.115, 6);
   });
 });
 
