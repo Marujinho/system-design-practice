@@ -76,15 +76,28 @@ export function gbPerMonth(rps: number, payloadKB: number): number {
  * Σ price × usage. `byId` overrides the dimension for a specific price, for
  * services with two prices in one dimension (reads vs writes).
  */
+/** The cost of a monthly quantity, tier by tier when the price has volume tiers (cost-model FR-1). */
+export function tieredCost(quantity: number, price: Price): number {
+  if (quantity <= 0) return 0;
+  if (!price.tiers) return price.amountUsd * quantity;
+  let total = 0;
+  let from = 0;
+  for (const t of price.tiers) {
+    const to = t.upTo ?? Infinity;
+    const inTier = Math.min(quantity, to) - from;
+    if (inTier > 0) total += inTier * t.amountUsd;
+    if (quantity <= to) break;
+    from = to;
+  }
+  return total;
+}
+
 export function monthlyCost(
   prices: Price[],
   usage: Usage,
   byId: Record<string, number> = {},
 ): number {
   let total = 0;
-  for (const p of prices) {
-    const quantity = byId[p.id] ?? usage[p.per] ?? 0;
-    total += p.amountUsd * quantity;
-  }
+  for (const p of prices) total += tieredCost(byId[p.id] ?? usage[p.per] ?? 0, p);
   return total;
 }
