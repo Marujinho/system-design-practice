@@ -32,3 +32,31 @@
 - **Files**: `apps/app/e2e/replica-groups.spec.ts` (new)
 - **Do**: no canvas livre, selecionar a EC2 da referência e mudar "Réplicas" para 6 → o card mostra o grupo "6 réplicas" com 6 cópias; para 30 → "+18"; para 1 → nenhum grupo.
 - **Check**: `pnpm test:e2e` verde, `perf.spec` ≥ 50 fps, axe sem violações.
+
+## Implementation
+
+**Branch**: `feat/replica-groups` · **Base**: `master` · **Date**: 2026-11-15
+
+| Task | Commit | Lint / Types / Tests |
+|---|---|---|
+| T1 | `f468e8f` | ✅ ✅ ✅ (721) |
+| T2 | `034b231` | ✅ ✅ ✅ (726) |
+| T3 | `63e1bec` | ✅ ✅ ✅ + e2e 64/64 |
+
+### Deviations
+- **T1** — a legenda usa o nome do próprio parâmetro do painel ("3 nós", "2 tasks", "4 shards"), e não sempre "réplicas", para o card e o painel dizerem o mesmo. EKS, Fargate e OpenSearch já começam com 2 ou 3 unidades e mostram o grupo desde o início. O teste M2 do chat (da feature anterior) passou a esperar o status do provedor antes de segurar o botão: ele falhou uma vez na suíte completa por referência velha.
+- **T2** — no jsdom, o `getByRole('img')` não acha o grupo dentro da estrutura do React Flow. Os testes de unidade checam `role` e `aria-label` direto no elemento; o `getByRole` real está no e2e.
+- **T3** — o `aria-label` "30 réplicas" casava com `getByLabel('Réplicas')` por substring. Os locators do campo nos e2e (`practice-flow`, `free-flow`) passaram a usar `exact: true`.
+
+### Definition of Done
+- [x] FR-1 a FR-6, com testes de unidade, de componente e e2e.
+- [x] `pnpm lint`, `typecheck`, `test` (726), `test:e2e` (64) e `audit` passam. O perf ficou em 59,5 fps no p95 (meta ≥ 50).
+- [x] Visto no navegador: EC2 com 6 réplicas → 6 cópias e "6 réplicas"; RDS → o primário cheio e "primário + 2 réplicas de leitura".
+
+### Review
+- **Performance:** `replicaGroup` roda no `toFlow`, que já roda a cada mudança do diagrama (barato). As cópias são CSS puro, e o perf com 50 nós segue em 59,5 fps.
+- **OWASP Top 10:2025:**
+  - A06: teto de 12 cópias, testado.
+  - A10: o default do parâmetro e os serviços sem quantidade, testados.
+  - A01–A05 e A07–A09: N/A, porque a mudança é só renderização, sem dados, rede ou gravação.
+- Nenhum achado em aberto.
