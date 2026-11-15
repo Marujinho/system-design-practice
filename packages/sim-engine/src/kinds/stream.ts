@@ -1,6 +1,6 @@
 import { HOURS_PER_MONTH, monthlyCost, saturate, sum } from '../queueing';
 import type { ClassRates } from '../graph';
-import { payloadKB } from './shared';
+import { payloadKB, unitsPerMonthMillions } from './shared';
 import type { KindHandler, NodeContext } from './types';
 
 /** Average KB per record across the input classes. */
@@ -36,9 +36,12 @@ export const stream: KindHandler = {
       utilization: rho,
       p50: busy ? ctx.value('baseLatencyMs') : 0,
       p99: busy ? ctx.value('baseLatencyMs') * 2 : 0,
-      costMonth: monthlyCost(ctx.variant.prices, {
-        'unit-hour': ctx.param('shards') * HOURS_PER_MONTH,
-      }),
+      costMonth: monthlyCost(
+        ctx.variant.prices,
+        { 'unit-hour': ctx.param('shards') * HOURS_PER_MONTH },
+        // each record counts ⌈payload / 25 KB⌉ PUT payload units (cost-model FR-8)
+        { putPayloadUnits: unitsPerMonthMillions(ctx, processed, 25) },
+      ),
       nextState: {},
       warnings: [],
     };

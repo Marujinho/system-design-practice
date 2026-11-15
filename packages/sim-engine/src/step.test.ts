@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { simulateSteady } from './simulate';
 import { healthOf } from './state';
 import { initialState, step } from './step';
+import { SECONDS_PER_MONTH } from './queueing';
 import { diagram, edge, fixtureText, node, READ } from './test-helpers';
 
 const users = node('users', 'core.users', 'default');
@@ -146,6 +147,39 @@ describe('step: golden scenarios', () => {
       load(400),
     );
     expect(run(d).edges['users-app']?.errorRps).toBeCloseTo(200, 9);
+  });
+});
+
+describe('step: who came from the internet (cost-model FR-3)', () => {
+  /** S3's monthly cost with 2 reads/s of 1 MB (inside the first egress tier) arriving through the given edges. */
+  const s3Cost = (nodes: ReturnType<typeof node>[], edges: ReturnType<typeof edge>[]) =>
+    run(
+      diagram([users, ...nodes, node('s3', 'aws.s3', 'standard')], edges, [
+        { ...READ, name: 'default', rps: 2, payloadKB: 1000 },
+      ]),
+    ).nodes.s3?.costMonth ?? Number.NaN;
+  /** Internet egress, first tier, for `rps` reads/s of 1 MB. */
+  const egress = (rps: number) => 0.09 * ((rps * 1000 * SECONDS_PER_MONTH) / 1e6);
+
+  it('bills S3 egress when Users read it directly, and not behind a Lambda', () => {
+    const direct = s3Cost([], [edge('users', 's3')]);
+    const viaFn = s3Cost(
+      [node('fn', 'aws.lambda', 'x86')],
+      [edge('users', 'fn'), edge('fn', 's3')],
+    );
+    expect(direct - viaFn).toBeCloseTo(egress(2), 6);
+  });
+
+  it('bills egress on the direct half only when Users split between S3 and a Lambda', () => {
+    const viaFn = s3Cost(
+      [node('fn', 'aws.lambda', 'x86')],
+      [edge('users', 'fn'), edge('fn', 's3')],
+    );
+    const half = s3Cost(
+      [node('fn', 'aws.lambda', 'x86')],
+      [edge('users', 's3', { weight: 1 }), edge('users', 'fn', { weight: 1 }), edge('fn', 's3')],
+    );
+    expect(half - viaFn).toBeCloseTo(egress(1), 6);
   });
 });
 

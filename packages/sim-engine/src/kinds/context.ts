@@ -1,5 +1,6 @@
 import type { Kind, Service, Variant } from '@archsim/catalog';
 import type { DiagramNode, RequestClass } from '../diagram';
+import type { ClassRates } from '../graph';
 import type { NodeContext, NodeState } from './types';
 
 export function readValue(node: DiagramNode, variant: Variant, key: string): number {
@@ -26,6 +27,7 @@ export function makeContext(args: {
   downstreamCapacity?: number;
   outDegree?: number;
   outKinds?: readonly Kind[];
+  fromInternet?: ClassRates;
 }): NodeContext {
   const { node, service, variant } = args;
   return {
@@ -38,6 +40,7 @@ export function makeContext(args: {
     downstreamCapacity: args.downstreamCapacity ?? 0,
     outDegree: args.outDegree ?? 0,
     outKinds: args.outKinds ?? [],
+    fromInternet: args.fromInternet ?? {},
     param: (key) => readParam(node, service, key),
     value: (key) => readValue(node, variant, key),
   };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { latency, monthlyCost, saturate, SECONDS_PER_MONTH } from '../queueing';
-import { ctxFor } from '../test-helpers';
+import { ctxFor, READ, WRITE } from '../test-helpers';
 import { handlers } from './index';
 import type { KindHandler } from './types';
 
@@ -119,6 +119,15 @@ describe('cdn and cache (FR-13)', () => {
     expect(out.forward.write).toBeCloseTo(100, 9);
   });
 
+  it('bills uploads through CloudFront as transfer to the origin, not out to the internet (cost-model FR-4)', () => {
+    const upload = { ...WRITE, payloadKB: 2048 };
+    const ctx = ctxFor('aws.cloudfront', 'distribution', { classes: [READ, upload] });
+    const out = handler('cdn').process({ write: 50 }, ctx);
+    const gb = (50 * 2048 * SECONDS_PER_MONTH) / 1e6;
+    const requests = (50 * SECONDS_PER_MONTH) / 1e6;
+    expect(out.costMonth).toBeCloseTo(gb * 0.02 + requests * 1.0, 4);
+  });
+
   it('ElastiCache forwards only misses of cacheable reads', () => {
     const ctx = ctxFor('aws.elasticache-valkey', 'cache.t4g.micro', { props: { hitRatio: 0.8 } });
     const out = handler('cache').process({ read: 1000, write: 50 }, ctx);
@@ -163,7 +172,16 @@ describe('sql database (FR-23 basis)', () => {
     const out = handler('sql-database').process({ read: 3000, write: 200 }, ctx);
     expect(out.errors.read).toBe(0);
     expect(out.utilization).toBeCloseTo(0.5, 9);
-    expect(out.costMonth).toBeCloseTo(3 * 0.168 * 730, 6);
+    // 3 instances, each with its own 20 GB gp3 volume (cost-model FR-6)
+    expect(out.costMonth).toBeCloseTo(3 * 0.168 * 730 + 3 * 20 * 0.115, 6);
+  });
+
+  it('bills RDS storage per instance, at the size set', () => {
+    const ctx = ctxFor('aws.rds-postgres', 'db.m7g.large', {
+      props: { readReplicas: 2, storageGb: 100 },
+    });
+    const out = handler('sql-database').process({}, ctx);
+    expect(out.costMonth).toBeCloseTo(3 * 0.168 * 730 + 3 * 100 * 0.115, 6);
   });
 });
 

@@ -1,5 +1,5 @@
 import type { Conversation, MentorEvent, MentorStatus, Proposal } from '@archsim/problems';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { inlineBackend } from '../sim/sim-client';
@@ -86,6 +86,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Unmount before the stubs go: hooks run in reverse, and React Flow still uses
+  // ResizeObserver while it unmounts.
+  cleanup();
   useSim.getState().stop();
   vi.unstubAllGlobals();
 });

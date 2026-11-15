@@ -73,6 +73,44 @@ describe('parseCatalog', () => {
     expect(parseCatalog(catalog([service({ fullName: 'x'.repeat(81) })])).ok).toBe(false);
   });
 
+  it('accepts volume tiers that grow and end open, and rejects malformed ones (cost-model A06)', () => {
+    const tiered = (tiers: unknown, amountUsd = 3.5) =>
+      parseCatalog(
+        catalog([service({ variants: [variant({ prices: [{ ...price, amountUsd, tiers }] })] })]),
+      ).ok;
+    expect(
+      tiered([
+        { upTo: 333, amountUsd: 3.5 },
+        { upTo: null, amountUsd: 2.8 },
+      ]),
+    ).toBe(true);
+    expect(
+      tiered([
+        { upTo: 333, amountUsd: 3.0 },
+        { upTo: null, amountUsd: 2.8 },
+      ]),
+    ).toBe(false);
+    expect(
+      tiered([
+        { upTo: 333, amountUsd: 3.5 },
+        { upTo: 100, amountUsd: 2.8 },
+        { upTo: null, amountUsd: 1 },
+      ]),
+    ).toBe(false);
+    expect(
+      tiered([
+        { upTo: 333, amountUsd: 3.5 },
+        { upTo: 1000, amountUsd: 2.8 },
+      ]),
+    ).toBe(false);
+    expect(
+      tiered([
+        { upTo: null, amountUsd: 3.5 },
+        { upTo: null, amountUsd: 2.8 },
+      ]),
+    ).toBe(false);
+  });
+
   it('rejects an unknown family', () => {
     const s = service({ variants: [variant({ family: 'gpu' })] });
     expect(parseCatalog(catalog([s])).ok).toBe(false);

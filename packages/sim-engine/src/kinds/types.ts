@@ -26,6 +26,12 @@ export interface NodeContext {
   outDegree: number;
   /** Kinds of the nodes this one feeds, one per outgoing edge. */
   outKinds: readonly Kind[];
+  /**
+   * The part of this node's input that comes straight from the Users node, i.e.
+   * from the internet. Only that part leaves AWS and pays data transfer out
+   * (cost-model FR-3); traffic from CloudFront or a service in the region doesn't.
+   */
+  fromInternet: ClassRates;
 }
 
 export interface NodeOutput {

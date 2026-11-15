@@ -175,8 +175,39 @@
                           "million-requests",
                           "gb",
                           "gb-second",
-                          "capacity-unit-hour"
+                          "capacity-unit-hour",
+                          "gb-month",
+                          "million-units"
                         ]
+                      },
+                      "tiers": {
+                        "minItems": 2,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "upTo": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "amountUsd": {
+                              "type": "number",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "upTo",
+                            "amountUsd"
+                          ],
+                          "additionalProperties": false
+                        }
                       },
                       "priceDate": {
                         "type": "string",

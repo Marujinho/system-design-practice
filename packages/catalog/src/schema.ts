@@ -74,19 +74,58 @@ export const PriceUnit = z.enum([
   'gb',
   'gb-second',
   'capacity-unit-hour',
+  'gb-month',
+  'million-units',
 ]);
 export type PriceUnit = z.infer<typeof PriceUnit>;
+
+/**
+ * A volume tier: the price per unit up to `upTo` units a month, counted from zero;
+ * `null` on the last tier (cost-model FR-1).
+ */
+export const Tier = z
+  .object({ upTo: z.number().positive().nullable(), amountUsd: z.number().nonnegative() })
+  .strict();
+export type Tier = z.infer<typeof Tier>;
 
 export const Price = z
   .object({
     id: z.string().regex(/^[a-z][a-zA-Z0-9]*$/),
     label: z.string().min(1),
+    /** The price per unit; with tiers, the first tier's. */
     amountUsd: z.number().nonnegative(),
     per: PriceUnit,
+    tiers: z.array(Tier).min(2).optional(),
     priceDate: IsoDate,
     sourceUrl: SourceUrl,
   })
-  .strict();
+  .strict()
+  .superRefine((price, ctx) => {
+    const tiers = price.tiers;
+    if (tiers === undefined) return;
+    if (tiers[0]?.amountUsd !== price.amountUsd)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['tiers'],
+        message: 'a 1ª faixa deve ter o preço amountUsd',
+      });
+    tiers.forEach((t, i) => {
+      const last = i === tiers.length - 1;
+      if (last !== (t.upTo === null))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['tiers', i],
+          message: 'só a última faixa não tem limite',
+        });
+      const prev = tiers[i - 1]?.upTo;
+      if (t.upTo !== null && prev !== undefined && prev !== null && t.upTo <= prev)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['tiers', i],
+          message: 'limites das faixas devem crescer',
+        });
+    });
+  });
 export type Price = z.infer<typeof Price>;
 
 /** Instance family: groups the type picker. Omitted on services with a single family. */

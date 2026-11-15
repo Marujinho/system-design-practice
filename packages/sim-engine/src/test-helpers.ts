@@ -1,5 +1,6 @@
 import { catalog, findService, findVariant, type Kind } from '@archsim/catalog';
 import type { RequestClass } from './diagram';
+import type { ClassRates } from './graph';
 import { makeContext } from './kinds/context';
 import type { NodeContext, NodeState } from './kinds/types';
 import { readFileSync } from 'node:fs';
@@ -79,6 +80,7 @@ export function ctxFor(
     downstreamCapacity?: number;
     outDegree?: number;
     outKinds?: Kind[];
+    fromInternet?: ClassRates;
   } = {},
 ): NodeContext {
   const service = findService(catalog, serviceId);
@@ -96,5 +98,6 @@ export function ctxFor(
     downstreamCapacity: options.downstreamCapacity ?? 0,
     outDegree: options.outDegree ?? 1,
     outKinds: options.outKinds ?? [],
+    fromInternet: options.fromInternet ?? {},
   });
 }

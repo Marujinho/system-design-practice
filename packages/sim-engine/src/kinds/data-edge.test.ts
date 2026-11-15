@@ -24,12 +24,31 @@ describe('object storage (FR-21)', () => {
     expect(out.errors.write).toBeCloseTo(500, 9);
   });
 
-  it('bills GETs, PUTs and transfer', () => {
-    const ctx = ctxFor('aws.s3', 'standard', { classes: [{ ...READ, payloadKB: 100 }, WRITE] });
+  const classes = [{ ...READ, payloadKB: 100 }, WRITE];
+  const m = (rps: number) => (rps * SECONDS_PER_MONTH) / 1e6;
+  const gb = (rps: number) => (rps * 100 * SECONDS_PER_MONTH) / 1e6;
+  /** 100 GB stored by default, Standard, first tier (cost-model FR-5). */
+  const storage = 100 * 0.023;
+
+  it('bills GETs, PUTs, and transfer out for reads the internet asked for', () => {
+    const ctx = ctxFor('aws.s3', 'standard', { classes, fromInternet: { read: 10 } });
+    const out = handlers['object-storage'].process({ read: 10, write: 10 }, ctx);
+    const transfer = gb(10);
+    // 2,628 GB: within the first 10 TB tier, at 0.09
+    expect(transfer).toBeLessThan(10_240);
+    expect(out.costMonth).toBeCloseTo(0.4 * m(10) + 5 * m(10) + 0.09 * transfer + storage, 6);
+  });
+
+  it('bills no transfer for reads that come from CloudFront or a service in the region (cost-model FR-3)', () => {
+    const ctx = ctxFor('aws.s3', 'standard', { classes });
     const out = handlers['object-storage'].process({ read: 100, write: 10 }, ctx);
-    const m = (rps: number) => (rps * SECONDS_PER_MONTH) / 1e6;
-    const expected = 0.4 * m(100) + 5 * m(10) + 0.09 * ((100 * 100 * SECONDS_PER_MONTH) / 1e6);
-    expect(out.costMonth).toBeCloseTo(expected, 6);
+    expect(out.costMonth).toBeCloseTo(0.4 * m(100) + 5 * m(10) + storage, 6);
+  });
+
+  it('bills transfer only on the share that came straight from the internet', () => {
+    const ctx = ctxFor('aws.s3', 'standard', { classes, fromInternet: { read: 10 } });
+    const out = handlers['object-storage'].process({ read: 20 }, ctx);
+    expect(out.costMonth).toBeCloseTo(0.4 * m(20) + 0.09 * gb(10) + storage, 6);
   });
 });
 
@@ -76,7 +95,34 @@ describe('Aurora (FR-23)', () => {
     expect(out.errors.read).toBe(0);
     expect(out.errors.write).toBe(0);
     expect(out.utilization).toBeCloseTo(1500 / 3000, 9);
-    expect(out.costMonth).toBeCloseTo(3 * 0.29 * 730, 6);
+    // one 10 GB cluster volume, and 200 writes/s of 1 KB → 1 I/O each (cost-model FR-7)
+    const io = (200 * SECONDS_PER_MONTH) / 1e6;
+    expect(out.costMonth).toBeCloseTo(3 * 0.29 * 730 + 10 * 0.1 + io * 0.2, 6);
+  });
+
+  it('counts ⌈payload / 4 KB⌉ I/Os per write: 1,000 writes/s of 10 KB → 3 each', () => {
+    const big = { ...WRITE, payloadKB: 10 };
+    const ctx = ctxFor('aws.aurora-postgres', 'db.r5.large', {
+      classes: [READ, big],
+      props: { readReplicas: 0 },
+    });
+    const out = handlers['sql-database'].process({ write: 1000 }, ctx);
+    const io = (3000 * SECONDS_PER_MONTH) / 1e6;
+    expect(out.costMonth).toBeCloseTo(0.29 * 730 + 10 * 0.1 + io * 0.2, 6);
+  });
+});
+
+describe('Kinesis PUT payload units (cost-model FR-8)', () => {
+  it('counts ⌈payload / 25 KB⌉ units per record', () => {
+    const rec = { ...WRITE, payloadKB: 30 };
+    const ctx = ctxFor('aws.kinesis', 'provisioned', {
+      classes: [READ, rec],
+      props: { shards: 2 },
+    });
+    const out = handlers.stream.process({ write: 50 }, ctx);
+    // 2 shards take 66 records/s of 30 KB, so all 50 pass; 2 units each
+    const units = (100 * SECONDS_PER_MONTH) / 1e6;
+    expect(out.costMonth).toBeCloseTo(2 * 0.015 * 730 + units * 0.014, 6);
   });
 });
 

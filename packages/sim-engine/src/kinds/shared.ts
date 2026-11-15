@@ -1,5 +1,5 @@
 import type { ClassRates } from '../graph';
-import { latency, pick, saturate, sum } from '../queueing';
+import { latency, pick, requestsMillionsPerMonth, saturate, sum } from '../queueing';
 import type { NodeContext, NodeOutput } from './types';
 
 export function isWrite(ctx: NodeContext, cls: string): boolean {
@@ -42,6 +42,29 @@ export function misses(ctx: NodeContext, processed: ClassRates, hitRatio: number
     out[cls] = isCacheable(ctx, cls) ? rps * (1 - hitRatio) : rps;
   }
   return out;
+}
+
+/**
+ * The share of `processed` that answers the internet: per class, in the
+ * proportion its input came straight from the Users node (cost-model FR-3).
+ */
+export function toInternet(ctx: NodeContext, input: ClassRates, processed: ClassRates): ClassRates {
+  const out: ClassRates = {};
+  for (const [cls, rps] of Object.entries(processed)) {
+    const total = input[cls] ?? 0;
+    const direct = ctx.fromInternet[cls] ?? 0;
+    out[cls] = total > 0 ? rps * Math.min(1, direct / total) : 0;
+  }
+  return out;
+}
+
+/** Units of `unitKB` each request needs: ⌈payload / unit⌉, at least 1 (cost-model FR-7, FR-8). */
+export function unitsPerMonthMillions(ctx: NodeContext, rates: ClassRates, unitKB: number): number {
+  let perSecond = 0;
+  for (const [cls, rps] of Object.entries(rates)) {
+    perSecond += rps * Math.max(1, Math.ceil(payloadKB(ctx, cls) / unitKB));
+  }
+  return requestsMillionsPerMonth(perSecond);
 }
 
 export function reads(ctx: NodeContext, rates: ClassRates): ClassRates {

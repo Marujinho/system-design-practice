@@ -85,7 +85,8 @@ describe('catalog.json', () => {
           if (l.source === 'aws-quota') expect(l.sourceUrl, `${s.id}/${l.id}`).toBeDefined();
         }
         for (const p of v.prices) {
-          expect(p.priceDate).toBe('2026-11-13');
+          // checked on 2026-11-13, and the tiers and new dimensions on 2026-11-15 (cost-model)
+          expect(['2026-11-13', '2026-11-15'], `${s.id}/${v.id}/${p.id}`).toContain(p.priceDate);
           expect(p.sourceUrl).toMatch(/^https:\/\//);
         }
       }
@@ -144,8 +145,18 @@ describe('existing variants (aws-instance-types FR-10)', () => {
       for (const old of variants) {
         const now = service ? findVariant(service, String(old.id)) : undefined;
         expect(now, `${serviceId}/${String(old.id)}`).toBeDefined();
-        const { family: _family, ...rest } = now ?? {};
-        expect(rest, `${serviceId}/${String(old.id)}`).toEqual(old);
+        const { family: _family, prices, ...rest } = now ?? { prices: [] };
+        const { prices: oldPrices, ...oldRest } = old as { prices: Record<string, unknown>[] };
+        expect(rest, `${serviceId}/${String(old.id)}`).toEqual(oldRest);
+        // prices may gain tiers and new dimensions (cost-model); none of the old numbers moves
+        for (const op of oldPrices) {
+          const np = prices.find((x) => x.id === op.id);
+          expect(np, `${serviceId}/${String(old.id)}/${String(op.id)}`).toMatchObject({
+            id: op.id,
+            per: op.per,
+            amountUsd: op.amountUsd,
+          });
+        }
       }
     }
   });
@@ -446,7 +457,7 @@ describe('instance types (aws-instance-types)', () => {
   });
 
   it('bumps the catalog version for the new types (FR-14)', () => {
-    expect(catalog.catalogVersion).toBe('2026-11-13.2');
+    expect(catalog.catalogVersion).toBe('2026-11-15.1');
   });
 });
 
@@ -503,5 +514,70 @@ describe('full names of acronyms (study-mode FR-17)', () => {
       'OpenSearch',
       'CloudWatch',
     ]);
+  });
+});
+
+describe('cost model: tiers and the dimensions that were missing (cost-model FR-2, FR-5–FR-9)', () => {
+  const priceOfId = (serviceId: string, variantId: string, id: string) =>
+    variantOf(serviceId, variantId).prices.find((p) => p.id === id);
+
+  it('prices API Gateway REST and HTTP by volume tier', () => {
+    expect(priceOfId('aws.api-gateway', 'rest', 'requests')?.tiers).toEqual([
+      { upTo: 333, amountUsd: 3.5 },
+      { upTo: 1000, amountUsd: 2.8 },
+      { upTo: 20000, amountUsd: 2.38 },
+      { upTo: null, amountUsd: 1.51 },
+    ]);
+    expect(priceOfId('aws.api-gateway', 'http', 'requests')?.tiers).toEqual([
+      { upTo: 300, amountUsd: 1.0 },
+      { upTo: null, amountUsd: 0.9 },
+    ]);
+  });
+
+  it('prices CloudFront transfer out by tier, and uploads to the origin at 0.020/GB', () => {
+    expect(
+      priceOfId('aws.cloudfront', 'distribution', 'dataTransfer')?.tiers?.map((t) => t.amountUsd),
+    ).toEqual([0.085, 0.08, 0.06, 0.04, 0.03, 0.025, 0.02]);
+    expect(priceOfId('aws.cloudfront', 'distribution', 'originTransfer')).toMatchObject({
+      amountUsd: 0.02,
+      per: 'gb',
+    });
+  });
+
+  it('prices S3 transfer out and Standard storage by tier, with a stored-data param', () => {
+    expect(priceOfId('aws.s3', 'standard', 'dataTransfer')?.tiers?.map((t) => t.amountUsd)).toEqual(
+      [0.09, 0.085, 0.07, 0.05],
+    );
+    expect(priceOfId('aws.s3', 'standard', 'storage')).toMatchObject({
+      amountUsd: 0.023,
+      per: 'gb-month',
+    });
+    expect(findService(catalog, 'aws.s3')?.params.find((p) => p.key === 'storageGb')?.default).toBe(
+      100,
+    );
+  });
+
+  it('prices storage on every RDS and Aurora type, Aurora I/O, and Kinesis payload units', () => {
+    for (const v of findService(catalog, 'aws.rds-postgres')?.variants ?? [])
+      expect(
+        v.prices.find((p) => p.id === 'storage'),
+        v.id,
+      ).toMatchObject({ amountUsd: 0.115, per: 'gb-month' });
+    for (const v of findService(catalog, 'aws.aurora-postgres')?.variants ?? []) {
+      expect(
+        v.prices.find((p) => p.id === 'clusterStorage'),
+        v.id,
+      ).toMatchObject({ amountUsd: 0.1 });
+      expect(
+        v.prices.find((p) => p.id === 'io'),
+        v.id,
+      ).toMatchObject({ amountUsd: 0.2, per: 'million-units' });
+    }
+    expect(priceOfId('aws.kinesis', 'provisioned', 'putPayloadUnits')).toMatchObject({
+      amountUsd: 0.014,
+    });
+    expect(
+      findService(catalog, 'aws.rds-postgres')?.params.find((p) => p.key === 'storageGb'),
+    ).toMatchObject({ min: 20, default: 20 });
   });
 });
