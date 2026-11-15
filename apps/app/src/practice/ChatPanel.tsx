@@ -120,7 +120,8 @@ export function ChatPanel({ problemId }: { problemId: string }) {
   const [live, setLive] = useState<Live | null>(null);
   const [failure, setFailure] = useState<{ text: string; question: string } | null>(null);
   const [trimmed, setTrimmed] = useState(false);
-  const [rejected, setRejected] = useState(false);
+  /** Why the simulator refused the reply's proposal, when none made it (feedback FR-1). */
+  const [rejected, setRejected] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const controller = useRef<AbortController | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -170,7 +171,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
     let proposal: Proposal | undefined;
     let sawDone = false;
     setLive({ question: text, text: '', provider });
-    setRejected(false);
+    setRejected(null);
     setUi({ streaming: true, unread: null });
 
     const finish = () => {
@@ -181,7 +182,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
       // A stream that ended without done was cut: the server kept no proposal either (L1).
       if (!sawDone) interrupted = true;
       const kept = interrupted ? undefined : proposal;
-      if (kept !== undefined) setRejected(false); // one proposal made it: no warning (L6)
+      if (kept !== undefined) setRejected(null); // one proposal made it: no warning (L6)
       if (reply.length > 0 || kept !== undefined) {
         setMessages((m) => [
           ...m,
@@ -223,7 +224,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
             sawDone = true;
             interrupted = e.interrupted;
           } else if (e.type === 'proposal') proposal = e.proposal;
-          else if (e.type === 'proposal_rejected') setRejected(true);
+          else if (e.type === 'proposal_rejected') setRejected(e.reason);
         },
       )
       .then(
@@ -395,9 +396,9 @@ export function ChatPanel({ problemId }: { problemId: string }) {
         )}
       </div>
 
-      {rejected && (
+      {rejected !== null && (
         <p className="chat-note muted" role="status">
-          O mentor propôs uma mudança que o simulador não aceita; peça de outro jeito.
+          O mentor propôs uma mudança que o simulador não aceita: {rejected}. Peça de outro jeito.
         </p>
       )}
       {trimmed && (
