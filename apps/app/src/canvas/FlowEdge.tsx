@@ -80,8 +80,11 @@ export function FlowEdge(props: EdgeProps<FlowFlowEdge>) {
           >
             {caption !== '' && <span>{caption}</span>}
             {warning !== null && (
-              <span className="edge-warning" role="img" aria-label={warning} title={warning}>
-                !
+              <span className="edge-warning" role="img" aria-label={warning} tabIndex={0}>
+                !{/* shown at once on hover or focus, instead of the browser's slow title */}
+                <span className="edge-tooltip" aria-hidden="true">
+                  {warning}
+                </span>
               </span>
             )}
             {showRemove && (

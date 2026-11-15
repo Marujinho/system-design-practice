@@ -413,6 +413,7 @@
 }
 
 .edge-warning {
+  position: relative;
   display: inline-grid;
   place-content: center;
   width: 14px;
@@ -421,6 +422,42 @@
   border-radius: 50%;
   color: var(--state-pressured);
   font-weight: 600;
+  cursor: help;
+}
+
+.edge-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 8px;
+  border: 1px solid var(--state-pressured);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Edge labels live in a layer under the cards: while one is hovered, lift the layer so the
+   tip shows on top of them. */
+.react-flow__edgelabel-renderer:has(.edge-label:hover),
+.react-flow__edgelabel-renderer:has(.edge-warning:focus-visible) {
+  z-index: 1000;
+}
+
+/* the whole label: hovering shows the × and nudges the mark, and the tip must stay */
+.edge-label:hover .edge-tooltip,
+.edge-warning:focus-visible .edge-tooltip {
+  display: block;
 }
 
 /* size, font and border come from FlowEdge, scaled against the zoom */
