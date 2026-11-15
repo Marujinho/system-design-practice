@@ -14,7 +14,7 @@ test('free canvas: the under-provisioned API is the bottleneck, then recovers wi
     page.getByRole('button', { name: /^gargalo: API de redirecionamento$/ }),
   ).toBeVisible();
 
-  const units = page.getByLabel('Réplicas');
+  const units = page.getByLabel('Réplicas', { exact: true });
   // The node re-renders with every result (10/s); retry the click until it is selected.
   await expect(async () => {
     await api.locator('.service-node-label').click();

@@ -602,16 +602,20 @@ describe('proposals in the chat (mentor-edits FR-3–FR-9, NFR-2, A05)', () => {
     });
     vi.stubGlobal('fetch', fetch);
     render(<ChatPanel problemId="url-shortener" />);
-    const applyButton = await screen.findByRole('button', { name: 'Aplicar' });
+    // wait until the provider status has loaded, so the card no longer re-renders under us
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Pergunta para o mentor' })).toBeEnabled();
+    });
+    await screen.findByRole('button', { name: 'Aplicar' });
     act(() => {
       useMentorUi.setState({ streaming: true });
     });
-    expect(applyButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Aplicar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Descartar' })).toBeDisabled();
     act(() => {
       useMentorUi.setState({ streaming: false });
     });
-    await userEvent.click(applyButton);
+    await userEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
     await waitFor(() => {
       expect(bodies).toHaveLength(1);
     });
