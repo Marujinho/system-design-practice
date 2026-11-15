@@ -177,6 +177,101 @@ describe('toFlow carries the replica group (replica-groups FR-1)', () => {
   });
 });
 
+describe('replica groups on the card (replica-groups FR-1–FR-5)', () => {
+  const groupOf = (container: HTMLElement, label: string) =>
+    [...container.querySelectorAll<HTMLElement>('.service-node')].find((c) =>
+      c.textContent.includes(label),
+    );
+
+  it('shows one copy per replica, named for screen readers, and nothing for a single one', () => {
+    const { container } = render(<Canvas />);
+    act(() => {
+      const s = useDiagram.getState();
+      const api = s.addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
+      s.setLabel(api, 'API');
+      s.setProp(api, 'units', 6);
+      const solo = s.addNode('aws.ec2', { x: 300, y: 0 }) ?? '';
+      s.setLabel(solo, 'Solo');
+    });
+    const api = groupOf(container, 'API');
+    const group = api?.querySelector('.replica-group');
+    expect(group?.getAttribute('role')).toBe('img');
+    expect(group?.getAttribute('aria-label')).toBe('6 réplicas');
+    expect(api?.querySelectorAll('.replica')).toHaveLength(6);
+    expect(api?.querySelector('.replica-copies')?.getAttribute('aria-hidden')).toBe('true');
+    expect(groupOf(container, 'Solo')?.querySelector('.replica-group')).toBeNull();
+  });
+
+  it('draws at most twelve copies and counts the rest', () => {
+    const { container } = render(<Canvas />);
+    act(() => {
+      const s = useDiagram.getState();
+      const id = s.addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
+      s.setProp(id, 'units', 30);
+    });
+    expect(container.querySelectorAll('.replica')).toHaveLength(12);
+    expect(container.querySelector('.replica-more')?.textContent).toBe('+18');
+    expect(container.querySelector('.replica-group')?.getAttribute('aria-label')).toBe(
+      '30 réplicas',
+    );
+  });
+
+  it('marks the primary of a database with read replicas', () => {
+    const { container } = render(<Canvas />);
+    act(() => {
+      const s = useDiagram.getState();
+      const id = s.addNode('aws.rds-postgres', { x: 0, y: 0 }) ?? '';
+      s.setProp(id, 'readReplicas', 2);
+    });
+    const copies = container.querySelectorAll('.replica');
+    expect(copies).toHaveLength(3);
+    expect(copies[0]?.classList.contains('primary')).toBe(true);
+    expect(copies[1]?.classList.contains('primary')).toBe(false);
+  });
+
+  it('animates only the copies that appear after the card is on screen', () => {
+    const { container } = render(<Canvas />);
+    let id = '';
+    act(() => {
+      const s = useDiagram.getState();
+      id = s.addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
+      s.setProp(id, 'units', 3);
+    });
+    act(() => {
+      useDiagram.getState().setProp(id, 'units', 5);
+    });
+    const copies = [...container.querySelectorAll('.replica')];
+    expect(copies.map((c) => c.classList.contains('replica-enter'))).toEqual([
+      false,
+      false,
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it('does not animate under reduced motion', () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: q.includes('reduce'),
+      media: q,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    const { container } = render(<Canvas />);
+    let id = '';
+    act(() => {
+      const s = useDiagram.getState();
+      id = s.addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
+      s.setProp(id, 'units', 2);
+    });
+    act(() => {
+      useDiagram.getState().setProp(id, 'units', 6);
+    });
+    expect(container.querySelectorAll('.replica')).toHaveLength(6);
+    expect(container.querySelectorAll('.replica-enter')).toHaveLength(0);
+  });
+});
+
 describe('withMeasured (edge-hover T2a)', () => {
   const two = () => {
     const s = useDiagram.getState();
