@@ -1,7 +1,9 @@
+import { catalog, findService } from '@archsim/catalog';
 import type { Diagram } from '@archsim/sim-engine';
 import type { FlowFlowEdge } from './FlowEdge';
 import type { ServiceFlowNode } from './ServiceNode';
 import { edgeWarning } from './connection-rules';
+import { replicaGroup } from './replicas';
 
 export type NodeSizes = ReadonlyMap<string, { width: number; height: number }>;
 
@@ -28,7 +30,12 @@ export function toFlow(
       type: 'service',
       position: n.position,
       selected: selected.has(n.id),
-      data: { serviceId: n.serviceId, variantId: n.variantId, label: n.label },
+      data: {
+        serviceId: n.serviceId,
+        variantId: n.variantId,
+        label: n.label,
+        replicas: replicaGroup(n, findService(catalog, n.serviceId)),
+      },
     })),
     edges: diagram.edges.map((e) => {
       const parts: string[] = [];

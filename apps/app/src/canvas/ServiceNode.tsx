@@ -2,12 +2,15 @@ import { catalog, findService, findVariant } from '@archsim/catalog';
 import { ServiceFigure } from '@archsim/icons';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { memo, type ReactNode } from 'react';
+import type { ReplicaGroup } from './replicas';
 
 export interface ServiceNodeData extends Record<string, unknown> {
   serviceId: string;
   /** The instance type, shown on the card when the service offers more than one. */
   variantId: string;
   label: string;
+  /** The units this card stands for, when more than one (replica-groups FR-1). */
+  replicas?: ReplicaGroup | null;
   /** Live status, filled in by the visualization layer. */
   status?: ReactNode;
   health?: string;

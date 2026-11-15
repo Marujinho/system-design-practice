@@ -165,6 +165,18 @@ describe('Canvas', () => {
   });
 });
 
+describe('toFlow carries the replica group (replica-groups FR-1)', () => {
+  it('gives a card with 6 EC2 replicas its group, and a single one none', () => {
+    const s = useDiagram.getState();
+    const many = s.addNode('aws.ec2', { x: 0, y: 0 }) ?? '';
+    s.setProp(many, 'units', 6);
+    const one = s.addNode('aws.ec2', { x: 300, y: 0 }) ?? '';
+    const nodes = toFlow(useDiagram.getState().diagram, []).nodes;
+    expect(nodes.find((n) => n.id === many)?.data.replicas).toMatchObject({ count: 6 });
+    expect(nodes.find((n) => n.id === one)?.data.replicas).toBeNull();
+  });
+});
+
 describe('withMeasured (edge-hover T2a)', () => {
   const two = () => {
     const s = useDiagram.getState();
