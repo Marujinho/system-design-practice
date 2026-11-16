@@ -1,6 +1,7 @@
 import type { SimResult } from '@archsim/sim-engine';
 import { useReactFlow } from '@xyflow/react';
 import { formatMs, formatPct, formatUsd } from '../format';
+import { useT } from '../i18n/t';
 import { useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
 import { useLayout } from '../workspace/layout-store';
@@ -17,6 +18,7 @@ function bottleneckName(result: SimResult): { id: string; label: string } | null
  * Folds into a small button; the numbers keep updating meanwhile (edge-hover FR-11).
  */
 export function GlobalBar() {
+  const t = useT();
   const result = useSim((s) => s.result);
   const classes = useDiagram((s) => s.diagram.load.classes);
   const flow = useReactFlow();
@@ -28,8 +30,8 @@ export function GlobalBar() {
         type="button"
         className="collapse-toggle global-bar-toggle"
         aria-expanded={false}
-        aria-label="Expandir métricas"
-        title="Expandir métricas"
+        aria-label={t('global.expand')}
+        title={t('global.expand')}
         onClick={() => {
           useLayout.getState().toggle('metrics');
         }}
@@ -40,15 +42,15 @@ export function GlobalBar() {
   }
   const b = bottleneckName(result);
   return (
-    <div className="global-bar num" role="status" aria-label="Resultado global">
+    <div className="global-bar num" role="status" aria-label={t('global.label')}>
       {classes.map((c) => (
         <span key={c.name}>
           {c.label}: p50 {formatMs(result.global.p50ByClass[c.name] ?? 0)} · p99{' '}
           {formatMs(result.global.p99ByClass[c.name] ?? 0)}
         </span>
       ))}
-      <span>erro {formatPct(result.global.errorRate)}</span>
-      <span>{formatUsd(result.global.costMonth)}/mês</span>
+      <span>{t('status.error', { pct: formatPct(result.global.errorRate) })}</span>
+      <span>{t('unit.perMonth', { amount: formatUsd(result.global.costMonth) })}</span>
       {b && (
         <button
           type="button"
@@ -58,15 +60,17 @@ export function GlobalBar() {
             void flow.fitView({ nodes: [{ id: b.id }], duration: 300, maxZoom: 1.2 });
           }}
         >
-          {result.nodes[b.id]?.health === 'bottleneck' ? 'gargalo' : 'mais carregado'}: {b.label}
+          {t(result.nodes[b.id]?.health === 'bottleneck' ? 'global.bottleneck' : 'global.busiest', {
+            name: b.label,
+          })}
         </button>
       )}
       <button
         type="button"
         className="collapse-toggle"
         aria-expanded={true}
-        aria-label="Recolher métricas"
-        title="Recolher métricas"
+        aria-label={t('global.collapse')}
+        title={t('global.collapse')}
         onClick={() => {
           useLayout.getState().toggle('metrics');
         }}

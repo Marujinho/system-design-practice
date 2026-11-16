@@ -1,3 +1,5 @@
+import type { Lang } from '../i18n/lang';
+import { translate } from '../i18n/t';
 import { findService, findVariant, type Catalog } from '@archsim/catalog';
 import type { ProposalOp } from '@archsim/problems';
 import { LIMITS, overridableKeys, validateDiagram, type Diagram } from '@archsim/sim-engine';
@@ -209,13 +211,15 @@ export function describeOp(
   diagram: Diagram,
   ops: readonly ProposalOp[],
   catalog: Catalog,
+  lang: Lang = 'pt',
 ): string {
   const serviceLabel = (id: string) => findService(catalog, id)?.label ?? id;
   const name = (ref: string): string => {
     const n = diagram.nodes.find((x) => x.id === ref);
     if (n) return `'${n.label}'`;
     const add = ops.find((o) => o.op === 'add' && o.ref === ref);
-    if (add?.op === 'add') return `'${add.label ?? serviceLabel(add.service)}' (novo)`;
+    if (add?.op === 'add')
+      return translate(lang, 'op.new', { name: add.label ?? serviceLabel(add.service) });
     return ref;
   };
   const nodeService = (ref: string) => {
@@ -232,17 +236,24 @@ export function describeOp(
           return `${(p?.label ?? k).toLowerCase()} ${String(v)}`;
         }),
       ].filter((x) => x !== undefined);
-      return `+ ${serviceLabel(op.service)} '${op.label ?? serviceLabel(op.service)}'${extras.length > 0 ? ` (${extras.join(', ')})` : ''}`;
+      return translate(lang, 'op.add', {
+        service: serviceLabel(op.service),
+        name: op.label ?? serviceLabel(op.service),
+        extras: extras.length > 0 ? ` (${extras.join(', ')})` : '',
+      });
     }
     case 'remove':
-      return `− remover ${name(op.node)}`;
+      return translate(lang, 'op.remove', { name: name(op.node) });
     case 'connect':
-      return `+ conexão ${name(op.from)} → ${name(op.to)}`;
+      return translate(lang, 'op.connect', { from: name(op.from), to: name(op.to) });
     case 'disconnect':
-      return `− conexão ${name(op.from)} → ${name(op.to)}`;
+      return translate(lang, 'op.disconnect', { from: name(op.from), to: name(op.to) });
     case 'set_variant': {
       const n = diagram.nodes.find((x) => x.id === op.node);
-      return `${name(op.node)}: tipo ${n ? `${n.variantId} → ` : ''}${op.variant}`;
+      return translate(lang, 'op.variant', {
+        name: name(op.node),
+        change: `${n ? `${n.variantId} → ` : ''}${op.variant}`,
+      });
     }
     case 'set_prop': {
       const s = nodeService(op.node);
@@ -252,6 +263,6 @@ export function describeOp(
       return `${name(op.node)}: ${(p?.label ?? op.key).toLowerCase()} ${before === undefined ? '' : `${String(before)} → `}${String(op.value)}`;
     }
     case 'rename':
-      return `${name(op.node)}: novo nome '${op.label}'`;
+      return translate(lang, 'op.rename', { name: name(op.node), label: op.label });
   }
 }

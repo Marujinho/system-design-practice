@@ -1,5 +1,7 @@
 import type { Requirement, RequirementResult } from '@archsim/sim-engine';
 import { formatCompact, formatMs, formatPct, formatRps, formatUsd } from '../format';
+import type { Lang } from '../i18n/lang';
+import { tr, translate } from '../i18n/t';
 
 export function formatMeasure(metric: Requirement['metric'], value: number, unit: string): string {
   switch (metric) {
@@ -14,7 +16,7 @@ export function formatMeasure(metric: Requirement['metric'], value: number, unit
     case 'queueAge':
       return `${formatCompact(value, 1)} s`;
     case 'queueStable':
-      return value === 0 ? 'estável' : `${formatCompact(value, 0)} crescendo`;
+      return value === 0 ? tr('req.stable') : tr('req.growing', { n: formatCompact(value, 0) });
   }
 }
 
@@ -31,8 +33,6 @@ export function starsText(stars: number): string {
   return '★'.repeat(stars) + '☆'.repeat(3 - stars);
 }
 
-export const DIFFICULTY: Record<'facil' | 'medio' | 'dificil', string> = {
-  facil: 'fácil',
-  medio: 'médio',
-  dificil: 'difícil',
-};
+export function difficultyLabel(d: 'facil' | 'medio' | 'dificil', lang: Lang): string {
+  return translate(lang, `difficulty.${d}` as const);
+}

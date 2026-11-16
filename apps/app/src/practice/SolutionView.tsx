@@ -6,6 +6,8 @@ import { FlowEdge } from '../canvas/FlowEdge';
 import { toFlow } from '../canvas/flow-model';
 import { ServiceNode } from '../canvas/ServiceNode';
 import { formatUsd } from '../format';
+import { useLang } from '../i18n/store';
+import { useT } from '../i18n/t';
 import { NodeStatus } from '../viz/NodeStatus';
 
 const nodeTypes = { service: ServiceNode };
@@ -13,9 +15,11 @@ const edgeTypes = { flow: FlowEdge };
 
 /** The reference, read-only and simulated on its own; the user's diagram is not touched (FR-46). */
 export function SolutionView({ reference, onClose }: { reference: Diagram; onClose: () => void }) {
+  const t = useT();
+  const lang = useLang();
   const result = useMemo(() => simulateSteady(reference, catalog, { ticks: 100 }), [reference]);
   const { nodes, edges } = useMemo(() => {
-    const flow = toFlow(reference, []);
+    const flow = toFlow(reference, [], lang);
     return {
       nodes: flow.nodes.map((n) => {
         const m = result.nodes[n.id];
@@ -25,15 +29,19 @@ export function SolutionView({ reference, onClose }: { reference: Diagram; onClo
       }),
       edges: flow.edges,
     };
-  }, [reference, result]);
+  }, [reference, result, lang]);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="solution-title">
       <div className="solution">
         <header className="solution-head">
-          <h2 id="solution-title">Uma solução: {reference.name ?? 'referência'}</h2>
-          <span className="num muted">{formatUsd(result.global.costMonth)}/mês</span>
+          <h2 id="solution-title">
+            {t('solution.title', { name: reference.name ?? t('solution.reference') })}
+          </h2>
+          <span className="num muted">
+            {t('unit.perMonth', { amount: formatUsd(result.global.costMonth) })}
+          </span>
           <button type="button" className="button" onClick={onClose}>
-            Fechar
+            {t('solution.close')}
           </button>
         </header>
         <div className="solution-canvas">

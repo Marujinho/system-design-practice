@@ -12,6 +12,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLangStore } from '../i18n/store';
 import { inlineBackend } from '../sim/sim-client';
 import { setBackendFactory, useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
@@ -339,6 +340,29 @@ describe('ResultScreen (FR-58)', () => {
     expect(screen.getByText('novo recorde')).toBeTruthy();
     expect(screen.getByText(/Seu custo × referência/)).toBeTruthy();
     for (const label of referenceLabels) expect(document.body.textContent).not.toContain(label);
+  });
+
+  it('shows the result screen in English (language-switch FR-5, FR-10)', () => {
+    act(() => {
+      useLangStore.getState().setLang('en');
+    });
+    const answer = finalizeAnswer();
+    render(<ResultScreen result={answer} onClose={vi.fn()} onSolution={vi.fn()} />);
+    expect(screen.getByRole('heading', { name: 'Result' })).toBeTruthy();
+    expect(screen.getByLabelText(`Score ${answer.score.total} of 100`)).toBeTruthy();
+    expect(screen.getByLabelText('3 of 3 stars')).toBeTruthy();
+    expect(screen.getByText('new best')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Keep adjusting' })).toBeTruthy();
+    expect(screen.getByText(/Your cost vs\. reference/)).toBeTruthy();
+    const ui = document.body.textContent;
+    for (const pt of [
+      'Resultado',
+      'novo recorde',
+      'Continuar ajustando',
+      'Seu custo',
+      'Requisitos',
+    ])
+      expect(ui).not.toContain(pt);
   });
 
   it('marks an attempt made after seeing the solution', () => {

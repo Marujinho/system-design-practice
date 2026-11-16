@@ -8,6 +8,7 @@ import { emptyDiagram, problemStart } from '../store/defaults';
 import { useDiagram } from '../store/diagram-store';
 import { EXPANDED, useLayout } from '../workspace/layout-store';
 import { Workspace } from '../workspace/Workspace';
+import { useLangStore } from '../i18n/store';
 import { ChatPanel } from './ChatPanel';
 import { preview, sseData, useMentorUi } from './mentor-api';
 import { MentorLauncher } from './MentorLauncher';
@@ -272,6 +273,46 @@ describe('mentor replies are text, never markup (NFR-7, A05)', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(container.querySelector('img')).toBeNull();
     expect(container.querySelector('script')).toBeNull();
+  });
+});
+
+describe('the chat in English (language-switch FR-5)', () => {
+  it('labels, suggestions and the empty state follow the language; the mentor text stays text', async () => {
+    mockFetch({
+      conversation: {
+        ...empty,
+        messages: [
+          { role: 'user', text: 'oi', at: '2026-11-14T12:00:00.000Z' },
+          {
+            role: 'mentor',
+            text: 'See <b>this</b>',
+            at: '2026-11-14T12:00:00.000Z',
+            provider: 'api',
+          },
+        ],
+      },
+    });
+    act(() => {
+      useLangStore.getState().setLang('en');
+    });
+    const { container } = render(<ChatPanel problemId="url-shortener" />);
+    expect(await screen.findByRole('group', { name: 'Provider' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Question for the mentor' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeTruthy();
+    expect(await screen.findByText(/See/)).toBeTruthy();
+    expect(container.querySelector('.chat-mentor b')).toBeNull();
+    const ui = container.textContent;
+    for (const pt of ['Provedor', 'Enviar', 'Fechar', 'Nova conversa', 'disponível'])
+      expect(ui).not.toContain(pt);
+  });
+
+  it('suggests questions in English on an empty conversation', async () => {
+    mockFetch({});
+    act(() => {
+      useLangStore.getState().setLang('en');
+    });
+    render(<ChatPanel problemId="url-shortener" />);
+    expect(await screen.findByRole('button', { name: 'Where do I start?' })).toBeTruthy();
   });
 });
 

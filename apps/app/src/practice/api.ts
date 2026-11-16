@@ -1,3 +1,4 @@
+import { tr } from '../i18n/t';
 import { FinalizeResponse, History, ProblemSummary, PublicProblem } from '@archsim/problems';
 import { Diagram } from '@archsim/sim-engine';
 import { z } from 'zod';
@@ -9,20 +10,18 @@ async function call<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): 
   try {
     res = await fetch(`/__archsim/${path}`, { credentials: 'same-origin', ...init });
   } catch {
-    throw new ApiError(
-      'o servidor local não respondeu (o app está rodando com pnpm dev ou pnpm preview?)',
-    );
+    throw new ApiError(tr('api.noServer'));
   }
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const reason =
       body !== null && typeof body === 'object' && 'error' in body
         ? String(body.error)
-        : `erro ${res.status}`;
+        : tr('api.status', { status: res.status });
     throw new ApiError(reason);
   }
   const parsed = schema.safeParse(body);
-  if (!parsed.success) throw new ApiError('resposta inesperada do servidor local');
+  if (!parsed.success) throw new ApiError(tr('api.unexpected'));
   return parsed.data;
 }
 

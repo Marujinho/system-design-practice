@@ -7,6 +7,7 @@ import {
 } from '@archsim/problems';
 import type { Diagram } from '@archsim/sim-engine';
 import { create } from 'zustand';
+import { tr } from '../i18n/t';
 import { ApiError } from './api';
 
 async function json<T>(parse: (v: unknown) => T, path: string, init?: RequestInit): Promise<T> {
@@ -14,7 +15,7 @@ async function json<T>(parse: (v: unknown) => T, path: string, init?: RequestIni
   try {
     res = await fetch(`/__archsim/${path}`, { credentials: 'same-origin', ...init });
   } catch {
-    throw new ApiError('o servidor local não respondeu');
+    throw new ApiError(tr('api.noServerShort'));
   }
   if (res.status === 204) return parse(null);
   const body: unknown = await res.json().catch(() => null);
@@ -25,7 +26,7 @@ async function json<T>(parse: (v: unknown) => T, path: string, init?: RequestIni
 function errorOf(body: unknown, status: number): string {
   return body !== null && typeof body === 'object' && 'error' in body
     ? String(body.error)
-    : `erro ${String(status)}`;
+    : tr('api.status', { status });
 }
 
 /** Splits a server-sent-event stream into its `data:` payloads. */
@@ -79,7 +80,7 @@ export const mentorApi = {
       });
     } catch {
       if (signal.aborted) return;
-      throw new ApiError('o servidor local não respondeu');
+      throw new ApiError(tr('api.noServerShort'));
     }
     if (!res.ok || !res.body) {
       const err: unknown = await res.json().catch(() => null);

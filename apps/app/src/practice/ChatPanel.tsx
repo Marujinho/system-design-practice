@@ -9,6 +9,11 @@ import type {
 import { MAX_MESSAGE_CHARS } from '@archsim/problems';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Markdown from 'react-markdown';
+import { formatNumber } from '../format';
+import { localeOf } from '../i18n/lang';
+import type { Key } from '../i18n/pt';
+import { useLang } from '../i18n/store';
+import { tr, useT } from '../i18n/t';
 import { useDiagram } from '../store/diagram-store';
 import { browserStorage } from '../theme/theme';
 import { useLayout } from '../workspace/layout-store';
@@ -52,16 +57,12 @@ export function Reply({ text }: { text: string }) {
   );
 }
 
-const SUGGESTIONS = [
-  'Por onde eu começo?',
-  'O que está saturando?',
-  'Qual o trade-off de usar cache aqui?',
-];
+const SUGGESTIONS = ['chat.suggest1', 'chat.suggest2', 'chat.suggest3'] as const;
 
-const PROVIDER_LABEL: Record<MentorProviderId, string> = {
-  subscription: 'Assinatura do Claude',
-  api: 'API key',
-};
+const PROVIDER_KEY_LABEL = {
+  subscription: 'chat.subscription',
+  api: 'chat.apiKey',
+} as const satisfies Record<MentorProviderId, Key>;
 
 const PROVIDER_KEY = 'archsim:mentor:provider';
 
@@ -69,19 +70,19 @@ function errorText(code: MentorErrorCode, provider: MentorProviderId, other: boo
   switch (code) {
     case 'auth':
       return provider === 'api'
-        ? `A API recusou a credencial (ANTHROPIC_API_KEY inválida ou sem acesso).${other ? ' Você pode trocar para a assinatura.' : ''}`
-        : `O login do Claude não funcionou: rode \`claude\` no terminal e faça login de novo.${other ? ' Você pode trocar para a API key.' : ''}`;
+        ? tr('chat.err.authApi') + (other ? tr('chat.err.switchToSub') : '')
+        : tr('chat.err.authSub') + (other ? tr('chat.err.switchToApi') : '');
     case 'rate_limit':
     case 'overloaded':
-      return 'O provedor está limitando ou sobrecarregado; tente de novo em instantes.';
+      return tr('chat.err.limited');
     case 'network':
-      return 'A conexão caiu no meio da resposta.';
+      return tr('chat.err.network');
     case 'timeout':
-      return 'A resposta parou de chegar.';
+      return tr('chat.err.timeout');
     case 'refusal':
-      return 'O mentor não respondeu a essa pergunta.';
+      return tr('chat.err.refusal');
     case 'unknown':
-      return 'Algo deu errado com o provedor.';
+      return tr('chat.err.unknown');
   }
 }
 
@@ -113,6 +114,8 @@ interface Live {
  * read the reply as it streams, stop it, start over (study-mode FR-3–FR-15).
  */
 export function ChatPanel({ problemId }: { problemId: string }) {
+  const t = useT();
+  const lang = useLang();
   const [status, setStatus] = useState<MentorStatus | null>(null);
   const [chosen, setChosen] = useState<MentorProviderId | null>(readProvider);
   const [messages, setMessages] = useState<MentorMessage[]>([]);
@@ -237,7 +240,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
           reply = '';
           finish();
           setFailure({
-            text: e instanceof ApiError ? e.message : 'não consegui falar com o mentor',
+            text: e instanceof ApiError ? e.message : tr('chat.err.send'),
             question: text,
           });
         },
@@ -262,12 +265,17 @@ export function ChatPanel({ problemId }: { problemId: string }) {
   if (provider === 'api' && tokens > 0)
     usageLine = (
       <p className="chat-usage muted num">
-        Esta conversa: {tokens.toLocaleString('pt-BR')} tokens · ≈ US${' '}
-        {spent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+        {t('chat.usage', {
+          tokens: formatNumber(tokens),
+          cost: spent.toLocaleString(localeOf(lang), {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 4,
+          }),
+        })}
       </p>
     );
   else if (provider === 'subscription')
-    usageLine = <p className="chat-usage muted">Incluído na sua assinatura do Claude.</p>;
+    usageLine = <p className="chat-usage muted">{t('chat.included')}</p>;
 
   return (
     <section className="chat-panel" aria-label="Mentor">
@@ -281,12 +289,12 @@ export function ChatPanel({ problemId }: { problemId: string }) {
             requestAnimationFrame(() => document.getElementById('mentor-launcher')?.focus());
           }}
         >
-          Fechar
+          {t('chat.close')}
         </button>
       </header>
 
       <fieldset className="chat-provider" disabled={busy}>
-        <legend>Provedor</legend>
+        <legend>{t('chat.provider')}</legend>
         {(['subscription', 'api'] as const).map((p) => (
           <label key={p}>
             <input
@@ -300,9 +308,9 @@ export function ChatPanel({ problemId }: { problemId: string }) {
                 storeProvider(p);
               }}
             />
-            {PROVIDER_LABEL[p]}{' '}
+            {t(PROVIDER_KEY_LABEL[p])}{' '}
             <span className="muted">
-              {status === null ? '…' : available(p) ? 'disponível' : 'não configurada'}
+              {status === null ? '…' : t(available(p) ? 'chat.available' : 'chat.notSet')}
             </span>
           </label>
         ))}
@@ -310,15 +318,15 @@ export function ChatPanel({ problemId }: { problemId: string }) {
 
       {status !== null && provider === null && (
         <div className="chat-setup" role="note">
-          <p>Nenhum provedor disponível. Para conversar com o mentor:</p>
+          <p>{t('chat.none')}</p>
           <ul>
             <li>
-              <strong>Assinatura:</strong> instale o Claude Code e faça login (<code>claude</code>{' '}
-              no terminal).
+              <strong>{t('chat.setupSubTitle')}</strong> {t('chat.setupSub1')}
+              <code>claude</code> {t('chat.setupSub2')}
             </li>
             <li>
-              <strong>API:</strong> rode o app com <code>ANTHROPIC_API_KEY</code> no ambiente do{' '}
-              <code>pnpm dev</code>.
+              <strong>{t('chat.setupApiTitle')}</strong> {t('chat.setupApi1')}{' '}
+              <code>ANTHROPIC_API_KEY</code> {t('chat.setupApi2')} <code>pnpm dev</code>.
             </li>
           </ul>
         </div>
@@ -329,15 +337,12 @@ export function ChatPanel({ problemId }: { problemId: string }) {
         className="chat-log"
         role="log"
         aria-live="polite"
-        aria-label="Conversa com o mentor"
+        aria-label={t('chat.log')}
         tabIndex={0}
       >
         {messages.length === 0 && !live && (
           <div className="chat-empty">
-            <p className="muted">
-              Pergunte sobre o desenho que está na tela: o mentor vê os nós, os números da
-              simulação, o enunciado e a solução de referência.
-            </p>
+            <p className="muted">{t('chat.empty')}</p>
             <ul className="chat-suggestions">
               {SUGGESTIONS.map((s) => (
                 <li key={s}>
@@ -346,10 +351,10 @@ export function ChatPanel({ problemId }: { problemId: string }) {
                     className="button"
                     disabled={provider === null}
                     onClick={() => {
-                      send(s);
+                      send(t(s));
                     }}
                   >
-                    {s}
+                    {t(s)}
                   </button>
                 </li>
               ))}
@@ -364,7 +369,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
           ) : (
             <div key={`${String(i)}-m`} className="chat-msg chat-mentor">
               <Reply text={m.text} />
-              {m.interrupted && <p className="chat-note muted">resposta interrompida</p>}
+              {m.interrupted && <p className="chat-note muted">{t('chat.interrupted')}</p>}
               {m.proposal && (
                 <ProposalCard
                   problemId={problemId}
@@ -388,7 +393,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
             <p className="chat-msg chat-user">{live.question}</p>
             <div className="chat-msg chat-mentor">
               {live.text === '' ? (
-                <p className="muted chat-thinking">pensando…</p>
+                <p className="muted chat-thinking">{t('chat.thinking')}</p>
               ) : (
                 <Reply text={live.text} />
               )}
@@ -399,12 +404,12 @@ export function ChatPanel({ problemId }: { problemId: string }) {
 
       {rejected !== null && (
         <p className="chat-note muted" role="status">
-          O mentor propôs uma mudança que o simulador não aceita: {rejected}. Peça de outro jeito.
+          {t('chat.rejected', { reason: rejected })}
         </p>
       )}
       {trimmed && (
         <p className="chat-note muted" role="status">
-          O início da conversa ficou de fora do contexto.
+          {t('chat.trimmed')}
         </p>
       )}
       {failure && (
@@ -418,7 +423,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
               send(failure.question);
             }}
           >
-            Tentar de novo
+            {t('chat.retry')}
           </button>
         </div>
       )}
@@ -432,14 +437,14 @@ export function ChatPanel({ problemId }: { problemId: string }) {
         }}
       >
         <label htmlFor="mentor-input" className="sr-only">
-          Pergunta para o mentor
+          {t('chat.question')}
         </label>
         <textarea
           id="mentor-input"
           ref={input}
           rows={3}
           maxLength={MAX_MESSAGE_CHARS}
-          placeholder={provider === null ? 'Configure um provedor' : 'Pergunte ao mentor…'}
+          placeholder={t(provider === null ? 'chat.setupPlaceholder' : 'chat.placeholder')}
           disabled={provider === null}
           value={draft}
           onChange={(e) => {
@@ -458,7 +463,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
           </span>
           {usageLine}
           <button type="submit" className="button primary" disabled={provider === null}>
-            {busy ? 'Parar' : 'Enviar'}
+            {t(busy ? 'chat.stop' : 'chat.send')}
           </button>
         </div>
       </form>
@@ -466,8 +471,8 @@ export function ChatPanel({ problemId }: { problemId: string }) {
       {messages.length > 0 &&
         !busy &&
         (confirmClear ? (
-          <div className="chat-clear" role="group" aria-label="Apagar a conversa?">
-            <span>Apagar a conversa deste problema?</span>
+          <div className="chat-clear" role="group" aria-label={t('chat.clearAsk')}>
+            <span>{t('chat.clearQuestion')}</span>
             <button
               type="button"
               className="button"
@@ -479,14 +484,14 @@ export function ChatPanel({ problemId }: { problemId: string }) {
                   },
                   (e: unknown) => {
                     setFailure({
-                      text: e instanceof ApiError ? e.message : 'não consegui apagar a conversa',
+                      text: e instanceof ApiError ? e.message : tr('chat.clearError'),
                       question: '',
                     });
                   },
                 );
               }}
             >
-              Apagar
+              {t('chat.clear')}
             </button>
             <button
               type="button"
@@ -495,7 +500,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
                 setConfirmClear(false);
               }}
             >
-              Cancelar
+              {t('chat.cancel')}
             </button>
           </div>
         ) : (
@@ -506,7 +511,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
               setConfirmClear(true);
             }}
           >
-            Nova conversa
+            {t('chat.new')}
           </button>
         ))}
     </section>

@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { en } from './en';
 import type { Lang } from './lang';
 import { pt, type Key } from './pt';
-import { useLang } from './store';
+import { currentLang, useLang } from './store';
 
 export type Params = Record<string, string | number>;
 type Table = Partial<Record<Key, string>>;
@@ -19,17 +19,24 @@ export function interpolate(text: string, params?: Params): string {
 
 /**
  * The text for `key` in `lang`. A missing translation falls back to Portuguese
- * and warns in development, never the raw key (NFR-3).
+ * and warns, never the raw key (NFR-3).
  */
 export function translate(lang: Lang, key: Key, params?: Params, tables = TABLES): string {
   const found = tables[lang][key];
-  if (found === undefined && lang !== 'pt' && import.meta.env.DEV) {
+  // the types make a gap impossible in the repository; a warning if one slips through anyway
+  if (found === undefined && lang !== 'pt') {
     console.warn(`[i18n] sem tradução ${lang}: ${key}`);
   }
   return interpolate(found ?? tables.pt[key] ?? pt[key], params);
 }
 
 export type T = (key: Key, params?: Params) => string;
+
+/**
+ * `t` in the language active right now, for plain functions called while rendering.
+ * The calling component must subscribe (`useT` or `useLang`) to re-render on a switch.
+ */
+export const tr: T = (key, params) => translate(currentLang(), key, params);
 
 /** `t` bound to the active language; components re-render when it changes. */
 export function useT(): T {
