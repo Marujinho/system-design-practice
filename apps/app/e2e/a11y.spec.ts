@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { reference, seed, watchConsole } from './helpers';
+import { inLanguage, reference, seed, watchConsole } from './helpers';
 
 const PAGES = [
   ['início', '/#/'],
@@ -26,6 +26,25 @@ for (const [name, url] of PAGES) {
             .map((n) => n.target.join(' '))
             .join(' | ')}`,
       );
+    expect(bad).toEqual([]);
+    expect(problems).toEqual([]);
+  });
+}
+
+// The same pages in English (language-switch NFR-4): names and labels change, so axe runs again.
+for (const [name, url] of PAGES) {
+  test(`no serious or critical accessibility violations in English: ${name} (language-switch NFR-4)`, async ({
+    page,
+  }) => {
+    const problems = watchConsole(page);
+    await inLanguage(page, 'en');
+    await page.goto(url);
+    await page.waitForTimeout(1200);
+    expect(await page.evaluate(() => document.documentElement.lang)).toBe('en');
+    const results = await new AxeBuilder({ page }).analyze();
+    const bad = results.violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${v.id}: ${v.help} (${v.nodes.length})`);
     expect(bad).toEqual([]);
     expect(problems).toEqual([]);
   });

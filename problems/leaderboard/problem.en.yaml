@@ -1,0 +1,74 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: Real-time leaderboard
+statement: |
+  Design the real-time leaderboard for a mobile game.
+
+  At the end of each match, the game sends the player's score. The global leaderboard (top 100) and
+  each player's rank have to reflect the new score within a few seconds. The full score history
+  has to be stored durably for auditing.
+
+  At peak there are **1,000 score updates/s** and **4,000 leaderboard queries/s**.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Record the score of each match
+  - Query the top 100 and a player's rank
+  - Store the full score history durably
+qualitative:
+  - Data structure for ranking (sorted set) and the cost of computing a rank
+  - Durability of the in-memory leaderboard and rebuilding after a failure
+  - Ties and players with equal scores
+requirements:
+  top-throughput: Queries served
+  score-throughput: Updates accepted
+  top-p99: Query p99
+  persist-age: Maximum delay to persist
+  error-rate: Error rate
+classes:
+  top: Top 100 query
+  score: Score update
+followups:
+  leaderboard.data-structure:
+    question: How do you compute a player's rank among millions without sorting everything on every query?
+    lookFor:
+      - sorted set (ZADD, ZRANK, ZREVRANGE)
+      - O(log n) cost per update
+  leaderboard.durability:
+    question: The leaderboard lives in memory. What happens if Redis restarts?
+    lookFor:
+      - rebuild from the durable history
+      - Redis persistence (AOF/snapshot) and its limits
+  leaderboard.sync-db:
+    question: You write each score straight to the relational database, on the request path. What does that do to latency and to the database at peak?
+    lookFor:
+      - a synchronous write couples latency to the database
+      - a queue or stream decouples and absorbs spikes
+  leaderboard.backlog:
+    question: The persistence queue is backing up. How long does it take for a score to become durable?
+    lookFor:
+      - read the queue age in the simulation
+      - scale the consumers
+      - write in batches
+  leaderboard.top-p99:
+    question: The top 100 query got slow. Where is the time going?
+    lookFor:
+      - serve the top 100 from memory
+      - cache the result for a few seconds
+  leaderboard.tournament:
+    question: A tournament is going to multiply everything by 5 for an hour. What breaks first?
+    lookFor:
+      - identify the first node to saturate
+      - the queue absorbs the writes while the workers scale
+  leaderboard.ties:
+    question: Two players get the same score. Who ranks higher, and how do you guarantee that in Redis?
+    lookFor:
+      - tie-breaking rule (whoever scored first)
+      - encode the tie-breaker into the score
+referenceLabels:
+  users: Users
+  alb: ALB
+  app: Leaderboard API
+  updates: Score queue
+  workers: Score workers
+  ranking: Leaderboard (sorted sets)
+  db: Score history

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useT } from '../i18n/t';
 import { useLayout, type PanelId } from './layout-store';
 
 type Edge = 'left' | 'right' | 'top';
@@ -11,7 +12,7 @@ const CHEVRON: Record<Edge, { open: string; closed: string }> = {
 
 export interface CollapsibleProps {
   id: PanelId;
-  /** What the button names, lower case: "paleta" → "Recolher paleta". */
+  /** What the button names, lower case and translated: "paleta" → "Recolher paleta". */
   label: string;
   edge: Edge;
   /** Shown on the collapsed strip, next to the button. */
@@ -25,14 +26,16 @@ export interface CollapsibleProps {
  */
 export function Collapsible({ id, label, edge, summary, children }: CollapsibleProps) {
   const collapsed = useLayout((s) => s.collapsed[id]);
+  const t = useT();
+  const name = t(collapsed ? 'ws.expand' : 'ws.collapse', { label });
   return (
     <div className={`collapsible collapsible-${edge}${collapsed ? ' collapsed' : ''}`}>
       <button
         type="button"
         className="collapse-toggle"
         aria-expanded={!collapsed}
-        aria-label={`${collapsed ? 'Expandir' : 'Recolher'} ${label}`}
-        title={`${collapsed ? 'Expandir' : 'Recolher'} ${label}`}
+        aria-label={name}
+        title={name}
         onClick={() => {
           useLayout.getState().toggle(id);
         }}

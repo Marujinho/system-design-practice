@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatCompact } from '../format';
+import { useT } from '../i18n/t';
 
 export interface LimitRowProps {
   label: string;
@@ -23,6 +24,7 @@ export function LimitRow({
   onOverride,
   onReset,
 }: LimitRowProps) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(String(value));
   const changed = value !== catalogValue;
@@ -34,20 +36,20 @@ export function LimitRow({
         {source === 'aws-quota' ? (
           sourceUrl ? (
             <a className="badge quota" href={sourceUrl} target="_blank" rel="noreferrer noopener">
-              cota AWS
+              {t('limit.quota')}
             </a>
           ) : (
-            <span className="badge quota">cota AWS</span>
+            <span className="badge quota">{t('limit.quota')}</span>
           )
         ) : (
-          <span className="badge assumption">premissa</span>
+          <span className="badge assumption">{t('limit.assumption')}</span>
         )}
       </div>
       <div className="limit-value">
         {editing ? (
           <input
             className="num"
-            aria-label={`Novo valor para ${label}`}
+            aria-label={t('limit.newValue', { label })}
             value={text}
             autoFocus
             onChange={(e) => {
@@ -67,7 +69,7 @@ export function LimitRow({
           <button
             type="button"
             className="link-button num"
-            aria-label={`Editar ${label}: ${formatCompact(value, 4)} ${unit}`}
+            aria-label={t('limit.edit', { label, value: formatCompact(value, 4), unit })}
             onClick={() => {
               setText(String(value));
               setEditing(true);
@@ -78,9 +80,9 @@ export function LimitRow({
         )}
         {changed && (
           <>
-            <span className="badge changed">valor alterado</span>
+            <span className="badge changed">{t('limit.changed')}</span>
             <button type="button" className="link-button" onClick={onReset}>
-              restaurar padrão
+              {t('limit.reset')}
             </button>
           </>
         )}

@@ -222,6 +222,39 @@ describe('findings (FR-57)', () => {
     expect(breaks?.numbers.multiplier).toBe(1.5);
   });
 
+  it('says every finding in English too, with the same numbers (language-switch FR-8)', () => {
+    const f = types(app(1));
+    const bottleneck = f.find((x) => x.type === 'bottleneck');
+    expect(bottleneck?.message).toMatch(/recebe [\d.]+ req\/s/);
+    expect(bottleneck?.messageEn).toMatch(/receives [\d,]+ req\/s for [\d,]+ of capacity/);
+    expect(bottleneck?.messageEn).toContain('EC2 (app)');
+    const failed = f.find((x) => x.type === 'requirement-failed');
+    expect(failed?.messageEn).toMatch(/^Requirement not met: .*\(measured [\d.,]+ .*target/);
+    for (const x of f) expect(x.messageEn).not.toMatch(/[çãõáéíóú]|\b(não|recebe|custa)\b/);
+  });
+
+  it('uses the English requirement labels it is given', () => {
+    const f = score({
+      diagram: app(1),
+      reference: app(9),
+      requirements: reqs,
+      catalog,
+      ticks: 5,
+      requirementLabelsEn: Object.fromEntries(reqs.map((r) => [r.id, `EN ${r.id}`])),
+    }).findings;
+    const failed = f.find((x) => x.type === 'requirement-failed');
+    expect(failed?.messageEn).toContain('EN ');
+    expect(failed?.message).not.toContain('EN ');
+  });
+
+  it('suggests the saving in English: units and a smaller variant', () => {
+    const big = types(app(10, 'm5.large')).find(
+      (x) => x.type === 'overprovisioned' && x.nodeIds[0] === 'app',
+    );
+    expect(big?.messageEn).toContain('from 10 to 2');
+    expect(big?.messageEn).toMatch(/save about US\$ [\d,]+\.\d{2}\/month/);
+  });
+
   it('orders findings by impact', () => {
     const f = types(app(1));
     const impacts = f.map((x) => x.impact);

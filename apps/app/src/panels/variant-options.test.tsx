@@ -1,7 +1,7 @@
 import { catalog, findService, type Variant } from '@archsim/catalog';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { FAMILY_LABEL, groupVariants, monthlyPerUnit, optionText } from './variant-options';
+import { familyLabel, groupVariants, monthlyPerUnit, optionText } from './variant-options';
 
 const variants = (serviceId: string): Variant[] => findService(catalog, serviceId)?.variants ?? [];
 
@@ -24,8 +24,21 @@ describe('groupVariants (aws-instance-types FR-12)', () => {
     expect(groups[0]?.variants).toHaveLength(7);
   });
 
-  it('labels every family in Portuguese', () => {
-    expect(Object.values(FAMILY_LABEL)).toEqual(['Burst', 'Uso geral', 'Computação', 'Memória']);
+  it('labels every family in Portuguese, and in English (language-switch FR-5)', () => {
+    const families = ['burst', 'general', 'compute', 'memory'] as const;
+    expect(families.map((f) => familyLabel(f))).toEqual([
+      'Burst',
+      'Uso geral',
+      'Computação',
+      'Memória',
+    ]);
+    expect(families.map((f) => familyLabel(f, 'en'))).toEqual([
+      'Burst',
+      'General purpose',
+      'Compute optimized',
+      'Memory optimized',
+    ]);
+    expect(familyLabel(null, 'en')).toBe('Other');
   });
 });
 

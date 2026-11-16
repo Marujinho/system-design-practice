@@ -107,6 +107,24 @@ select {
   border-bottom: 1px solid var(--line);
 }
 
+.app-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang-toggle {
+  display: inline-flex;
+}
+
+.lang-toggle .button + .button {
+  margin-left: -1px;
+}
+
+.lang-toggle .button[aria-pressed='true'] {
+  background: var(--line-strong);
+}
+
 .app-header h1 {
   font-size: 14px;
   font-weight: 600;

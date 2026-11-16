@@ -7,6 +7,8 @@ export class Refusal extends Error {
   constructor(
     readonly status: number,
     readonly reason: string,
+    /** The same reason in English, for the app in English (language-switch FR-5). */
+    readonly reasonEn: string,
   ) {
     super(reason);
   }
@@ -47,37 +49,48 @@ const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 export function checkCaller(req: IncomingMessage, port: number): void {
   // Headers can be forged by non-browser clients; the peer address cannot (e.g. `pnpm dev --host`).
   if (!LOOPBACK.has(req.socket.remoteAddress ?? ''))
-    throw new Refusal(403, 'cliente fora do loopback');
+    throw new Refusal(403, 'cliente fora do loopback', 'client outside loopback');
   const host = req.headers.host ?? '';
-  if (!allowedHosts(port).has(host)) throw new Refusal(403, 'host não permitido');
+  if (!allowedHosts(port).has(host))
+    throw new Refusal(403, 'host não permitido', 'host not allowed');
   const origin = req.headers.origin;
   // Anything that changes state (POST, DELETE) must carry this app's Origin (CSRF).
   if (req.method !== 'GET') {
     if (origin === undefined || !allowedOrigins(port).has(origin))
-      throw new Refusal(403, 'origem não permitida');
+      throw new Refusal(403, 'origem não permitida', 'origin not allowed');
     return;
   }
   const sameSite = req.headers['sec-fetch-site'] === 'same-origin';
   const sameOrigin = origin !== undefined && allowedOrigins(port).has(origin);
-  if (!sameSite && !sameOrigin) throw new Refusal(403, 'origem não permitida');
+  if (!sameSite && !sameOrigin)
+    throw new Refusal(403, 'origem não permitida', 'origin not allowed');
 }
 
 export function checkMethod(req: IncomingMessage, ...allowed: ('GET' | 'POST' | 'DELETE')[]): void {
   if (!allowed.some((m) => m === req.method))
-    throw new Refusal(405, `método ${clean(req.method)} não permitido`);
+    throw new Refusal(
+      405,
+      `método ${clean(req.method)} não permitido`,
+      `method ${clean(req.method)} not allowed`,
+    );
 }
 
 /** Reads a JSON body, refusing other content types and anything past 5 MB (A02, A06). */
 export async function readJsonBody(req: IncomingMessage, limit = MAX_BODY_BYTES): Promise<string> {
   const type = (req.headers['content-type'] ?? '').split(';')[0]?.trim().toLowerCase();
-  if (type !== 'application/json') throw new Refusal(415, 'content-type deve ser application/json');
+  if (type !== 'application/json')
+    throw new Refusal(
+      415,
+      'content-type deve ser application/json',
+      'content-type must be application/json',
+    );
   const declared = Number(req.headers['content-length'] ?? '0');
-  if (declared > limit) throw new Refusal(413, 'corpo passa de 5 MB');
+  if (declared > limit) throw new Refusal(413, 'corpo passa de 5 MB', 'body is larger than 5 MB');
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req as AsyncIterable<Buffer>) {
     size += chunk.length;
-    if (size > limit) throw new Refusal(413, 'corpo passa de 5 MB');
+    if (size > limit) throw new Refusal(413, 'corpo passa de 5 MB', 'body is larger than 5 MB');
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString('utf8');

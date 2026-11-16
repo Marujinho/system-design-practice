@@ -107,6 +107,8 @@ export interface ScoreArgs {
   catalog: Catalog;
   scoring?: Scoring | undefined;
   ticks?: number;
+  /** Requirement labels in English, by id, for the findings' English sentences. */
+  requirementLabelsEn?: Record<string, string> | undefined;
 }
 
 /** Simulate at 1×, 1.5× and 2× the problem load, compare with the reference, score and explain. */
@@ -154,6 +156,7 @@ export function score(args: ScoreArgs): ScoreResult {
       requirements,
       req15,
       req2,
+      ...(args.requirementLabelsEn ? { requirementLabelsEn: args.requirementLabelsEn } : {}),
     }),
     simulation: at1,
   };

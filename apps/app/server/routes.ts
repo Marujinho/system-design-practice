@@ -54,7 +54,7 @@ export function createPracticeHandler(options: PracticeOptions) {
   };
   const problemOf = (id: string | undefined): LoadedProblem => {
     const p = id !== undefined && ID.test(id) ? problems().get(id) : undefined;
-    if (!p) throw new Refusal(404, 'problema não existe');
+    if (!p) throw new Refusal(404, 'problema não existe', 'problem does not exist');
     return p;
   };
 
@@ -73,6 +73,7 @@ export function createPracticeHandler(options: PracticeOptions) {
     return {
       id: p.problem.id,
       title: p.problem.title,
+      titleEn: p.en.title,
       difficulty: p.problem.difficulty,
       record: best?.score ?? null,
       stars: best?.stars ?? null,
@@ -89,18 +90,24 @@ export function createPracticeHandler(options: PracticeOptions) {
     try {
       body = safeJsonParse(text);
     } catch {
-      throw new Refusal(400, 'JSON inválido');
+      throw new Refusal(400, 'JSON inválido', 'invalid JSON');
     }
     const { problemId, diagram } = (body ?? {}) as { problemId?: unknown; diagram?: unknown };
     const loaded = problemOf(typeof problemId === 'string' ? problemId : undefined);
     const checked = validateDiagram(diagram, options.catalog);
-    if (!checked.ok) throw new Refusal(400, `diagrama inválido: ${checked.code}`);
+    if (!checked.ok)
+      throw new Refusal(
+        400,
+        `diagrama inválido: ${checked.code}`,
+        `invalid diagram: ${checked.code}`,
+      );
     const attemptDiagram = withProblemLoad(checked.diagram, loaded.problem);
     const scored = scoreAttempt({
       problem: loaded.problem,
       reference: loaded.reference,
       diagram: attemptDiagram,
       catalog: options.catalog,
+      en: loaded.en,
     });
     return { problem: loaded.problem, attemptDiagram, scored };
   }
@@ -168,16 +175,47 @@ export function createPracticeHandler(options: PracticeOptions) {
     sendJson(res, 200, FinalizeResponse.parse(response));
   }
 
-  function reference(req: IncomingMessage, res: ServerResponse, id: string | undefined) {
+  /** `?lang=en` gives the reference's node labels in English; anything else, Portuguese (A05). */
+  function reference(
+    req: IncomingMessage,
+    res: ServerResponse,
+    id: string | undefined,
+    english: boolean,
+  ) {
     checkMethod(req, 'GET');
     const loaded = problemOf(id);
     const h = store.readHistory();
     // The solution stays on the server until the problem has been finalized once (FR-46, A06).
     if (!h.attempts.some((a) => a.problemId === loaded.problem.id)) {
-      throw new Refusal(403, 'finalize o problema antes de ver a solução');
+      throw new Refusal(
+        403,
+        'finalize o problema antes de ver a solução',
+        'finish the problem before seeing the solution',
+      );
     }
     store.markSolutionViewed(loaded.problem.id, now().toISOString());
-    sendJson(res, 200, withProblemLoad(loaded.reference, loaded.problem));
+    const shown = withProblemLoad(loaded.reference, loaded.problem);
+    sendJson(
+      res,
+      200,
+      english
+        ? {
+            ...shown,
+            // a diagram name holds 80 characters at most
+            name: `${loaded.en.title} — reference`.slice(0, 80),
+            nodes: shown.nodes.map((n) => ({
+              ...n,
+              label: loaded.en.referenceLabels[n.id] ?? n.label,
+            })),
+            load: {
+              classes: shown.load.classes.map((c) => ({
+                ...c,
+                label: loaded.en.classes[c.name] ?? c.label,
+              })),
+            },
+          }
+        : shown,
+    );
   }
 
   return async function practice(
@@ -205,7 +243,8 @@ export function createPracticeHandler(options: PracticeOptions) {
               [...problems().values()].map((p) => summary(p, h)),
             );
           } else {
-            sendJson(res, 200, toPublic(problemOf(parts[1]).problem));
+            const loaded = problemOf(parts[1]);
+            sendJson(res, 200, toPublic(loaded.problem, loaded.en));
           }
           return;
         case 'history':
@@ -220,7 +259,7 @@ export function createPracticeHandler(options: PracticeOptions) {
           return;
         case 'mentor':
           if (parts[1] !== 'status' || parts.length !== 2)
-            throw new Refusal(404, 'rota desconhecida');
+            throw new Refusal(404, 'rota desconhecida', 'unknown route');
           await mentor.status(req, res);
           return;
         case 'conversation':
@@ -233,21 +272,29 @@ export function createPracticeHandler(options: PracticeOptions) {
           await mentor.proposalStatus(req, res);
           return;
         case 'reference':
-          reference(req, res, parts[1]);
+          reference(
+            req,
+            res,
+            parts[1],
+            new URLSearchParams(url.split('?')[1] ?? '').get('lang') === 'en',
+          );
           return;
         default:
-          throw new Refusal(404, 'rota desconhecida');
+          throw new Refusal(404, 'rota desconhecida', 'unknown route');
       }
     } catch (error) {
       if (error instanceof Refusal) {
         logRefusal(req, error, log);
-        sendJson(res, error.status, { error: error.reason });
+        sendJson(res, error.status, { error: error.reason, errorEn: error.reasonEn });
         return;
       }
       log(
         `[archsim] erro interno em ${clean(req.method)} ${clean(url)}: ${error instanceof Error ? error.message : 'desconhecido'}`,
       );
-      sendJson(res, 500, { error: 'não consegui gravar a sessão' });
+      sendJson(res, 500, {
+        error: 'não consegui gravar a sessão',
+        errorEn: "couldn't save the session",
+      });
     }
   };
 }

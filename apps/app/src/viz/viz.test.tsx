@@ -11,7 +11,7 @@ import { emptyDiagram } from '../store/defaults';
 import { useDiagram } from '../store/diagram-store';
 import { EXPANDED, useLayout } from '../workspace/layout-store';
 import { GlobalBar } from './GlobalBar';
-import { HEALTH_LABEL, NodeStatus } from './NodeStatus';
+import { healthLabel, NodeStatus } from './NodeStatus';
 import { ParticleLayer } from './ParticleLayer';
 import { allocate, bezierPoint, PARTICLE_CAP, particleCount, staticStroke } from './particles';
 
@@ -89,11 +89,17 @@ describe('NodeStatus (FR-26, FR-30, NFR-6)', () => {
     expect(screen.getByText(/erro 75,0% · US\$ 3,80\/mês/)).toBeTruthy();
   });
 
-  it('has a distinct word for every state', () => {
-    const words = (
-      ['healthy', 'pressured', 'critical', 'bottleneck', 'unsimulated'] as NodeHealth[]
-    ).map((h) => HEALTH_LABEL[h]);
-    expect(new Set(words).size).toBe(5);
+  it('has a distinct word for every state, in both languages', () => {
+    const states = [
+      'healthy',
+      'pressured',
+      'critical',
+      'bottleneck',
+      'unsimulated',
+    ] as NodeHealth[];
+    expect(new Set(states.map((h) => healthLabel(h, 'pt'))).size).toBe(5);
+    expect(new Set(states.map((h) => healthLabel(h, 'en'))).size).toBe(5);
+    expect(healthLabel('bottleneck', 'en')).toBe('bottleneck');
   });
 });
 

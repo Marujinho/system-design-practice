@@ -1,0 +1,72 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: Image upload and processing
+statement: |
+  Design photo uploads for a classifieds app.
+
+  A person uploads a photo (about 2 MB). The system generates a 20 KB thumbnail, which is the
+  version shown in the listing pages. Processing one photo takes about **1 second** of
+  CPU with 1 GB of memory. The thumbnail can take a few seconds to be ready, but
+  the upload must not fail.
+
+  At peak there are **50 uploads/s** and **500 thumbnail views/s**.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Accept photos of up to a few MB
+  - Generate a thumbnail for each photo
+  - Serve the thumbnails in the listing pages
+qualitative:
+  - Direct upload to storage with a presigned URL
+  - Reprocessing when processing fails (DLQ, idempotent retries)
+  - Validation of the uploaded file
+requirements:
+  upload-throughput: Uploads accepted
+  view-throughput: Views served
+  view-p99: View p99
+  processing-age: Maximum delay for the thumbnail
+  error-rate: Error rate
+classes:
+  upload: Upload photo
+  view: View thumbnail
+followups:
+  image-pipeline.presigned:
+    question: Does the photo go through your servers or straight to storage? Why?
+    lookFor:
+      - S3 presigned URL
+      - servers don't carry 2 MB per upload
+  image-pipeline.sync-processing:
+    question: You process the image on the upload path. What happens to the person uploading when the work queue grows?
+    lookFor:
+      - a queue between upload and processing
+      - the upload responds before processing
+  image-pipeline.backlog:
+    question: Thumbnails are taking more than a minute. What limits the processing throughput?
+    lookFor:
+      - worker concurrency
+      - read the queue age
+  image-pipeline.lambda-cost:
+    question: You used Lambda for processing. How much does one second at 1 GB cost, 50 times per second, for a whole month? Compare that with instances.
+    lookFor:
+      - cost per GB-second under continuous use
+      - instances are cheaper under constant load
+  image-pipeline.failures:
+    question: Processing a photo failed halfway through. What happens to it?
+    lookFor:
+      - retry with a dead-letter queue
+      - idempotent processing
+  image-pipeline.view-p99:
+    question: Thumbnails are loading slowly. Where is the time going?
+    lookFor:
+      - serve directly from storage or from a CDN
+      - don't route views through the application server
+  image-pipeline.holiday:
+    question: During Christmas week, uploads are going to triple. What needs to grow?
+    lookFor:
+      - processing concurrency
+      - the queue absorbs the spike
+referenceLabels:
+  users: Users
+  uploads: Originals bucket
+  jobs: Processing queue
+  resize: Resize
+  thumbs: Thumbnails bucket

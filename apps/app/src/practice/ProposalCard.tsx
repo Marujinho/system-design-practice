@@ -1,18 +1,19 @@
-import { catalog } from '@archsim/catalog';
 import type { Proposal, ProposalStatus } from '@archsim/problems';
 import type { Diagram } from '@archsim/sim-engine';
 import { useEffect, useState } from 'react';
+import { useCatalog } from '../i18n/catalog';
+import type { Key } from '../i18n/pt';
+import { useLang } from '../i18n/store';
+import { tr, useT } from '../i18n/t';
 import { useDiagram } from '../store/diagram-store';
 import { applyProposal, describeOp, proposalNodeId } from '../store/proposal';
 import { ApiError } from './api';
 import { mentorApi, useMentorUi } from './mentor-api';
 
-const STALE = 'O desenho mudou desde esta proposta; peça de novo ao mentor.';
-
-const STATUS_LABEL: Record<ProposalStatus, string> = {
-  pending: 'proposta',
-  applied: 'aplicada',
-  discarded: 'descartada',
+const STATUS_KEY: Record<ProposalStatus, Key> = {
+  pending: 'proposal.pending',
+  applied: 'proposal.applied',
+  discarded: 'proposal.discarded',
 };
 
 /**
@@ -29,6 +30,10 @@ export function ProposalCard({
   proposal: Proposal;
   onChange: (proposal: Proposal) => void;
 }) {
+  const t = useT();
+  const lang = useLang();
+  // same numbers and ids as the bundled catalog; new nodes get labels in the active language
+  const catalog = useCatalog();
   const diagram = useDiagram((s) => s.diagram);
   const streaming = useMentorUi((s) => s.streaming);
   // The diagrams around the last Aplicar: kept through undo, so a redo is recognised (M1).
@@ -44,14 +49,14 @@ export function ProposalCard({
         setUnsynced(null);
       },
       (e: unknown) => {
-        if (e instanceof ApiError && e.message.includes('em andamento')) {
+        if (e instanceof ApiError && e.pt.includes('em andamento')) {
           setUnsynced(status);
           return;
         }
         setNote(
           e instanceof ApiError
-            ? `Não consegui guardar o estado da proposta: ${e.message}`
-            : 'Não consegui guardar o estado da proposta.',
+            ? tr('proposal.saveFailedWhy', { error: e.message })
+            : tr('proposal.saveFailed'),
         );
       },
     );
@@ -72,13 +77,17 @@ export function ProposalCard({
     if (applied !== null && current === applied) return; // already in: never twice
     const r = applyProposal(current, proposal.ops, { catalog, newId: proposalNodeId });
     if (!r.ok) {
-      setNote(r.code === 'missing' ? STALE : `Não dá para aplicar: ${r.message}`);
+      setNote(
+        r.code === 'missing'
+          ? tr('proposal.stale')
+          : tr('proposal.cannotApply', { reason: lang === 'en' ? r.messageEn : r.message }),
+      );
       return;
     }
     setBefore(current);
     useDiagram.getState().replaceDiagram(r.diagram);
     setApplied(r.diagram);
-    setNote('Proposta aplicada. Ctrl+Z desfaz.');
+    setNote(tr('proposal.appliedNote'));
     setStatus('applied');
   };
 
@@ -90,10 +99,10 @@ export function ProposalCard({
   // diagram before Aplicar → pending again; forward to the one it made → applied again.
   useEffect(() => {
     if (proposal.status === 'applied' && before !== null && diagram === before) {
-      setNote('Proposta desfeita.');
+      setNote(tr('proposal.undone'));
       setStatus('pending');
     } else if (proposal.status === 'pending' && applied !== null && diagram === applied) {
-      setNote('Proposta aplicada de novo.');
+      setNote(tr('proposal.reapplied'));
       setStatus('applied');
     }
     // Runs on the transition only: setStatus is a fresh closure every render.
@@ -103,21 +112,23 @@ export function ProposalCard({
     proposal.status === 'applied' && applied !== null && diagram === applied && !streaming;
 
   return (
-    <section className={`proposal proposal-${proposal.status}`} aria-label="Proposta do mentor">
+    <section className={`proposal proposal-${proposal.status}`} aria-label={t('proposal.label')}>
       <header className="proposal-head">
-        <span className="proposal-badge">{STATUS_LABEL[proposal.status]}</span>
+        <span className="proposal-badge">{t(STATUS_KEY[proposal.status])}</span>
         <span className="proposal-summary">{proposal.summary}</span>
       </header>
       <ul className="proposal-ops">
         {proposal.ops.map((op, i) => (
-          <li key={`${String(i)}-${op.op}`}>{describeOp(op, diagram, proposal.ops, catalog)}</li>
+          <li key={`${String(i)}-${op.op}`}>
+            {describeOp(op, diagram, proposal.ops, catalog, lang)}
+          </li>
         ))}
       </ul>
       <div className="proposal-actions">
         {proposal.status === 'pending' && (
           <>
             <button type="button" className="button primary" onClick={apply} disabled={streaming}>
-              Aplicar
+              {t('proposal.apply')}
             </button>
             <button
               type="button"
@@ -128,13 +139,13 @@ export function ProposalCard({
                 setStatus('discarded');
               }}
             >
-              Descartar
+              {t('proposal.discard')}
             </button>
           </>
         )}
         {canUndo && (
           <button type="button" className="button" onClick={undo}>
-            Desfazer
+            {t('proposal.undo')}
           </button>
         )}
       </div>

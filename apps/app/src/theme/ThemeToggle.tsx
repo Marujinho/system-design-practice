@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '../i18n/t';
 import { applyTheme, initialTheme, storeTheme, type Theme } from './theme';
 
 export function ThemeToggle() {
@@ -7,19 +8,20 @@ export function ThemeToggle() {
     applyTheme(t);
     return t;
   });
+  const t = useT();
   const next: Theme = theme === 'dark' ? 'light' : 'dark';
   return (
     <button
       type="button"
       className="button"
-      aria-label={`Mudar para o tema ${next === 'light' ? 'claro' : 'escuro'}`}
+      aria-label={t(next === 'light' ? 'theme.toLight' : 'theme.toDark')}
       onClick={() => {
         applyTheme(next);
         storeTheme(next);
         setTheme(next);
       }}
     >
-      {theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+      {t(theme === 'dark' ? 'theme.light' : 'theme.dark')}
     </button>
   );
 }

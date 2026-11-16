@@ -1,0 +1,76 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: URL shortener
+statement: |
+  Design a URL shortener in the style of bit.ly.
+
+  A user submits a long URL and gets back a short code (for example, `sho.rt/aZ3k9`).
+  Anyone who opens the short link is redirected to the original URL. Links never expire.
+
+  Traffic is heavily skewed: each link that is created gets opened about 100 times.
+  At peak, the service receives **10,000 redirects/s** and **100 creations/s**.
+  Redirects have to be fast, because they sit on the path of every click.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Create a unique short code for a long URL
+  - Redirect from the short code to the original URL
+  - Links never expire
+qualitative:
+  - Collision-free unique code generation (counter, hash, base62)
+  - Consistency between creation and the first redirect
+  - 301 vs. 302 redirects and their effect on browser caching
+requirements:
+  redirect-throughput: Redirects served
+  create-throughput: Creations served
+  redirect-p99: Redirect p99
+  error-rate: Error rate
+classes:
+  redirect: Redirect
+  create: Link creation
+followups:
+  url-shortener.code-generation:
+    question: How do you generate the short code without collisions when several API instances are creating links at the same time?
+    lookFor:
+      - distributed counter or ID ranges pre-allocated per instance
+      - base62 encoding
+      - why a truncated hash collides and how to handle the collision
+  url-shortener.no-cache:
+    question: Your redirect p99 came in above the target. Where is the time going, and what would you put in the path?
+    lookFor:
+      - read cache (Redis/ElastiCache) in front of the database
+      - high cache hit rate because the most popular links repeat
+      - the database shouldn't see every click
+  url-shortener.cache-invalidation:
+    question: You added a cache. Links don't change, but what if a link has to be taken down for abuse?
+    lookFor:
+      - TTL or explicit invalidation on removal
+      - remove from the database and the cache in the same operation
+  url-shortener.db-hot:
+    question: The database is close to its limit. What would you change before moving to a bigger instance?
+    lookFor:
+      - raise the cache hit rate
+      - read replicas for the misses
+      - separate reads from writes
+  url-shortener.viral-10x:
+    question: A viral campaign is going to multiply redirects by 10. What breaks first in your design?
+    lookFor:
+      - identify the first node to saturate in the simulation
+      - scale the API tier horizontally
+      - CDN for very popular links, weighing the per-request cost
+  url-shortener.cdn-cost:
+    question: Why not put a CDN in front of everything? Work out the cost at 10,000 requests per second.
+    lookFor:
+      - CDN per-request cost at high volume
+      - a redirect is a small response that's cheap to serve from the origin
+  url-shortener.analytics:
+    question: Product now wants to count clicks per link. How do you record that without making redirects slower?
+    lookFor:
+      - record the click asynchronously (queue or stream)
+      - batch aggregation
+      - don't write to the main database on every click
+referenceLabels:
+  users: Users
+  alb: ALB
+  app: Redirect API
+  cache: URL cache
+  db: URL database

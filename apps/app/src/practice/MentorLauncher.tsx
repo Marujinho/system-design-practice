@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { isTyping } from '../canvas/Canvas';
+import { useT } from '../i18n/t';
 import { useReducedMotion } from '../viz/useReducedMotion';
 import { useLayout } from '../workspace/layout-store';
 import { useMentorUi } from './mentor-api';
@@ -23,6 +24,7 @@ export function MentorLauncher() {
   const streaming = useMentorUi((s) => s.streaming);
   const unread = useMentorUi((s) => s.unread);
   const reduced = useReducedMotion();
+  const t = useT();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,16 +56,16 @@ export function MentorLauncher() {
         aria-expanded={false}
         aria-controls="mentor-chat"
         aria-keyshortcuts="M"
-        title="Mentor (M)"
+        title={t('launcher.title')}
         onClick={toggleChat}
       >
         {streaming && (
           <span
             className={`mentor-dot${reduced ? '' : ' pulsing'}`}
-            aria-label="o mentor está respondendo"
+            aria-label={t('launcher.answering')}
           />
         )}
-        Abrir mentor
+        {t('launcher.open')}
       </button>
     </div>
   );

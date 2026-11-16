@@ -1,0 +1,76 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: Notification system
+statement: |
+  Design the service that sends notifications for a marketplace.
+
+  Other services (orders, payments, deliveries) publish events. For each event, the
+  person receives the notification on up to three channels: push, email and SMS. A slow or down
+  channel must not delay the others, and no event can be lost.
+
+  At peak there are **2,000 events/s**, and each event goes out on all three channels.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Receive events from other services
+  - Send each notification by push, email and SMS
+  - Isolate a slow channel from the others
+  - Never lose events
+qualitative:
+  - Per-channel isolation (one queue per channel)
+  - At-least-once delivery and deduplication
+  - User preferences and quiet hours
+  - Sending limits of external providers
+requirements:
+  event-throughput: Events accepted
+  event-p99: Event acceptance p99
+  delivery-age: Maximum delivery delay
+  error-rate: Error rate
+classes:
+  event: Event to notify
+followups:
+  notifications.no-fanout:
+    question: How does the same event reach all three channels in your design?
+    lookFor:
+      - single publish with fan-out (SNS → queues)
+      - the producer doesn't call each channel
+  notifications.isolation:
+    question: The SMS provider got slow. What happens to push and email?
+    lookFor:
+      - one queue per channel isolates the delay
+      - per-channel workers scale independently
+  notifications.backlog:
+    question: One of the channels has a growing queue backlog. How long does the person wait for the notification?
+    lookFor:
+      - read the age of each queue
+      - more consumers on the lagging channel
+  notifications.dedup:
+    question: The queue delivers at least once. How do you avoid sending the same SMS twice?
+    lookFor:
+      - idempotency key per event and channel
+      - record of sends already made
+  notifications.p99:
+    question: The services publishing events are waiting too long. Why?
+    lookFor:
+      - accept the event and respond before sending
+      - the synchronous path ends at the publish
+  notifications.black-friday:
+    question: On Black Friday, events are going to grow fivefold. What saturates, and what can the external providers handle?
+    lookFor:
+      - identify the first node to saturate
+      - provider sending limits
+  notifications.preferences:
+    question: Someone turned off SMS and doesn't want notifications in the middle of the night. Where does that rule go?
+    lookFor:
+      - filter before enqueuing per channel
+      - schedule for after quiet hours
+referenceLabels:
+  users: Users
+  alb: ALB
+  ingest: Events API
+  topic: Notifications topic
+  push-q: Push queue
+  email-q: Email queue
+  sms-q: SMS queue
+  push: Push workers
+  email: Email workers
+  sms: SMS workers

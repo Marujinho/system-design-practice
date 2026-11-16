@@ -7,24 +7,24 @@ import { StudyView } from './practice/StudyView';
 import './practice/practice.css';
 import './panels/panels.css';
 import { hrefOf, type Route } from './routes';
+import { LanguageToggle } from './i18n/LanguageToggle';
+import { useT } from './i18n/t';
 import { ThemeToggle } from './theme/ThemeToggle';
 import { useRoute } from './useRoute';
 import { Workspace } from './workspace/Workspace';
 
 function Home() {
+  const t = useT();
   return (
     <section className="home" aria-labelledby="home-title">
-      <h2 id="home-title">Treine system design desenhando arquiteturas que reagem à carga</h2>
-      <p>
-        Escolha um problema clássico de entrevista, monte a arquitetura na AWS e veja onde ela
-        quebra. O objetivo: atender a todos os requisitos pelo menor custo.
-      </p>
-      <nav aria-label="Começar">
+      <h2 id="home-title">{t('home.title')}</h2>
+      <p>{t('home.lead')}</p>
+      <nav aria-label={t('home.start')}>
         <a className="button primary" href={hrefOf({ screen: 'problems' })}>
-          Praticar um problema
+          {t('home.practice')}
         </a>
         <a className="button" href={hrefOf({ screen: 'free' })}>
-          Canvas livre
+          {t('home.free')}
         </a>
       </nav>
     </section>
@@ -32,11 +32,12 @@ function Home() {
 }
 
 function NotFound() {
+  const t = useT();
   return (
     <section className="home">
-      <h2>Tela não encontrada</h2>
+      <h2>{t('notFound.title')}</h2>
       <a className="button" href={hrefOf({ screen: 'home' })}>
-        Voltar ao início
+        {t('notFound.back')}
       </a>
     </section>
   );
@@ -67,7 +68,10 @@ export function App() {
         <h1>
           <a href={hrefOf({ screen: 'home' })}>ARCHSIM</a>
         </h1>
-        <ThemeToggle />
+        <div className="app-header-tools">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
       </header>
       <main>
         <Screen route={route} />

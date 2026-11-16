@@ -12,6 +12,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLangStore } from '../i18n/store';
 import { inlineBackend } from '../sim/sim-client';
 import { setBackendFactory, useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
@@ -42,6 +43,7 @@ function summary(over: Partial<ProblemSummary> = {}): ProblemSummary {
   return {
     id: 'url-shortener',
     title: 'Encurtador de URL',
+    titleEn: 'URL shortener',
     difficulty: 'facil',
     record: null,
     stars: null,
@@ -149,7 +151,7 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
   function routes(solutionAvailable: boolean, statement = loaded.problem.statement): Route {
     return (url, init) => {
       if (url.endsWith('/problems/url-shortener'))
-        return { ...toPublic(loaded.problem), statement };
+        return { ...toPublic(loaded.problem, loaded.en), statement };
       if (url.endsWith('/problems'))
         return [summary({ solutionAvailable, attempts: solutionAvailable ? 1 : 0 })];
       if (url.endsWith('/finalize') && init?.method === 'POST') return finalizeAnswer();
@@ -170,6 +172,24 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     expect(useDiagram.getState().diagram.load).toEqual(loaded.problem.load);
   });
 
+  it('shows the problem in English, switching in place, with the load and requirements labelled in English (language-switch FR-2, FR-7)', async () => {
+    mockFetch(routes(false));
+    render(<ProblemView problemId="url-shortener" />);
+    await screen.findByText('Encurtador de URL');
+    const nodesBefore = useDiagram.getState().diagram;
+    act(() => {
+      useLangStore.getState().setLang('en');
+    });
+    expect(await screen.findAllByText(loaded.en.title)).not.toHaveLength(0);
+    expect(screen.getByText(loaded.en.functional[0] ?? '')).toBeTruthy();
+    expect(screen.getByText('Load set by the problem.')).toBeTruthy();
+    const firstClass = loaded.problem.load.classes[0];
+    expect(screen.getByText(loaded.en.classes[firstClass?.name ?? ''] ?? '')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Encurtador de URL');
+    // the switch changes no node, edge or load of the diagram
+    expect(useDiagram.getState().diagram).toEqual(nodesBefore);
+  });
+
   it('renders a statement with <script> as text, never as an element', async () => {
     mockFetch(
       routes(
@@ -187,7 +207,7 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     const base = routes(false);
     mockFetch((url, init) =>
       url.endsWith('/problems/url-shortener')
-        ? { ...toPublic(loaded.problem), title }
+        ? { ...toPublic(loaded.problem, loaded.en), title }
         : base(url, init),
     );
     useLayout.setState({ collapsed: { ...EXPANDED, top: true }, before: null });
@@ -235,6 +255,43 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     expect(await screen.findByRole('button', { name: 'Ver uma solução' })).toBeTruthy();
   });
 
+  it('fetches the solution again in English, and a late answer never reopens a closed solution', async () => {
+    const user = userEvent.setup();
+    const base = routes(true);
+    const held: (() => void)[] = [];
+    const fn = vi.fn((url: string, init?: RequestInit) => {
+      const respond = () =>
+        new Response(JSON.stringify(base(url.split('?')[0] ?? url, init) ?? {}), { status: 200 });
+      // English references wait until the test lets them through
+      if (url.includes('/reference/') && url.endsWith('?lang=en'))
+        return new Promise<Response>((resolve) => {
+          held.push(() => {
+            resolve(respond());
+          });
+        });
+      return Promise.resolve(respond());
+    });
+    vi.stubGlobal('fetch', fn);
+    render(<ProblemView problemId="url-shortener" />);
+    await user.click(await screen.findByRole('button', { name: 'Ver uma solução' }));
+    await screen.findByRole('dialog', { name: /Uma solução/ });
+    act(() => {
+      useLangStore.getState().setLang('en');
+    });
+    await waitFor(() => {
+      expect(fn.mock.calls.some(([u]) => u.endsWith('/reference/url-shortener?lang=en'))).toBe(
+        true,
+      );
+    });
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog', { name: /A solution/ })).toBeNull();
+    await act(async () => {
+      for (const release of held) release();
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole('dialog', { name: /solution/i })).toBeNull();
+  });
+
   it('says why the session could not be saved', async () => {
     const user = userEvent.setup();
     mockFetch((url, init) =>
@@ -251,7 +308,7 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
 
 describe('double click asks for properties (mentor-edits FR-14)', () => {
   const routesFor: Route = (url) => {
-    if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem);
+    if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem, loaded.en);
     if (url.endsWith('/problems')) return [summary()];
     return undefined;
   };
@@ -341,6 +398,29 @@ describe('ResultScreen (FR-58)', () => {
     for (const label of referenceLabels) expect(document.body.textContent).not.toContain(label);
   });
 
+  it('shows the result screen in English (language-switch FR-5, FR-10)', () => {
+    act(() => {
+      useLangStore.getState().setLang('en');
+    });
+    const answer = finalizeAnswer();
+    render(<ResultScreen result={answer} onClose={vi.fn()} onSolution={vi.fn()} />);
+    expect(screen.getByRole('heading', { name: 'Result' })).toBeTruthy();
+    expect(screen.getByLabelText(`Score ${answer.score.total} of 100`)).toBeTruthy();
+    expect(screen.getByLabelText('3 of 3 stars')).toBeTruthy();
+    expect(screen.getByText('new best')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Keep adjusting' })).toBeTruthy();
+    expect(screen.getByText(/Your cost vs\. reference/)).toBeTruthy();
+    const ui = document.body.textContent;
+    for (const pt of [
+      'Resultado',
+      'novo recorde',
+      'Continuar ajustando',
+      'Seu custo',
+      'Requisitos',
+    ])
+      expect(ui).not.toContain(pt);
+  });
+
   it('marks an attempt made after seeing the solution', () => {
     const answer = finalizeAnswer({ isRecord: false });
     answer.score.solutionSeen = true;
@@ -376,7 +456,7 @@ describe('study mode (study-mode FR-1, FR-9)', () => {
     const calls: string[] = [];
     mockFetch((url, init) => {
       calls.push(url);
-      if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem);
+      if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem, loaded.en);
       if (url.endsWith('/study-score') && init?.method === 'POST')
         return finalizeAnswer({ isRecord: false });
       return undefined;

@@ -3,7 +3,7 @@ import { neutralIds, summarize } from '@archsim/cli/output';
 import { scoreAttempt, withProblemLoad, type MentorMessage } from '@archsim/problems';
 import type { LoadedProblem } from '@archsim/problems/load';
 import { simulateSteady, type Diagram } from '@archsim/sim-engine';
-import { MENTOR_PROMPT } from './prompt';
+import { mentorPrompt } from './prompt';
 
 /** Tokens of history the mentor sees at most; older messages are left out, visibly (NFR-4). */
 export const HISTORY_BUDGET_TOKENS = 60_000;
@@ -73,6 +73,7 @@ function engineView(loaded: LoadedProblem, diagram: Diagram, catalog: Catalog, s
     reference: loaded.reference,
     diagram: d,
     catalog,
+    en: loaded.en,
   });
   return {
     ...summarize({
@@ -95,21 +96,44 @@ function engineView(loaded: LoadedProblem, diagram: Diagram, catalog: Catalog, s
  * The system prompt: the role, the problem and its reference solution. It only
  * changes with the problem, so the provider can cache it (study-mode FR-4, FR-11).
  */
-export function systemPrompt(loaded: LoadedProblem, catalog: Catalog): string {
+export function systemPrompt(
+  loaded: LoadedProblem,
+  catalog: Catalog,
+  lang: 'pt' | 'en' = 'pt',
+): string {
   const p = loaded.problem;
-  const brief = {
-    id: p.id,
-    title: p.title,
-    difficulty: p.difficulty,
-    statement: p.statement,
-    functional: p.functional,
-    quantitative: p.quantitative,
-    load: p.load,
-    qualitative: p.qualitative,
-  };
+  const en = loaded.en;
+  // In English, the texts the mentor may quote come in English too (language-switch FR-9).
+  const brief =
+    lang === 'en'
+      ? {
+          id: p.id,
+          title: en.title,
+          difficulty: p.difficulty,
+          statement: en.statement,
+          functional: en.functional,
+          quantitative: p.quantitative.map((r) => ({
+            ...r,
+            label: en.requirements[r.id] ?? r.label,
+          })),
+          load: {
+            classes: p.load.classes.map((c) => ({ ...c, label: en.classes[c.name] ?? c.label })),
+          },
+          qualitative: en.qualitative,
+        }
+      : {
+          id: p.id,
+          title: p.title,
+          difficulty: p.difficulty,
+          statement: p.statement,
+          functional: p.functional,
+          quantitative: p.quantitative,
+          load: p.load,
+          qualitative: p.qualitative,
+        };
   const reference = engineView(loaded, loaded.reference, catalog, false);
   return [
-    MENTOR_PROMPT,
+    mentorPrompt(lang),
     `<enunciado>\n${JSON.stringify(brief, null, 2)}\n</enunciado>`,
     `<referencia>\nA solução de referência do problema, simulada com a carga dele:\n${JSON.stringify(reference)}\n</referencia>`,
     `<catalogo>\nOs serviços que existem no simulador, com os tipos e os parâmetros editáveis:\n${JSON.stringify(catalogDigest(catalog))}\n</catalogo>`,

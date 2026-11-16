@@ -1,5 +1,7 @@
 import { evaluate, type Requirement } from '@archsim/sim-engine';
 import { formatUsd } from '../format';
+import { useRequirementLabel } from '../i18n/problem-text';
+import { useT } from '../i18n/t';
 import { useSim } from '../sim/sim-store';
 import { requirementLine } from './format-req';
 
@@ -15,15 +17,18 @@ export function EvaluationPanel({
   busy: boolean;
   error: string | null;
 }) {
+  const t = useT();
+  const label = useRequirementLabel();
   const result = useSim((s) => s.result);
   const rows = result ? evaluate(result, requirements) : [];
   const met = rows.filter((r) => r.pass).length;
   return (
-    <section className="panel evaluation" aria-label="Avaliação">
+    <section className="panel evaluation" aria-label={t('eval.label')}>
       <header>
-        <h2>Requisitos</h2>
+        <h2>{t('eval.title')}</h2>
         <p className="muted">
-          {result ? `${met} de ${rows.length} atendidos` : 'Simulando…'} · o score sai ao finalizar
+          {result ? t('eval.met', { met, total: rows.length }) : t('eval.simulating')} ·{' '}
+          {t('eval.scoreLater')}
         </p>
       </header>
       <ul className="requirements">
@@ -35,25 +40,28 @@ export function EvaluationPanel({
                 {r.pass ? '✓' : '✗'}
               </span>
               <span className="req-label">
-                {r.label}
-                <span className="sr-only">{r.pass ? ' — atendido' : ' — não atendido'}</span>
+                {label(r)}
+                <span className="sr-only">{t(r.pass ? 'eval.pass' : 'eval.fail')}</span>
               </span>
               <span className="num req-values">
-                {line.measured} <span className="muted">(alvo {line.target})</span>
+                {line.measured}{' '}
+                <span className="muted">({t('eval.target', { target: line.target })})</span>
               </span>
             </li>
           );
         })}
       </ul>
       {result && (
-        <p className="num cost-now">Custo atual: {formatUsd(result.global.costMonth)}/mês</p>
+        <p className="num cost-now">
+          {t('eval.costNow', { amount: formatUsd(result.global.costMonth) })}
+        </p>
       )}
       <button type="button" className="button primary" disabled={busy} onClick={onFinalize}>
-        {busy ? 'Pontuando…' : 'Finalizar e pontuar'}
+        {t(busy ? 'eval.scoring' : 'eval.finalize')}
       </button>
       {error && (
         <p className="field-error" role="alert">
-          Não consegui gravar a sessão: {error}
+          {t('eval.saveError', { error })}
         </p>
       )}
     </section>

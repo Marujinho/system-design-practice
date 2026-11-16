@@ -1,3 +1,5 @@
+import { catalogNow } from '../i18n/catalog';
+import { tr } from '../i18n/t';
 import { catalog, findService, findVariant } from '@archsim/catalog';
 import {
   LIMITS,
@@ -90,11 +92,11 @@ export const useDiagram = create<DiagramState>()((set, get) => {
       const variant = service?.variants[0];
       if (!service || !variant) return null;
       if (diagram.nodes.length >= LIMITS.maxNodes) {
-        set({ notice: `O diagrama já tem o máximo de ${LIMITS.maxNodes} nós.` });
+        set({ notice: tr('notice.maxNodes', { n: LIMITS.maxNodes }) });
         return null;
       }
       if (service.kind === 'entry' && diagram.nodes.some((n) => n.serviceId === serviceId)) {
-        set({ notice: 'Só pode haver um nó de Usuários.' });
+        set({ notice: tr('notice.oneUsers') });
         return null;
       }
       const id = service.kind === 'entry' ? 'users' : newId(service.id.split('.')[1] ?? 'node');
@@ -104,7 +106,7 @@ export const useDiagram = create<DiagramState>()((set, get) => {
           serviceId,
           variantId: variant.id,
           position,
-          label: service.label,
+          label: findService(catalogNow(), serviceId)?.label ?? service.label,
           props: {},
           overrides: {},
         });
@@ -159,7 +161,7 @@ export const useDiagram = create<DiagramState>()((set, get) => {
       const { diagram } = get();
       if (source === target) return null;
       if (diagram.edges.length >= LIMITS.maxEdges) {
-        set({ notice: `O diagrama já tem o máximo de ${LIMITS.maxEdges} conexões.` });
+        set({ notice: tr('notice.maxEdges', { n: LIMITS.maxEdges }) });
         return null;
       }
       if (diagram.edges.some((e) => e.source === source && e.target === target)) return null;

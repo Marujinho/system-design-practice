@@ -7,6 +7,7 @@ import {
   type EdgeProps,
 } from '@xyflow/react';
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '../i18n/t';
 import { useDiagram } from '../store/diagram-store';
 
 export interface FlowEdgeData extends Record<string, unknown> {
@@ -31,6 +32,7 @@ export const REMOVE_PX = 16;
  * Hovered or selected, it offers a button that removes just this edge (edge-hover FR-1, FR-2).
  */
 export function FlowEdge(props: EdgeProps<FlowFlowEdge>) {
+  const t = useT();
   const [path, labelX, labelY] = getBezierPath(props);
   const warning = props.data?.warning ?? null;
   const caption = props.data?.caption ?? '';
@@ -97,8 +99,8 @@ export function FlowEdge(props: EdgeProps<FlowFlowEdge>) {
                   fontSize: 12 / zoom,
                   borderWidth: 1 / zoom,
                 }}
-                aria-label="Remover conexão"
-                title="Remover conexão"
+                aria-label={t('edge.remove')}
+                title={t('edge.remove')}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                 }}

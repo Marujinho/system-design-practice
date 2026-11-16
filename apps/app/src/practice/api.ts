@@ -1,28 +1,39 @@
+import { currentLang } from '../i18n/store';
+import { tr } from '../i18n/t';
 import { FinalizeResponse, History, ProblemSummary, PublicProblem } from '@archsim/problems';
 import { Diagram } from '@archsim/sim-engine';
 import { z } from 'zod';
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  /** `message` is in the active language; `pt` is the server's Portuguese reason, for matching. */
+  constructor(
+    message: string,
+    readonly pt: string = message,
+  ) {
+    super(message);
+  }
+}
+
+/** The server's refusal in the active language: `errorEn` in English when it sent one. */
+export function apiErrorOf(body: unknown, status: number): ApiError {
+  if (body === null || typeof body !== 'object' || !('error' in body))
+    return new ApiError(tr('api.status', { status }));
+  const pt = String(body.error);
+  const en = 'errorEn' in body && typeof body.errorEn === 'string' ? body.errorEn : null;
+  return new ApiError(currentLang() === 'en' && en !== null ? en : pt, pt);
+}
 
 async function call<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`/__archsim/${path}`, { credentials: 'same-origin', ...init });
   } catch {
-    throw new ApiError(
-      'o servidor local não respondeu (o app está rodando com pnpm dev ou pnpm preview?)',
-    );
+    throw new ApiError(tr('api.noServer'));
   }
   const body: unknown = await res.json().catch(() => null);
-  if (!res.ok) {
-    const reason =
-      body !== null && typeof body === 'object' && 'error' in body
-        ? String(body.error)
-        : `erro ${res.status}`;
-    throw new ApiError(reason);
-  }
+  if (!res.ok) throw apiErrorOf(body, res.status);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) throw new ApiError('resposta inesperada do servidor local');
+  if (!parsed.success) throw new ApiError(tr('api.unexpected'));
   return parsed.data;
 }
 
@@ -43,5 +54,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ problemId, diagram }),
     }),
-  reference: (id: string) => call(Diagram, `reference/${encodeURIComponent(id)}`),
+  /** The reference; with `en`, its node labels in English (language-switch FR-7). */
+  reference: (id: string, lang: 'pt' | 'en' = 'pt') =>
+    call(Diagram, `reference/${encodeURIComponent(id)}${lang === 'en' ? '?lang=en' : ''}`),
 };

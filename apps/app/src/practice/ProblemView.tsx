@@ -2,6 +2,9 @@ import type { FinalizeResponse, PublicProblem } from '@archsim/problems';
 import type { Diagram } from '@archsim/sim-engine';
 import { useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
+import { useProblemText, useShownProblem } from '../i18n/problem-text';
+import { useLang } from '../i18n/store';
+import { tr, useT } from '../i18n/t';
 import { LoadPanel } from '../panels/LoadPanel';
 import { PropertiesPanel } from '../panels/PropertiesPanel';
 import { hrefOf } from '../routes';
@@ -10,7 +13,7 @@ import { useDiagram } from '../store/diagram-store';
 import { useLayout } from '../workspace/layout-store';
 import { Workspace } from '../workspace/Workspace';
 import { api, ApiError } from './api';
-import { DIFFICULTY } from './format-req';
+import { difficultyLabel } from './format-req';
 import { EvaluationPanel } from './EvaluationPanel';
 import { ResultScreen } from './ResultScreen';
 import { SolutionView } from './SolutionView';
@@ -20,14 +23,17 @@ const ALLOWED = ['p', 'strong', 'em', 'code', 'ul', 'ol', 'li', 'br'];
 
 export function Brief({ problem }: { problem: PublicProblem }) {
   const [open, setOpen] = useState(true);
+  const t = useT();
+  const lang = useLang();
+  const shown = useShownProblem(problem);
   return (
-    <section className="brief" aria-label="Enunciado">
+    <section className="brief" aria-label={t('brief.label')}>
       <div className="brief-head">
         <a href={hrefOf({ screen: 'problems' })} className="muted">
-          Problemas
+          {t('list.title')}
         </a>
-        <h2>{problem.title}</h2>
-        <span className="muted">{DIFFICULTY[problem.difficulty]}</span>
+        <h2>{shown.title}</h2>
+        <span className="muted">{difficultyLabel(problem.difficulty, lang)}</span>
         <button
           type="button"
           className="link-button"
@@ -36,26 +42,24 @@ export function Brief({ problem }: { problem: PublicProblem }) {
             setOpen(!open);
           }}
         >
-          {open ? 'esconder enunciado' : 'mostrar enunciado'}
+          {t(open ? 'brief.hide' : 'brief.show')}
         </button>
       </div>
       {open && (
         <div className="brief-body">
           <div className="statement">
             <Markdown allowedElements={ALLOWED} skipHtml unwrapDisallowed>
-              {problem.statement}
+              {shown.statement}
             </Markdown>
           </div>
           <div>
-            <h3>Funcionalidades</h3>
+            <h3>{t('brief.functional')}</h3>
             <ul>
-              {problem.functional.map((f) => (
+              {shown.functional.map((f) => (
                 <li key={f}>{f}</li>
               ))}
             </ul>
-            <p className="note">
-              Regra do jogo: atender a todos os requisitos pelo menor custo mensal.
-            </p>
+            <p className="note">{t('brief.rule')}</p>
           </div>
         </div>
       )}
@@ -63,7 +67,24 @@ export function Brief({ problem }: { problem: PublicProblem }) {
   );
 }
 
+/** The problem's title in the active language, as text (A05). */
+export function ProblemTitle({ problem }: { problem: PublicProblem }) {
+  return <strong>{useShownProblem(problem).title}</strong>;
+}
+
+/** Hands the problem's English texts to the panels while the screen is open. */
+export function useProblemTextFor(problem: PublicProblem | null): void {
+  useEffect(() => {
+    useProblemText.getState().set(problem ? problem.en : null);
+    return () => {
+      useProblemText.getState().set(null);
+    };
+  }, [problem]);
+}
+
 export function ProblemView({ problemId }: { problemId: string }) {
+  const t = useT();
+  const lang = useLang();
   const [problem, setProblem] = useState<PublicProblem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'req' | 'props'>('req');
@@ -79,13 +100,40 @@ export function ProblemView({ problemId }: { problemId: string }) {
   const [result, setResult] = useState<FinalizeResponse | null>(null);
   const [canSeeSolution, setCanSeeSolution] = useState(false);
   const [solution, setSolution] = useState<Diagram | null>(null);
+  // The language the open solution was fetched in: a switch fetches its labels again.
+  const solutionLang = useRef(lang);
+  // Only the latest request may show its answer: a close or a newer fetch invalidates the rest.
+  const solutionRequest = useRef(0);
+  const fetchSolution = (id: string, l: typeof lang, onError?: (e: unknown) => void) => {
+    const mine = ++solutionRequest.current;
+    solutionLang.current = l;
+    api.reference(id, l).then(
+      (d) => {
+        if (mine !== solutionRequest.current) return;
+        setResult(null);
+        setSolution(d);
+      },
+      (e: unknown) => {
+        if (mine === solutionRequest.current) onError?.(e);
+      },
+    );
+  };
+  const closeSolution = () => {
+    solutionRequest.current += 1;
+    setSolution(null);
+  };
+  useProblemTextFor(problem);
+  useEffect(() => {
+    if (solution === null || solutionLang.current === lang) return;
+    fetchSolution(problemId, lang);
+  }, [lang, solution, problemId]);
 
   useEffect(() => {
     setProblem(null);
     setResult(null);
     setSolution(null);
     api.problem(problemId).then(setProblem, (e: unknown) => {
-      setError(e instanceof ApiError ? e.message : 'não consegui carregar o problema');
+      setError(e instanceof ApiError ? e.message : tr('problem.loadError'));
     });
     api.problems().then(
       (list) => {
@@ -97,8 +145,8 @@ export function ProblemView({ problemId }: { problemId: string }) {
     );
   }, [problemId]);
 
-  if (error) return <p className="page field-error">Não consegui carregar o problema: {error}</p>;
-  if (!problem) return <p className="page muted">Carregando problema…</p>;
+  if (error) return <p className="page field-error">{t('problem.failed', { error })}</p>;
+  if (!problem) return <p className="page muted">{t('problem.loading')}</p>;
 
   const finalize = () => {
     setBusy(true);
@@ -110,22 +158,16 @@ export function ProblemView({ problemId }: { problemId: string }) {
         setBusy(false);
       },
       (e: unknown) => {
-        setSaveError(e instanceof ApiError ? e.message : 'erro desconhecido');
+        setSaveError(e instanceof ApiError ? e.message : tr('problem.unknownError'));
         setBusy(false);
       },
     );
   };
 
   const openSolution = () => {
-    api.reference(problem.id).then(
-      (d) => {
-        setResult(null);
-        setSolution(d);
-      },
-      (e: unknown) => {
-        setSaveError(e instanceof ApiError ? e.message : 'não consegui abrir a solução');
-      },
-    );
+    fetchSolution(problem.id, lang, (e) => {
+      setSaveError(e instanceof ApiError ? e.message : tr('problem.solutionError'));
+    });
   };
 
   return (
@@ -133,7 +175,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
       <Workspace
         mode={{ kind: 'problem', problemId: problem.id }}
         initial={() => problemStart(problem.load)}
-        topSummary={<strong>{problem.title}</strong>}
+        topSummary={<ProblemTitle problem={problem} />}
         top={
           <>
             <Brief problem={problem} />
@@ -142,7 +184,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
         }
         side={
           <>
-            <div className="tabs" role="tablist" aria-label="Painel">
+            <div className="tabs" role="tablist" aria-label={t('problem.panel')}>
               <button
                 type="button"
                 role="tab"
@@ -151,7 +193,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
                   setTab('req');
                 }}
               >
-                Requisitos
+                {t('problem.requirements')}
               </button>
               <button
                 type="button"
@@ -161,7 +203,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
                   setTab('props');
                 }}
               >
-                Propriedades
+                {t('problem.properties')}
               </button>
             </div>
             {tab === 'req' ? (
@@ -175,7 +217,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
                 {canSeeSolution && (
                   <div className="panel">
                     <button type="button" className="button" onClick={openSolution}>
-                      Ver uma solução
+                      {t('problem.seeSolution')}
                     </button>
                   </div>
                 )}
@@ -195,14 +237,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
           onSolution={openSolution}
         />
       )}
-      {solution && (
-        <SolutionView
-          reference={solution}
-          onClose={() => {
-            setSolution(null);
-          }}
-        />
-      )}
+      {solution && <SolutionView reference={solution} onClose={closeSolution} />}
     </>
   );
 }

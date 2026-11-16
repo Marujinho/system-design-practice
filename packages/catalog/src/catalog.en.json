@@ -1,0 +1,823 @@
+{
+  "services": {
+    "core.users": {
+      "label": "Users / Internet",
+      "description": "Where the load comes from: concurrent users × requests, or req/s directly.",
+      "params": {},
+      "prices": {},
+      "limits": {},
+      "variants": {
+        "default": {
+          "label": "Users"
+        }
+      }
+    },
+    "aws.route53": {
+      "label": "Route 53",
+      "description": "Managed DNS. Only a fraction of requests trigger a query, because of DNS caching.",
+      "params": {},
+      "prices": {
+        "hostedZone": "Hosted zone",
+        "queries": "Queries"
+      },
+      "limits": {
+        "queryShare": {
+          "label": "Fraction of requests that become DNS queries (TTL cache)",
+          "unit": "fraction"
+        }
+      },
+      "variants": {
+        "hosted-zone": {
+          "label": "Hosted zone"
+        }
+      }
+    },
+    "aws.cloudfront": {
+      "label": "CloudFront",
+      "description": "CDN. The hit ratio sets how much reaches the origin; misses are passed on.",
+      "params": {
+        "hitRatio": {
+          "label": "Hit ratio",
+          "unit": "fraction"
+        }
+      },
+      "prices": {
+        "dataTransfer": "Data transfer out to the internet (US, volume tiers)",
+        "httpsRequests": "HTTPS requests (US)",
+        "originTransfer": "Data transfer out to origin (uploads)"
+      },
+      "limits": {},
+      "variants": {
+        "distribution": {
+          "label": "Distribution"
+        }
+      }
+    },
+    "aws.alb": {
+      "label": "ALB",
+      "description": "Application Load Balancer. Billed per hour and per LCU.",
+      "params": {},
+      "prices": {
+        "hourly": "Per hour",
+        "lcu": "Per LCU-hour"
+      },
+      "limits": {
+        "newConnectionsPerLcu": {
+          "label": "New connections/s per LCU",
+          "unit": "connections/s"
+        },
+        "ruleEvaluationsPerLcu": {
+          "label": "Rule evaluations/s per LCU",
+          "unit": "evaluations/s"
+        },
+        "gbPerHourPerLcu": {
+          "label": "Processed GB per hour per LCU",
+          "unit": "GB/h"
+        },
+        "newConnectionShare": {
+          "label": "Fraction of requests that open a new connection (keep-alive)",
+          "unit": "fraction"
+        }
+      },
+      "variants": {
+        "alb": {
+          "label": "ALB"
+        }
+      }
+    },
+    "aws.ec2": {
+      "label": "EC2",
+      "description": "Virtual machines. req/s per instance is an assumption: AWS does not publish that number.",
+      "params": {
+        "units": {
+          "label": "Replicas"
+        }
+      },
+      "prices": {
+        "hourly": "Per hour"
+      },
+      "limits": {},
+      "variants": {
+        "t3.nano": {
+          "label": "t3.nano (2 vCPU, 0.5 GiB, 5% baseline)"
+        },
+        "t3.micro": {
+          "label": "t3.micro (2 vCPU, 1 GiB, 10% baseline)"
+        },
+        "t3.small": {
+          "label": "t3.small (2 vCPU, 2 GiB, 20% baseline)"
+        },
+        "t3.medium": {
+          "label": "t3.medium (2 vCPU, 4 GiB, 20% baseline)"
+        },
+        "m5.large": {
+          "label": "m5.large (2 vCPU, 8 GiB, no burst)"
+        },
+        "t3.large": {
+          "label": "t3.large (2 vCPU, 8 GiB, 30% baseline)"
+        },
+        "t3.xlarge": {
+          "label": "t3.xlarge (4 vCPU, 16 GiB, 40% baseline)"
+        },
+        "t3.2xlarge": {
+          "label": "t3.2xlarge (8 vCPU, 32 GiB, 40% baseline)"
+        },
+        "m5.xlarge": {
+          "label": "m5.xlarge (4 vCPU, 16 GiB)"
+        },
+        "m5.2xlarge": {
+          "label": "m5.2xlarge (8 vCPU, 32 GiB)"
+        },
+        "m5.4xlarge": {
+          "label": "m5.4xlarge (16 vCPU, 64 GiB)"
+        },
+        "c5.large": {
+          "label": "c5.large (2 vCPU, 4 GiB)"
+        },
+        "c5.xlarge": {
+          "label": "c5.xlarge (4 vCPU, 8 GiB)"
+        },
+        "c5.2xlarge": {
+          "label": "c5.2xlarge (8 vCPU, 16 GiB)"
+        },
+        "c5.4xlarge": {
+          "label": "c5.4xlarge (16 vCPU, 32 GiB)"
+        },
+        "r5.large": {
+          "label": "r5.large (2 vCPU, 16 GiB)"
+        },
+        "r5.xlarge": {
+          "label": "r5.xlarge (4 vCPU, 32 GiB)"
+        },
+        "r5.2xlarge": {
+          "label": "r5.2xlarge (8 vCPU, 64 GiB)"
+        },
+        "r5.4xlarge": {
+          "label": "r5.4xlarge (16 vCPU, 128 GiB)"
+        }
+      }
+    },
+    "aws.lambda": {
+      "label": "Lambda",
+      "description": "Functions. Concurrency = req/s × duration; above the quota, the excess gets a 429.",
+      "params": {
+        "memoryMB": {
+          "label": "Memory",
+          "unit": "MB"
+        },
+        "durationMs": {
+          "label": "Average duration",
+          "unit": "ms"
+        }
+      },
+      "prices": {
+        "requests": "Requests",
+        "compute": "Compute (x86)"
+      },
+      "limits": {
+        "maxPayloadMB": {
+          "label": "Max synchronous payload",
+          "unit": "MB"
+        },
+        "maxDurationS": {
+          "label": "Max duration",
+          "unit": "s"
+        }
+      },
+      "variants": {
+        "x86": {
+          "label": "x86_64"
+        }
+      }
+    },
+    "aws.rds-postgres": {
+      "label": "RDS PostgreSQL",
+      "description": "Relational database. Writes go to the primary; reads are split across the read replicas, if any.",
+      "params": {
+        "readReplicas": {
+          "label": "Read replicas"
+        },
+        "storageGb": {
+          "label": "Storage (GB)",
+          "unit": "GB"
+        }
+      },
+      "prices": {
+        "hourly": "Per hour",
+        "storage": "gp3 storage (GB-month, per instance)"
+      },
+      "limits": {},
+      "variants": {
+        "db.t4g.micro": {
+          "label": "db.t4g.micro (2 vCPU, 1 GiB)"
+        },
+        "db.t4g.small": {
+          "label": "db.t4g.small (2 vCPU, 2 GiB)"
+        },
+        "db.m7g.large": {
+          "label": "db.m7g.large (2 vCPU, 8 GiB)"
+        },
+        "db.t4g.medium": {
+          "label": "db.t4g.medium (2 vCPU, 4 GiB)"
+        },
+        "db.t4g.large": {
+          "label": "db.t4g.large (2 vCPU, 8 GiB)"
+        },
+        "db.m7g.xlarge": {
+          "label": "db.m7g.xlarge (4 vCPU, 16 GiB)"
+        },
+        "db.m7g.2xlarge": {
+          "label": "db.m7g.2xlarge (8 vCPU, 32 GiB)"
+        },
+        "db.m7g.4xlarge": {
+          "label": "db.m7g.4xlarge (16 vCPU, 64 GiB)"
+        },
+        "db.r7g.large": {
+          "label": "db.r7g.large (2 vCPU, 16 GiB)"
+        },
+        "db.r7g.xlarge": {
+          "label": "db.r7g.xlarge (4 vCPU, 32 GiB)"
+        },
+        "db.r7g.2xlarge": {
+          "label": "db.r7g.2xlarge (8 vCPU, 64 GiB)"
+        },
+        "db.r7g.4xlarge": {
+          "label": "db.r7g.4xlarge (16 vCPU, 128 GiB)"
+        }
+      }
+    },
+    "aws.elasticache-valkey": {
+      "label": "ElastiCache (Valkey)",
+      "description": "In-memory cache. Inline, only misses reach the database.",
+      "params": {
+        "units": {
+          "label": "Nodes"
+        },
+        "hitRatio": {
+          "label": "Hit ratio",
+          "unit": "fraction"
+        }
+      },
+      "prices": {
+        "hourly": "Per hour"
+      },
+      "limits": {},
+      "variants": {
+        "cache.t4g.micro": {
+          "label": "cache.t4g.micro (0.5 GiB)"
+        },
+        "cache.t4g.small": {
+          "label": "cache.t4g.small (2 vCPU, 1.37 GiB)"
+        },
+        "cache.t4g.medium": {
+          "label": "cache.t4g.medium (2 vCPU, 3.09 GiB)"
+        },
+        "cache.m7g.large": {
+          "label": "cache.m7g.large (2 vCPU, 6.38 GiB)"
+        },
+        "cache.m7g.xlarge": {
+          "label": "cache.m7g.xlarge (4 vCPU, 12.93 GiB)"
+        },
+        "cache.m7g.2xlarge": {
+          "label": "cache.m7g.2xlarge (8 vCPU, 26.04 GiB)"
+        },
+        "cache.r7g.large": {
+          "label": "cache.r7g.large (2 vCPU, 13.07 GiB)"
+        },
+        "cache.r7g.xlarge": {
+          "label": "cache.r7g.xlarge (4 vCPU, 26.32 GiB)"
+        },
+        "cache.r7g.2xlarge": {
+          "label": "cache.r7g.2xlarge (8 vCPU, 52.82 GiB)"
+        }
+      }
+    },
+    "aws.api-gateway": {
+      "label": "API Gateway",
+      "description": "Managed APIs. Quota of 10,000 req/s + a 5,000 burst per account and Region, across all APIs.",
+      "params": {
+        "connections": {
+          "label": "Concurrent connections (WebSocket)"
+        }
+      },
+      "prices": {
+        "requests": "Requests (per million, volume tiers)",
+        "messages": "WebSocket messages (32 KB increments)",
+        "connectionMinutes": "Connection minutes (per million)"
+      },
+      "limits": {
+        "accountRps": {
+          "label": "Throttle per account/Region (REST, HTTP and WebSocket)",
+          "unit": "req/s"
+        },
+        "burst": {
+          "label": "Token bucket burst",
+          "unit": "req"
+        },
+        "timeoutS": {
+          "label": "Integration timeout",
+          "unit": "s"
+        },
+        "newConnectionsPerSecond": {
+          "label": "New connections per second (published quota not found)",
+          "unit": "connections/s"
+        }
+      },
+      "variants": {
+        "rest": {
+          "label": "REST API"
+        },
+        "http": {
+          "label": "HTTP API"
+        },
+        "websocket": {
+          "label": "WebSocket API"
+        }
+      }
+    },
+    "aws.nlb": {
+      "label": "NLB",
+      "description": "Network Load Balancer (layer 4). Billed per hour and per NLCU.",
+      "params": {},
+      "prices": {
+        "hourly": "Per hour",
+        "lcu": "Per NLCU-hour"
+      },
+      "limits": {
+        "newConnectionsPerLcu": {
+          "label": "New TCP connections/s per NLCU",
+          "unit": "connections/s"
+        },
+        "ruleEvaluationsPerLcu": {
+          "label": "NLB does not evaluate rules (inactive dimension)",
+          "unit": "evaluations/s"
+        },
+        "gbPerHourPerLcu": {
+          "label": "Processed GB per hour per NLCU",
+          "unit": "GB/h"
+        },
+        "newConnectionShare": {
+          "label": "Fraction of requests that open a new connection",
+          "unit": "fraction"
+        }
+      },
+      "variants": {
+        "nlb": {
+          "label": "NLB"
+        }
+      }
+    },
+    "aws.nat-gateway": {
+      "label": "NAT Gateway",
+      "description": "Internet egress for private subnets. Cost grows with traffic.",
+      "params": {
+        "units": {
+          "label": "Gateways"
+        }
+      },
+      "prices": {
+        "hourly": "Per hour",
+        "processed": "Per GB processed"
+      },
+      "limits": {},
+      "variants": {
+        "nat": {
+          "label": "NAT Gateway"
+        }
+      }
+    },
+    "aws.waf": {
+      "label": "WAF",
+      "description": "Web application firewall. Inspects every request and blocks the configured fraction.",
+      "params": {
+        "blockedShare": {
+          "label": "Blocked fraction",
+          "unit": "fraction"
+        },
+        "rules": {
+          "label": "Rules"
+        }
+      },
+      "prices": {
+        "webAcl": "Web ACL per month",
+        "rules": "Rule per month",
+        "requests": "Inspected requests"
+      },
+      "limits": {},
+      "variants": {
+        "web-acl": {
+          "label": "Web ACL"
+        }
+      }
+    },
+    "aws.fargate": {
+      "label": "Fargate (ECS)",
+      "description": "Serverless containers. Priced per vCPU-hour and GB-hour, summed per task here.",
+      "params": {
+        "units": {
+          "label": "Tasks"
+        }
+      },
+      "prices": {},
+      "limits": {},
+      "variants": {
+        "0.5vcpu-1gb": {
+          "label": "0.5 vCPU / 1 GB",
+          "prices": {
+            "hourly": "Per task-hour (0.5 × 0.04048 + 1 × 0.004445)"
+          }
+        },
+        "1vcpu-2gb": {
+          "label": "1 vCPU / 2 GB",
+          "prices": {
+            "hourly": "Per task-hour (1 × 0.04048 + 2 × 0.004445)"
+          }
+        },
+        "2vcpu-4gb": {
+          "label": "2 vCPU / 4 GB",
+          "prices": {
+            "hourly": "Per task-hour (2 × 0.04048 + 4 × 0.004445)"
+          }
+        },
+        "0.25vcpu-0.5gb": {
+          "label": "0.25 vCPU / 0.5 GB",
+          "prices": {
+            "hourly": "Per task-hour (0.25 × 0.04048 + 0.5 × 0.004445)"
+          }
+        },
+        "4vcpu-8gb": {
+          "label": "4 vCPU / 8 GB",
+          "prices": {
+            "hourly": "Per task-hour (4 × 0.04048 + 8 × 0.004445)"
+          }
+        },
+        "8vcpu-16gb": {
+          "label": "8 vCPU / 16 GB",
+          "prices": {
+            "hourly": "Per task-hour (8 × 0.04048 + 16 × 0.004445)"
+          }
+        },
+        "16vcpu-32gb": {
+          "label": "16 vCPU / 32 GB",
+          "prices": {
+            "hourly": "Per task-hour (16 × 0.04048 + 32 × 0.004445)"
+          }
+        }
+      }
+    },
+    "aws.eks": {
+      "label": "EKS",
+      "description": "Managed Kubernetes: cluster fee + EC2 nodes.",
+      "params": {
+        "units": {
+          "label": "Nodes"
+        }
+      },
+      "prices": {
+        "clusterFee": "Cluster fee per hour"
+      },
+      "limits": {},
+      "variants": {
+        "m5.large-nodes": {
+          "label": "m5.large nodes",
+          "prices": {
+            "hourly": "m5.large node per hour"
+          }
+        },
+        "t3.medium-nodes": {
+          "label": "t3.medium nodes (2 vCPU, 4 GiB)",
+          "prices": {
+            "hourly": "t3.medium node per hour"
+          }
+        },
+        "t3.large-nodes": {
+          "label": "t3.large nodes (2 vCPU, 8 GiB)",
+          "prices": {
+            "hourly": "t3.large node per hour"
+          }
+        },
+        "m5.xlarge-nodes": {
+          "label": "m5.xlarge nodes (4 vCPU, 16 GiB)",
+          "prices": {
+            "hourly": "m5.xlarge node per hour"
+          }
+        },
+        "m5.2xlarge-nodes": {
+          "label": "m5.2xlarge nodes (8 vCPU, 32 GiB)",
+          "prices": {
+            "hourly": "m5.2xlarge node per hour"
+          }
+        },
+        "c5.large-nodes": {
+          "label": "c5.large nodes (2 vCPU, 4 GiB)",
+          "prices": {
+            "hourly": "c5.large node per hour"
+          }
+        },
+        "c5.xlarge-nodes": {
+          "label": "c5.xlarge nodes (4 vCPU, 8 GiB)",
+          "prices": {
+            "hourly": "c5.xlarge node per hour"
+          }
+        },
+        "r5.large-nodes": {
+          "label": "r5.large nodes (2 vCPU, 16 GiB)",
+          "prices": {
+            "hourly": "r5.large node per hour"
+          }
+        },
+        "r5.xlarge-nodes": {
+          "label": "r5.xlarge nodes (4 vCPU, 32 GiB)",
+          "prices": {
+            "hourly": "r5.xlarge node per hour"
+          }
+        }
+      }
+    },
+    "aws.s3": {
+      "label": "S3",
+      "description": "Object storage. 3,500 PUT/s and 5,500 GET/s per prefix; above that, 503 SlowDown.",
+      "params": {
+        "prefixes": {
+          "label": "Prefixes"
+        },
+        "storageGb": {
+          "label": "Data stored (GB)",
+          "unit": "GB"
+        }
+      },
+      "prices": {
+        "getRequests": "GET (per million)",
+        "putRequests": "PUT (per million)",
+        "dataTransfer": "Data transfer out to the internet (volume tiers)",
+        "storage": "Standard storage (GB-month, tiered)"
+      },
+      "limits": {
+        "putPerPrefix": {
+          "label": "PUT/COPY/POST/DELETE per second per prefix",
+          "unit": "req/s"
+        },
+        "getPerPrefix": {
+          "label": "GET/HEAD per second per prefix",
+          "unit": "req/s"
+        }
+      },
+      "variants": {
+        "standard": {
+          "label": "S3 Standard"
+        }
+      }
+    },
+    "aws.dynamodb": {
+      "label": "DynamoDB",
+      "description": "Key-value store. Each partition handles 3,000 RCU and 1,000 WCU: a hot key becomes a bottleneck.",
+      "params": {
+        "wcu": {
+          "label": "Provisioned WCU"
+        },
+        "rcu": {
+          "label": "Provisioned RCU"
+        },
+        "hotKeyShare": {
+          "label": "Fraction of traffic on the hottest key",
+          "unit": "fraction"
+        }
+      },
+      "prices": {
+        "writeRequests": "Writes (per million units)",
+        "readRequests": "Reads (per million units)",
+        "wcuHours": "WCU-hour",
+        "rcuHours": "RCU-hour"
+      },
+      "limits": {
+        "partitionRcu": {
+          "label": "RCU per partition",
+          "unit": "RCU"
+        },
+        "partitionWcu": {
+          "label": "WCU per partition",
+          "unit": "WCU"
+        }
+      },
+      "variants": {
+        "on-demand": {
+          "label": "On-demand"
+        },
+        "provisioned": {
+          "label": "Provisioned"
+        }
+      }
+    },
+    "aws.aurora-postgres": {
+      "label": "Aurora PostgreSQL",
+      "description": "Relational, with up to 15 read replicas; writes go only to the writer.",
+      "params": {
+        "readReplicas": {
+          "label": "Read replicas"
+        },
+        "storageGb": {
+          "label": "Data stored (GB)",
+          "unit": "GB"
+        }
+      },
+      "prices": {
+        "hourly": "Per hour (per instance)",
+        "clusterStorage": "Aurora Standard storage (GB-month, cluster volume)",
+        "io": "I/O requests (per million)"
+      },
+      "limits": {},
+      "variants": {
+        "db.r5.large": {
+          "label": "db.r5.large (2 vCPU, 16 GiB)"
+        },
+        "db.t4g.medium": {
+          "label": "db.t4g.medium (2 vCPU, 4 GiB)"
+        },
+        "db.r5.xlarge": {
+          "label": "db.r5.xlarge (4 vCPU, 32 GiB)"
+        },
+        "db.r5.2xlarge": {
+          "label": "db.r5.2xlarge (8 vCPU, 64 GiB)"
+        },
+        "db.r5.4xlarge": {
+          "label": "db.r5.4xlarge (16 vCPU, 128 GiB)"
+        },
+        "db.r7g.large": {
+          "label": "db.r7g.large (2 vCPU, 16 GiB)"
+        },
+        "db.r7g.xlarge": {
+          "label": "db.r7g.xlarge (4 vCPU, 32 GiB)"
+        },
+        "db.r7g.2xlarge": {
+          "label": "db.r7g.2xlarge (8 vCPU, 64 GiB)"
+        },
+        "db.r7g.4xlarge": {
+          "label": "db.r7g.4xlarge (16 vCPU, 128 GiB)"
+        }
+      }
+    },
+    "aws.sqs": {
+      "label": "SQS",
+      "description": "Queue. The producer is never blocked; the backlog grows when consumers can't keep up.",
+      "params": {
+        "batchSize": {
+          "label": "Batch size"
+        }
+      },
+      "prices": {},
+      "limits": {
+        "requestsPerMessage": {
+          "label": "Calls per message (send + receive + delete)",
+          "unit": "calls"
+        },
+        "callsPerSecond": {
+          "label": "Calls per second without batching",
+          "unit": "calls/s"
+        }
+      },
+      "variants": {
+        "standard": {
+          "label": "Standard",
+          "prices": {
+            "requests": "Requests (each 64 KB = 1)"
+          }
+        },
+        "fifo": {
+          "label": "FIFO",
+          "prices": {
+            "requests": "FIFO requests (each 64 KB = 1)"
+          }
+        }
+      }
+    },
+    "aws.sns": {
+      "label": "SNS",
+      "description": "Pub/sub. Each published message is delivered to every subscriber (fan-out).",
+      "params": {},
+      "prices": {
+        "publishes": "Publishes",
+        "deliveries": "HTTP/S deliveries (no delivery charge for SQS and Lambda)"
+      },
+      "limits": {},
+      "variants": {
+        "standard": {
+          "label": "Standard topic"
+        }
+      }
+    },
+    "aws.kinesis": {
+      "label": "Kinesis Data Streams",
+      "description": "Stream. Each shard accepts 1,000 records/s or 1 MB/s of writes.",
+      "params": {
+        "shards": {
+          "label": "Shards"
+        }
+      },
+      "prices": {
+        "shardHours": "Shard-hour",
+        "putPayloadUnits": "PUT payload units (25 KB, per million)"
+      },
+      "limits": {
+        "writeRecordsPerShard": {
+          "label": "Write records/s per shard",
+          "unit": "records/s"
+        },
+        "writeMBPerShard": {
+          "label": "Write MB/s per shard",
+          "unit": "MB/s"
+        },
+        "readMBPerShard": {
+          "label": "Read MB/s per shard",
+          "unit": "MB/s"
+        }
+      },
+      "variants": {
+        "provisioned": {
+          "label": "Provisioned"
+        }
+      }
+    },
+    "aws.eventbridge": {
+      "label": "EventBridge",
+      "description": "Event bus (classic). Rules deliver each event to its targets.",
+      "params": {},
+      "prices": {
+        "publishes": "Published events (each 64 KB = 1)"
+      },
+      "limits": {},
+      "variants": {
+        "classic": {
+          "label": "Custom bus (classic)"
+        }
+      }
+    },
+    "aws.opensearch": {
+      "label": "OpenSearch",
+      "description": "Search and autocomplete. Queries/s per node are an assumption.",
+      "params": {
+        "units": {
+          "label": "Nodes"
+        }
+      },
+      "prices": {
+        "hourly": "Per hour"
+      },
+      "limits": {},
+      "variants": {
+        "m7g.medium.search": {
+          "label": "m7g.medium.search"
+        },
+        "c6g.large.search": {
+          "label": "c6g.large.search"
+        },
+        "r6g.xlarge.search": {
+          "label": "r6g.xlarge.search"
+        },
+        "t3.small.search": {
+          "label": "t3.small.search (2 vCPU, 2 GiB)"
+        },
+        "m7g.large.search": {
+          "label": "m7g.large.search (2 vCPU, 8 GiB)"
+        },
+        "m7g.xlarge.search": {
+          "label": "m7g.xlarge.search (4 vCPU, 16 GiB)"
+        },
+        "c6g.xlarge.search": {
+          "label": "c6g.xlarge.search (4 vCPU, 8 GiB)"
+        },
+        "c6g.2xlarge.search": {
+          "label": "c6g.2xlarge.search (8 vCPU, 16 GiB)"
+        },
+        "r6g.large.search": {
+          "label": "r6g.large.search (2 vCPU, 16 GiB)"
+        },
+        "r6g.2xlarge.search": {
+          "label": "r6g.2xlarge.search (8 vCPU, 64 GiB)"
+        }
+      }
+    },
+    "aws.cloudwatch": {
+      "label": "CloudWatch",
+      "description": "Logs and metrics. Stays off the request path; it only adds cost.",
+      "params": {
+        "logsGB": {
+          "label": "Logs per month",
+          "unit": "GB"
+        },
+        "metrics": {
+          "label": "Custom metrics"
+        }
+      },
+      "prices": {
+        "logs": "Log ingestion (standard)",
+        "metrics": "Custom metric per month (first 10,000)"
+      },
+      "limits": {},
+      "variants": {
+        "standard": {
+          "label": "Logs + metrics"
+        }
+      }
+    }
+  }
+}

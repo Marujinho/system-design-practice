@@ -1,3 +1,5 @@
+import type { Lang } from '../i18n/lang';
+import { translate } from '../i18n/t';
 import { findService, findVariant, type Catalog } from '@archsim/catalog';
 import type { ProposalOp } from '@archsim/problems';
 import { LIMITS, overridableKeys, validateDiagram, type Diagram } from '@archsim/sim-engine';
@@ -12,7 +14,8 @@ import { freeSpot } from '../canvas/place';
  * changes; the Users node can be connected from, never removed or edited.
  */
 export type ApplyResult =
-  { ok: true; diagram: Diagram } | { ok: false; code: 'missing' | 'invalid'; message: string };
+  | { ok: true; diagram: Diagram }
+  | { ok: false; code: 'missing' | 'invalid'; message: string; messageEn: string };
 
 export interface ApplyOptions {
   catalog: Catalog;
@@ -28,6 +31,8 @@ class Refused extends Error {
   constructor(
     readonly code: 'missing' | 'invalid',
     message: string,
+    /** The same reason in English (language-switch FR-9). */
+    readonly messageEn: string,
   ) {
     super(message);
   }
@@ -54,42 +59,79 @@ export function applyProposal(
       const nodeOf = (ref: string) => {
         const id = created.get(ref) ?? ref;
         const n = d.nodes.find((x) => x.id === id);
-        if (!n) throw new Refused('missing', `o nó ${ref} não existe mais no desenho`);
+        if (!n)
+          throw new Refused(
+            'missing',
+            `o nó ${ref} não existe mais no desenho`,
+            `node ${ref} is no longer in the diagram`,
+          );
         return n;
       };
       const editable = (ref: string) => {
         const n = nodeOf(ref);
         if (n.serviceId === 'core.users')
-          throw new Refused('invalid', 'o nó Usuários não pode ser alterado nem removido');
+          throw new Refused(
+            'invalid',
+            'o nó Usuários não pode ser alterado nem removido',
+            'the Users node cannot be changed or removed',
+          );
         return n;
       };
       const serviceOf = (serviceId: string) => {
         const s = findService(catalog, serviceId);
-        if (!s) throw new Refused('invalid', `serviço desconhecido: ${serviceId}`);
+        if (!s)
+          throw new Refused(
+            'invalid',
+            `serviço desconhecido: ${serviceId}`,
+            `unknown service: ${serviceId}`,
+          );
         return s;
       };
 
       ops.forEach((op, i) => {
         switch (op.op) {
           case 'add': {
-            if (created.has(op.ref)) throw new Refused('invalid', `${op.ref} criado duas vezes`);
+            if (created.has(op.ref))
+              throw new Refused(
+                'invalid',
+                `${op.ref} criado duas vezes`,
+                `${op.ref} created twice`,
+              );
             const service = serviceOf(op.service);
             if (service.kind === 'entry')
-              throw new Refused('invalid', 'o nó Usuários já existe e é único');
+              throw new Refused(
+                'invalid',
+                'o nó Usuários já existe e é único',
+                'the Users node already exists and is unique',
+              );
             const variant =
               op.variant === undefined ? service.variants[0] : findVariant(service, op.variant);
-            if (!variant) throw new Refused('invalid', `tipo desconhecido: ${op.variant ?? ''}`);
+            if (!variant)
+              throw new Refused(
+                'invalid',
+                `tipo desconhecido: ${op.variant ?? ''}`,
+                `unknown type: ${op.variant ?? ''}`,
+              );
             if (d.nodes.length >= LIMITS.maxNodes)
-              throw new Refused('invalid', `o desenho já tem ${String(LIMITS.maxNodes)} nós`);
+              throw new Refused(
+                'invalid',
+                `o desenho já tem ${String(LIMITS.maxNodes)} nós`,
+                `the diagram already has ${String(LIMITS.maxNodes)} nodes`,
+              );
             const props: Record<string, number> = {};
             for (const [key, value] of Object.entries(op.props ?? {})) {
               const p = service.params.find((x) => x.key === key);
               if (!p || value < p.min || value > p.max)
-                throw new Refused('invalid', `${service.label}: ${key} fora do permitido`);
+                throw new Refused(
+                  'invalid',
+                  `${service.label}: ${key} fora do permitido`,
+                  `${service.label}: ${key} outside what is allowed`,
+                );
               props[key] = value;
             }
             const id = options.newId(service.id, i);
-            if (d.nodes.some((n) => n.id === id)) throw new Refused('invalid', 'id repetido');
+            if (d.nodes.some((n) => n.id === id))
+              throw new Refused('invalid', 'id repetido', 'repeated id');
             created.set(op.ref, id);
             d.nodes.push({
               id,
@@ -111,14 +153,27 @@ export function applyProposal(
           case 'connect': {
             const from = nodeOf(op.from);
             const to = nodeOf(op.to);
-            if (from.id === to.id) throw new Refused('invalid', 'um nó não se conecta a si mesmo');
+            if (from.id === to.id)
+              throw new Refused(
+                'invalid',
+                'um nó não se conecta a si mesmo',
+                'a node does not connect to itself',
+              );
             // The canvas gives Users no input: nothing can connect into it (mentor-edits FR-6).
             if (serviceOf(to.serviceId).kind === 'entry')
-              throw new Refused('invalid', 'nada se conecta em Usuários; Usuários só envia');
+              throw new Refused(
+                'invalid',
+                'nada se conecta em Usuários; Usuários só envia',
+                'nothing connects into Users; Users only sends',
+              );
             // Already connected: the end state the mentor wants is there (feedback FR-4).
             if (d.edges.some((e) => e.source === from.id && e.target === to.id)) break;
             if (d.edges.length >= LIMITS.maxEdges)
-              throw new Refused('invalid', `o desenho já tem ${String(LIMITS.maxEdges)} conexões`);
+              throw new Refused(
+                'invalid',
+                `o desenho já tem ${String(LIMITS.maxEdges)} conexões`,
+                `the diagram already has ${String(LIMITS.maxEdges)} connections`,
+              );
             const protocol = defaultProtocol(
               serviceOf(from.serviceId).kind,
               serviceOf(to.serviceId).kind,
@@ -137,13 +192,22 @@ export function applyProposal(
             const before = d.edges.length;
             d.edges = d.edges.filter((e) => !(e.source === from.id && e.target === to.id));
             if (d.edges.length === before)
-              throw new Refused('missing', `não há conexão de ${from.label} para ${to.label}`);
+              throw new Refused(
+                'missing',
+                `não há conexão de ${from.label} para ${to.label}`,
+                `there is no connection from ${from.label} to ${to.label}`,
+              );
             break;
           }
           case 'set_variant': {
             const n = editable(op.node);
             const variant = findVariant(serviceOf(n.serviceId), op.variant);
-            if (!variant) throw new Refused('invalid', `tipo desconhecido: ${op.variant}`);
+            if (!variant)
+              throw new Refused(
+                'invalid',
+                `tipo desconhecido: ${op.variant}`,
+                `unknown type: ${op.variant}`,
+              );
             n.variantId = variant.id;
             const allowed = overridableKeys(variant);
             n.overrides = Object.fromEntries(
@@ -155,7 +219,11 @@ export function applyProposal(
             const n = editable(op.node);
             const p = serviceOf(n.serviceId).params.find((x) => x.key === op.key);
             if (!p || op.value < p.min || op.value > p.max)
-              throw new Refused('invalid', `${n.label}: ${op.key} fora do permitido`);
+              throw new Refused(
+                'invalid',
+                `${n.label}: ${op.key} fora do permitido`,
+                `${n.label}: ${op.key} outside what is allowed`,
+              );
             n.props[op.key] = op.value;
             break;
           }
@@ -193,12 +261,24 @@ export function applyProposal(
     });
     // immer returns the same object when nothing changed: a card that does nothing (review L5).
     if (next === diagram)
-      return { ok: false, code: 'invalid', message: 'a proposta não muda nada no desenho' };
+      return {
+        ok: false,
+        code: 'invalid',
+        message: 'a proposta não muda nada no desenho',
+        messageEn: 'the proposal changes nothing in the diagram',
+      };
     const checked = validateDiagram(next, catalog);
-    if (!checked.ok) return { ok: false, code: 'invalid', message: checked.message };
+    if (!checked.ok)
+      return {
+        ok: false,
+        code: 'invalid',
+        message: checked.message,
+        messageEn: checked.messageEn,
+      };
     return { ok: true, diagram: next };
   } catch (error) {
-    if (error instanceof Refused) return { ok: false, code: error.code, message: error.message };
+    if (error instanceof Refused)
+      return { ok: false, code: error.code, message: error.message, messageEn: error.messageEn };
     throw error;
   }
 }
@@ -209,13 +289,15 @@ export function describeOp(
   diagram: Diagram,
   ops: readonly ProposalOp[],
   catalog: Catalog,
+  lang: Lang = 'pt',
 ): string {
   const serviceLabel = (id: string) => findService(catalog, id)?.label ?? id;
   const name = (ref: string): string => {
     const n = diagram.nodes.find((x) => x.id === ref);
     if (n) return `'${n.label}'`;
     const add = ops.find((o) => o.op === 'add' && o.ref === ref);
-    if (add?.op === 'add') return `'${add.label ?? serviceLabel(add.service)}' (novo)`;
+    if (add?.op === 'add')
+      return translate(lang, 'op.new', { name: add.label ?? serviceLabel(add.service) });
     return ref;
   };
   const nodeService = (ref: string) => {
@@ -232,17 +314,24 @@ export function describeOp(
           return `${(p?.label ?? k).toLowerCase()} ${String(v)}`;
         }),
       ].filter((x) => x !== undefined);
-      return `+ ${serviceLabel(op.service)} '${op.label ?? serviceLabel(op.service)}'${extras.length > 0 ? ` (${extras.join(', ')})` : ''}`;
+      return translate(lang, 'op.add', {
+        service: serviceLabel(op.service),
+        name: op.label ?? serviceLabel(op.service),
+        extras: extras.length > 0 ? ` (${extras.join(', ')})` : '',
+      });
     }
     case 'remove':
-      return `− remover ${name(op.node)}`;
+      return translate(lang, 'op.remove', { name: name(op.node) });
     case 'connect':
-      return `+ conexão ${name(op.from)} → ${name(op.to)}`;
+      return translate(lang, 'op.connect', { from: name(op.from), to: name(op.to) });
     case 'disconnect':
-      return `− conexão ${name(op.from)} → ${name(op.to)}`;
+      return translate(lang, 'op.disconnect', { from: name(op.from), to: name(op.to) });
     case 'set_variant': {
       const n = diagram.nodes.find((x) => x.id === op.node);
-      return `${name(op.node)}: tipo ${n ? `${n.variantId} → ` : ''}${op.variant}`;
+      return translate(lang, 'op.variant', {
+        name: name(op.node),
+        change: `${n ? `${n.variantId} → ` : ''}${op.variant}`,
+      });
     }
     case 'set_prop': {
       const s = nodeService(op.node);
@@ -252,6 +341,6 @@ export function describeOp(
       return `${name(op.node)}: ${(p?.label ?? op.key).toLowerCase()} ${before === undefined ? '' : `${String(before)} → `}${String(op.value)}`;
     }
     case 'rename':
-      return `${name(op.node)}: novo nome '${op.label}'`;
+      return translate(lang, 'op.rename', { name: name(op.node), label: op.label });
   }
 }

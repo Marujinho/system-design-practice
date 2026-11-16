@@ -7,40 +7,56 @@ import {
   type DiagramNode,
 } from '@archsim/sim-engine';
 import { useId } from 'react';
-import { formatRps, formatUsd } from '../format';
+import { formatCompact, formatDate, formatRps, formatUsd } from '../format';
+import { useCatalog } from '../i18n/catalog';
+import { useClassLabel } from '../i18n/problem-text';
+import type { Lang } from '../i18n/lang';
+import { useLang } from '../i18n/store';
+import { translate, useT } from '../i18n/t';
 import { useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
 import { LimitRow } from './LimitRow';
 import { ParamField } from './ParamField';
 import { groupVariants, optionText } from './variant-options';
 
-const PROTOCOL_LABEL: Record<Protocol, string> = {
-  http: 'HTTP/HTTPS',
-  grpc: 'gRPC',
-  tcp: 'TCP (banco)',
-  websocket: 'WebSocket',
-  pubsub: 'Pub/sub',
-  queue: 'Fila',
-};
+function protocolLabel(p: Protocol, lang: Lang): string {
+  switch (p) {
+    case 'http':
+      return 'HTTP/HTTPS';
+    case 'grpc':
+      return 'gRPC';
+    case 'tcp':
+      return translate(lang, 'protocol.tcp');
+    case 'websocket':
+      return 'WebSocket';
+    case 'pubsub':
+      return 'Pub/sub';
+    case 'queue':
+      return translate(lang, 'protocol.queue');
+  }
+}
 
 function NodePanel({ node }: { node: DiagramNode }) {
   const diagram = useDiagram((s) => s.diagram);
   const store = useDiagram.getState;
   const labelId = useId();
   const variantId = useId();
-  const service = findService(catalog, node.serviceId);
+  const lang = useLang();
+  const t = useT();
+  // texts in the active language; the numbers below are the bundled catalog's, the same
+  const service = findService(useCatalog(), node.serviceId);
   const variant = service ? findVariant(service, node.variantId) : undefined;
-  if (!service || !variant) return <p className="muted">Serviço desconhecido.</p>;
+  if (!service || !variant) return <p className="muted">{t('props.unknownService')}</p>;
   // Subscribed, so the numbers follow each simulation result, not just diagram edits.
   const live = useSim((s) => s.result?.nodes[node.id]);
   const statics = nodeStatics(node, catalog, diagram.load);
   const capacity = live?.capacity ?? statics?.capacity ?? 0;
   const cost = live?.costMonth ?? statics?.idleCostMonth ?? 0;
   const value = (key: string) => readValue(node, variant, key);
-  const groups = groupVariants(service.variants);
+  const groups = groupVariants(service.variants, lang);
 
   return (
-    <div className="panel" aria-label={`Propriedades de ${node.label}`}>
+    <div className="panel" aria-label={t('props.of', { name: node.label })}>
       <header>
         <h2>{service.label}</h2>
         {service.fullName !== undefined && <p className="service-full-name">{service.fullName}</p>}
@@ -48,7 +64,7 @@ function NodePanel({ node }: { node: DiagramNode }) {
       </header>
 
       <div className="field">
-        <label htmlFor={labelId}>Nome no desenho</label>
+        <label htmlFor={labelId}>{t('props.name')}</label>
         <input
           id={labelId}
           value={node.label}
@@ -61,7 +77,7 @@ function NodePanel({ node }: { node: DiagramNode }) {
 
       {service.variants.length > 1 && (
         <div className="field">
-          <label htmlFor={variantId}>Tipo</label>
+          <label htmlFor={variantId}>{t('props.type')}</label>
           <select
             id={variantId}
             value={node.variantId}
@@ -74,14 +90,14 @@ function NodePanel({ node }: { node: DiagramNode }) {
                   <optgroup key={g.label} label={g.label}>
                     {g.variants.map((v) => (
                       <option key={v.id} value={v.id}>
-                        {optionText(v)}
+                        {optionText(v, lang)}
                       </option>
                     ))}
                   </optgroup>
                 ))
               : service.variants.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {optionText(v)}
+                    {optionText(v, lang)}
                   </option>
                 ))}
           </select>
@@ -104,28 +120,26 @@ function NodePanel({ node }: { node: DiagramNode }) {
       {service.kind !== 'entry' && (
         <dl className="figures">
           <div>
-            <dt>Capacidade</dt>
+            <dt>{t('props.capacity')}</dt>
             <dd className="num">
-              {Number.isFinite(capacity) ? formatRps(capacity) : 'sem limite'}
+              {Number.isFinite(capacity) ? formatRps(capacity) : t('props.unlimited')}
             </dd>
           </div>
           <div>
-            <dt>Custo</dt>
-            <dd className="num">{formatUsd(cost)}/mês</dd>
+            <dt>{t('props.cost')}</dt>
+            <dd className="num">{t('unit.perMonth', { amount: formatUsd(cost) })}</dd>
           </div>
         </dl>
       )}
 
-      {variant.burst === true && (
-        <p className="note">Capacidade em burst; créditos de CPU ainda não modelados.</p>
-      )}
+      {variant.burst === true && <p className="note">{t('props.burst')}</p>}
 
       {service.kind !== 'entry' && (
         <section>
-          <h3>Números da simulação</h3>
+          <h3>{t('props.simNumbers')}</h3>
           <ul className="limits">
             <LimitRow
-              label="Capacidade por unidade"
+              label={t('props.capPerUnit')}
               unit="req/s"
               catalogValue={variant.capPerUnit}
               value={value('capPerUnit')}
@@ -139,7 +153,7 @@ function NodePanel({ node }: { node: DiagramNode }) {
               }}
             />
             <LimitRow
-              label="Latência base"
+              label={t('props.baseLatency')}
               unit="ms"
               catalogValue={variant.baseLatencyMs}
               value={value('baseLatencyMs')}
@@ -174,16 +188,14 @@ function NodePanel({ node }: { node: DiagramNode }) {
 
       {variant.prices.length > 0 && (
         <section>
-          <h3>Preços (us-east-1)</h3>
+          <h3>{t('props.prices')}</h3>
           <ul className="prices">
             {variant.prices.map((p) => (
               <li key={p.id}>
                 <span>{p.label}</span>
-                <span className="num">
-                  US$ {p.amountUsd.toLocaleString('pt-BR', { maximumFractionDigits: 10 })}
-                </span>
+                <span className="num">US$ {formatCompact(p.amountUsd, 10)}</span>
                 <a href={p.sourceUrl} target="_blank" rel="noreferrer noopener" className="muted">
-                  fonte, {p.priceDate.split('-').reverse().join('/')}
+                  {t('props.source', { date: formatDate(p.priceDate) })}
                 </a>
               </li>
             ))}
@@ -198,13 +210,16 @@ function EdgePanel({ edge }: { edge: DiagramEdge }) {
   const load = useDiagram((s) => s.diagram.load);
   const store = useDiagram.getState;
   const protocolId = useId();
+  const lang = useLang();
+  const t = useT();
+  const classLabel = useClassLabel();
   return (
-    <div className="panel" aria-label="Propriedades da conexão">
+    <div className="panel" aria-label={t('props.edgeOf')}>
       <header>
-        <h2>Conexão</h2>
+        <h2>{t('props.edge')}</h2>
       </header>
       <div className="field">
-        <label htmlFor={protocolId}>Protocolo</label>
+        <label htmlFor={protocolId}>{t('props.protocol')}</label>
         <select
           id={protocolId}
           value={edge.protocol}
@@ -214,14 +229,14 @@ function EdgePanel({ edge }: { edge: DiagramEdge }) {
         >
           {Protocol.options.map((p) => (
             <option key={p} value={p}>
-              {PROTOCOL_LABEL[p]}
+              {protocolLabel(p, lang)}
             </option>
           ))}
         </select>
       </div>
       <ParamField
-        label="Peso da conexão"
-        unit="%, vazio = divide o restante"
+        label={t('props.weight')}
+        unit={t('props.weightUnit')}
         value={edge.weight === undefined ? 0 : Math.round(edge.weight * 100)}
         min={0}
         max={100}
@@ -239,11 +254,11 @@ function EdgePanel({ edge }: { edge: DiagramEdge }) {
             store().setEdge(edge.id, { weight: undefined });
           }}
         >
-          remover peso
+          {t('props.removeWeight')}
         </button>
       )}
       <fieldset className="field">
-        <legend>Classes que passam por aqui</legend>
+        <legend>{t('props.classes')}</legend>
         {load.classes.map((c) => {
           const on = edge.classes === undefined || edge.classes.includes(c.name);
           return (
@@ -260,7 +275,7 @@ function EdgePanel({ edge }: { edge: DiagramEdge }) {
                   store().setEdge(edge.id, { classes: all ? undefined : next });
                 }}
               />
-              {c.label}
+              {classLabel(c)}
             </label>
           );
         })}
@@ -272,12 +287,13 @@ function EdgePanel({ edge }: { edge: DiagramEdge }) {
 export function PropertiesPanel() {
   const selection = useDiagram((s) => s.selection);
   const diagram = useDiagram((s) => s.diagram);
+  const t = useT();
   if (selection.length !== 1) {
     return (
       <p className="panel-empty muted">
         {selection.length === 0
-          ? 'Selecione um nó ou uma conexão.'
-          : `${selection.length} itens selecionados.`}
+          ? t('props.selectOne')
+          : t('props.selectedMany', { n: selection.length })}
       </p>
     );
   }

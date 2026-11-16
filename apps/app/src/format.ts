@@ -1,7 +1,16 @@
-const pt = 'pt-BR';
+import { localeOf } from './i18n/lang';
+import { currentLang } from './i18n/store';
+
+/** The active language's locale, read at call time (FR-10). */
+function locale(): string {
+  return localeOf(currentLang());
+}
 
 function fixed(value: number, digits: number): string {
-  return value.toLocaleString(pt, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return value.toLocaleString(locale(), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
 /** US$ 7,59 */
@@ -31,11 +40,13 @@ export function formatNumber(value: number, digits = 0): string {
 
 /** Up to `digits` decimals, none when not needed: 1 · 0,01 · 1.000 */
 export function formatCompact(value: number, digits = 2): string {
-  return value.toLocaleString(pt, { maximumFractionDigits: digits });
+  return value.toLocaleString(locale(), { maximumFractionDigits: digits });
 }
 
-/** 13/11/2026 */
+/** 13/11/2026 in Portuguese, 11/13/2026 in English. */
 export function formatDate(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${d ?? ''}/${m ?? ''}/${y ?? ''}`;
+  return currentLang() === 'en'
+    ? `${m ?? ''}/${d ?? ''}/${y ?? ''}`
+    : `${d ?? ''}/${m ?? ''}/${y ?? ''}`;
 }

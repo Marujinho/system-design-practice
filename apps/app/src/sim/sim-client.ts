@@ -1,5 +1,6 @@
 import type { Diagram, SimResult } from '@archsim/sim-engine';
 import * as Comlink from 'comlink';
+import { tr } from '../i18n/t';
 import { createLoop } from './loop';
 import type { SimWorkerApi } from './sim.worker';
 
@@ -17,10 +18,10 @@ export function workerBackend(onError: (message: string) => void): SimBackend {
   const worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
   worker.onerror = (e) => {
     e.preventDefault();
-    onError(e.message || 'erro no worker');
+    onError(e.message || tr('sim.workerError'));
   };
   worker.onmessageerror = () => {
-    onError('mensagem inválida do worker');
+    onError(tr('sim.badMessage'));
   };
   const api = Comlink.wrap<SimWorkerApi>(worker);
   return {
