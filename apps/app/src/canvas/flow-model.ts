@@ -1,4 +1,4 @@
-import { catalog, findService } from '@archsim/catalog';
+import { catalogIn, findService } from '@archsim/catalog';
 import type { Diagram } from '@archsim/sim-engine';
 import type { FlowFlowEdge } from './FlowEdge';
 import type { ServiceFlowNode } from './ServiceNode';
@@ -36,7 +36,7 @@ export function toFlow(
         serviceId: n.serviceId,
         variantId: n.variantId,
         label: n.label,
-        replicas: replicaGroup(n, findService(catalog, n.serviceId), lang),
+        replicas: replicaGroup(n, findService(catalogIn(lang), n.serviceId), lang),
       },
     })),
     edges: diagram.edges.map((e) => {

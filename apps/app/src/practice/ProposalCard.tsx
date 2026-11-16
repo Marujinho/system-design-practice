@@ -1,7 +1,7 @@
-import { catalog } from '@archsim/catalog';
 import type { Proposal, ProposalStatus } from '@archsim/problems';
 import type { Diagram } from '@archsim/sim-engine';
 import { useEffect, useState } from 'react';
+import { useCatalog } from '../i18n/catalog';
 import type { Key } from '../i18n/pt';
 import { useLang } from '../i18n/store';
 import { tr, useT } from '../i18n/t';
@@ -32,6 +32,8 @@ export function ProposalCard({
 }) {
   const t = useT();
   const lang = useLang();
+  // same numbers and ids as the bundled catalog; new nodes get labels in the active language
+  const catalog = useCatalog();
   const diagram = useDiagram((s) => s.diagram);
   const streaming = useMentorUi((s) => s.streaming);
   // The diagrams around the last Aplicar: kept through undo, so a redo is recognised (M1).

@@ -61,8 +61,6 @@ describe('the canvas and the panels in English (language-switch FR-5)', () => {
     expect(screen.getByLabelText('Name in the diagram')).toHaveValue('Minha API');
     expect(screen.getByText('Simulation numbers')).toBeInTheDocument();
     expect(container.textContent).toMatch(/US\$ [\d,]+\.\d{2}\/month/);
-    // the header holds the catalog's label and description, translated with the catalog (T4)
-    container.querySelector('header')?.remove();
     const attrs = [...container.querySelectorAll('[aria-label]')]
       .map((e) => e.getAttribute('aria-label') ?? '')
       .join(' ');
@@ -82,6 +80,26 @@ describe('the canvas and the panels in English (language-switch FR-5)', () => {
     expect(screen.getByRole('button', { name: 'Save file' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Load' })).toBeInTheDocument();
     expect(leftovers(container.textContent)).toEqual([]);
+  });
+
+  it('shows the catalog in English: service, description, params, prices', () => {
+    const id = s().addNode('aws.rds-postgres', { x: 0, y: 0 }) ?? '';
+    s().select([id]);
+    english();
+    render(<PropertiesPanel />);
+    expect(screen.getByText(/Relational database/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Read replicas/)).toBeInTheDocument();
+    expect(screen.getByText(/gp3 storage/)).toBeInTheDocument();
+  });
+
+  it('labels a new node in the language active when it is added; a switch keeps it', () => {
+    english();
+    const id = s().addNode('core.users', { x: 0, y: 0 }) ?? '';
+    expect(s().diagram.nodes.find((n) => n.id === id)?.label).toBe('Users / Internet');
+    act(() => {
+      useLangStore.getState().setLang('pt');
+    });
+    expect(s().diagram.nodes.find((n) => n.id === id)?.label).toBe('Users / Internet');
   });
 
   it('a new free canvas starts with its load labelled in the active language', () => {

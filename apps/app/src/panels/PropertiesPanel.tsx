@@ -8,6 +8,7 @@ import {
 } from '@archsim/sim-engine';
 import { useId } from 'react';
 import { formatCompact, formatDate, formatRps, formatUsd } from '../format';
+import { useCatalog } from '../i18n/catalog';
 import type { Lang } from '../i18n/lang';
 import { useLang } from '../i18n/store';
 import { translate, useT } from '../i18n/t';
@@ -41,7 +42,8 @@ function NodePanel({ node }: { node: DiagramNode }) {
   const variantId = useId();
   const lang = useLang();
   const t = useT();
-  const service = findService(catalog, node.serviceId);
+  // texts in the active language; the numbers below are the bundled catalog's, the same
+  const service = findService(useCatalog(), node.serviceId);
   const variant = service ? findVariant(service, node.variantId) : undefined;
   if (!service || !variant) return <p className="muted">{t('props.unknownService')}</p>;
   // Subscribed, so the numbers follow each simulation result, not just diagram edits.

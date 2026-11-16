@@ -1,3 +1,4 @@
+import { catalogNow } from '../i18n/catalog';
 import { tr } from '../i18n/t';
 import { catalog, findService, findVariant } from '@archsim/catalog';
 import {
@@ -105,7 +106,7 @@ export const useDiagram = create<DiagramState>()((set, get) => {
           serviceId,
           variantId: variant.id,
           position,
-          label: service.label,
+          label: findService(catalogNow(), serviceId)?.label ?? service.label,
           props: {},
           overrides: {},
         });

@@ -1,14 +1,15 @@
 import { useState } from 'react';
+import { useCatalog } from '../i18n/catalog';
 import { useLang } from '../i18n/store';
 import { useT } from '../i18n/t';
-import { catalog } from '@archsim/catalog';
 import { DRAG_TYPE, paletteGroups } from './palette-model';
 
 export function Palette({ onAdd }: { onAdd: (serviceId: string) => void }) {
   const [query, setQuery] = useState('');
   const lang = useLang();
   const t = useT();
-  const groups = paletteGroups(query, catalog.services, lang);
+  const shown = useCatalog();
+  const groups = paletteGroups(query, shown.services, lang);
   return (
     <aside className="palette" aria-label={t('palette.label')}>
       <input

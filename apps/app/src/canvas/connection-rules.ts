@@ -1,4 +1,4 @@
-import { catalog, findService, type Kind, type Service } from '@archsim/catalog';
+import { catalog, catalogIn, findService, type Kind, type Service } from '@archsim/catalog';
 import type { Diagram, DiagramEdge, Protocol } from '@archsim/sim-engine';
 import type { Lang } from '../i18n/lang';
 import { translate } from '../i18n/t';
@@ -26,8 +26,9 @@ export function connectionWarning(
 export function edgeWarning(diagram: Diagram, edge: DiagramEdge, lang: Lang = 'pt'): string | null {
   const s = diagram.nodes.find((n) => n.id === edge.source);
   const t = diagram.nodes.find((n) => n.id === edge.target);
-  const ss = s ? findService(catalog, s.serviceId) : undefined;
-  const ts = t ? findService(catalog, t.serviceId) : undefined;
+  const shown = catalogIn(lang);
+  const ss = s ? findService(shown, s.serviceId) : undefined;
+  const ts = t ? findService(shown, t.serviceId) : undefined;
   return ss && ts ? connectionWarning(ss, ts, lang) : null;
 }
 

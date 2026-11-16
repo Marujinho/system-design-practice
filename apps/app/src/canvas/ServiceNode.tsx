@@ -1,4 +1,5 @@
-import { catalog, findService, findVariant } from '@archsim/catalog';
+import { findService, findVariant } from '@archsim/catalog';
+import { useCatalog } from '../i18n/catalog';
 import { ServiceFigure } from '@archsim/icons';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { memo, useEffect, useRef, type ReactNode } from 'react';
@@ -63,7 +64,7 @@ function ReplicaStrip({ group }: { group: ReplicaGroup }) {
 }
 
 function ServiceNodeView({ data, selected }: NodeProps<ServiceFlowNode>) {
-  const service = findService(catalog, data.serviceId);
+  const service = findService(useCatalog(), data.serviceId);
   const name = service?.label ?? data.serviceId;
   const fullName = service?.fullName;
   const variant =
