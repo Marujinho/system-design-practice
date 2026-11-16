@@ -102,11 +102,30 @@ export function ProblemView({ problemId }: { problemId: string }) {
   const [solution, setSolution] = useState<Diagram | null>(null);
   // The language the open solution was fetched in: a switch fetches its labels again.
   const solutionLang = useRef(lang);
+  // Only the latest request may show its answer: a close or a newer fetch invalidates the rest.
+  const solutionRequest = useRef(0);
+  const fetchSolution = (id: string, l: typeof lang, onError?: (e: unknown) => void) => {
+    const mine = ++solutionRequest.current;
+    solutionLang.current = l;
+    api.reference(id, l).then(
+      (d) => {
+        if (mine !== solutionRequest.current) return;
+        setResult(null);
+        setSolution(d);
+      },
+      (e: unknown) => {
+        if (mine === solutionRequest.current) onError?.(e);
+      },
+    );
+  };
+  const closeSolution = () => {
+    solutionRequest.current += 1;
+    setSolution(null);
+  };
   useProblemTextFor(problem);
   useEffect(() => {
     if (solution === null || solutionLang.current === lang) return;
-    solutionLang.current = lang;
-    api.reference(problemId, lang).then(setSolution, () => undefined);
+    fetchSolution(problemId, lang);
   }, [lang, solution, problemId]);
 
   useEffect(() => {
@@ -146,16 +165,9 @@ export function ProblemView({ problemId }: { problemId: string }) {
   };
 
   const openSolution = () => {
-    solutionLang.current = lang;
-    api.reference(problem.id, lang).then(
-      (d) => {
-        setResult(null);
-        setSolution(d);
-      },
-      (e: unknown) => {
-        setSaveError(e instanceof ApiError ? e.message : tr('problem.solutionError'));
-      },
-    );
+    fetchSolution(problem.id, lang, (e) => {
+      setSaveError(e instanceof ApiError ? e.message : tr('problem.solutionError'));
+    });
   };
 
   return (
@@ -225,14 +237,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
           onSolution={openSolution}
         />
       )}
-      {solution && (
-        <SolutionView
-          reference={solution}
-          onClose={() => {
-            setSolution(null);
-          }}
-        />
-      )}
+      {solution && <SolutionView reference={solution} onClose={closeSolution} />}
     </>
   );
 }

@@ -255,6 +255,43 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     expect(await screen.findByRole('button', { name: 'Ver uma solução' })).toBeTruthy();
   });
 
+  it('fetches the solution again in English, and a late answer never reopens a closed solution', async () => {
+    const user = userEvent.setup();
+    const base = routes(true);
+    const held: (() => void)[] = [];
+    const fn = vi.fn((url: string, init?: RequestInit) => {
+      const respond = () =>
+        new Response(JSON.stringify(base(url.split('?')[0] ?? url, init) ?? {}), { status: 200 });
+      // English references wait until the test lets them through
+      if (url.includes('/reference/') && url.endsWith('?lang=en'))
+        return new Promise<Response>((resolve) => {
+          held.push(() => {
+            resolve(respond());
+          });
+        });
+      return Promise.resolve(respond());
+    });
+    vi.stubGlobal('fetch', fn);
+    render(<ProblemView problemId="url-shortener" />);
+    await user.click(await screen.findByRole('button', { name: 'Ver uma solução' }));
+    await screen.findByRole('dialog', { name: /Uma solução/ });
+    act(() => {
+      useLangStore.getState().setLang('en');
+    });
+    await waitFor(() => {
+      expect(fn.mock.calls.some(([u]) => u.endsWith('/reference/url-shortener?lang=en'))).toBe(
+        true,
+      );
+    });
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog', { name: /A solution/ })).toBeNull();
+    await act(async () => {
+      for (const release of held) release();
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole('dialog', { name: /solution/i })).toBeNull();
+  });
+
   it('says why the session could not be saved', async () => {
     const user = userEvent.setup();
     mockFetch((url, init) =>

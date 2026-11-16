@@ -351,3 +351,15 @@ Linha de base: 744 testes unitários e 64 e2e, todos verdes. No fim: 800 unitár
 
 ### Inherited failures
 Nenhuma nos testes. O aviso do audit (`minimatch`) é anterior ao branch.
+
+### Review fixes
+A revisão independente não achou nada Critical ou High. Foram corrigidos:
+- **M1:** a varredura do e2e só pegava acentos e uma lista curta de palavras, e deixava passar 132 dos 260 textos de `pt.ts` (ex.: "Pausar", "Conquistas"). Agora ela procura também cada trecho de `pt.ts` que difere do inglês. Ela deixou de ignorar os rótulos dos nós e o card de proposta, e o teste gera e aplica uma proposta do mentor. O teste negativo prova que "Pausar" e "Conquistas" são pegos.
+- **L2:** trocar de idioma com a solução aberta e fechá-la antes da resposta podia reabrir a solução. Agora só a última busca vale, e fechar invalida as anteriores. Um teste falha sem a correção.
+- **L4:** o nome da referência em inglês passa a ser cortado em 80 caracteres, o limite do diagrama.
+- **L5:** o `AGENTS.md` passa a citar a frase em inglês que o app copia ("Start the ArchSim follow-ups").
+
+Em aberto (Low):
+- **L3:** avisos já mostrados (nota de proposta, erro do chat, aviso do canvas, erro de carga) continuam no idioma antigo até a próxima ação substituí-los.
+
+801 testes unitários e 80 e2e verdes. Uma execução completa teve uma falha isolada do `study-flow` no webkit, que não se repetiu: 12 de 12 isolado e 80 de 80 na suíte seguinte.

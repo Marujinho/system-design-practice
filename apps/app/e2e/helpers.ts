@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { en } from '../src/i18n/en';
+import { pt, type Key } from '../src/i18n/pt';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 
@@ -47,8 +49,22 @@ export function withUnits<T extends Record<string, unknown>>(
   return copy;
 }
 
-/** What the person or the mentor wrote: data, shown as it was written (language-switch §9). */
-const USER_CONTENT = '.service-node-label, .chat-msg, .proposal, [lang="pt-BR"]';
+/** What the mentor wrote, and the PT button itself: data, shown as it was written (language-switch §9). */
+const USER_CONTENT = '.chat-msg, .proposal-summary, [lang="pt-BR"]';
+
+/**
+ * Every piece of the app's Portuguese texts that the English side does not share,
+ * split at the placeholders: if one shows up on an English page, a text was missed.
+ */
+const PT_PIECES = [
+  ...new Set(
+    (Object.keys(pt) as Key[])
+      .filter((k) => pt[k] !== en[k])
+      .flatMap((k) => pt[k].split(/\{\w+\}/))
+      .map((s) => s.trim().replace(/^[\s:·—–(),.+−-]+|[\s:·—–(),.+−-]+$/g, ''))
+      .filter((s) => s.length >= 4 && !Object.values(en).some((e) => e.includes(s))),
+  ),
+];
 
 /** Accents and words that exist in Portuguese and not in the English texts. */
 const PORTUGUESE =
@@ -60,8 +76,11 @@ const PORTUGUESE =
  */
 export async function portugueseLeftovers(page: Page): Promise<string[]> {
   const found = await page.evaluate(
-    ([skip, source]) => {
-      const re = new RegExp(source, 'i');
+    ([skip, source, pieces]) => {
+      const words = new RegExp(source, 'i');
+      const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const known = pieces.map((p) => new RegExp(`(^|[^\\p{L}])${escape(p)}($|[^\\p{L}])`, 'u'));
+      const re = { test: (s: string) => words.test(s) || known.some((k) => k.test(s)) };
       const out: string[] = [];
       const outside = (el: Element) => el.closest(skip) === null;
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -80,7 +99,7 @@ export async function portugueseLeftovers(page: Page): Promise<string[]> {
       }
       return out;
     },
-    [USER_CONTENT, PORTUGUESE.source] as const,
+    [USER_CONTENT, PORTUGUESE.source, PT_PIECES] as const,
   );
   return [...new Set(found)];
 }

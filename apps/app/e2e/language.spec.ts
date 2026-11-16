@@ -60,11 +60,25 @@ test('English everywhere: no Portuguese left outside what people wrote (language
   await expect(page.locator('#solution-title')).toContainText('A solution');
   await scan('solution');
 
-  // study with the mentor open (scripted provider)
+  // study with the mentor open (scripted provider), from an empty conversation
+  const cleared = await page.request.delete(`/__archsim/conversation/${id}`, {
+    headers: { origin: 'http://127.0.0.1:4173' },
+  });
+  expect(cleared.status()).toBe(204);
   await page.goto(`/#/problems/${id}/study`);
   await page.getByRole('button', { name: 'Open mentor' }).click();
-  await expect(page.getByRole('textbox', { name: 'Question for the mentor' })).toBeVisible();
+  const question = page.getByRole('textbox', { name: 'Question for the mentor' });
+  await expect(question).toBeVisible();
   await scan('study with the mentor');
+  // a scripted reply with a proposal: the card's chrome is the app's, the summary is the mentor's
+  await question.fill('proponha:ec2');
+  await question.press('Enter');
+  const card = page.getByRole('region', { name: "The mentor's proposal" });
+  await expect(card).toContainText('+ connection');
+  await scan('proposal card');
+  await card.getByRole('button', { name: 'Apply' }).click();
+  await expect(card).toContainText('applied');
+  await scan('applied proposal');
 
   // the free canvas, created in English
   await page.goto('/#/free');
@@ -86,9 +100,17 @@ test('the scan catches Portuguese that slips in (FR-11, negative)', async ({ pag
     p.textContent = 'isto não funciona';
     document.querySelector('main')?.append(p);
     document.querySelector('h1 a')?.setAttribute('title', 'Voltar ao início');
+    // app texts with no accent and no listed word: caught because they are in pt.ts
+    for (const text of ['Pausar', 'Conquistas']) {
+      const b = document.createElement('button');
+      b.textContent = text;
+      document.querySelector('main')?.append(b);
+    }
   });
   expect(await portugueseLeftovers(page)).toEqual([
     'isto não funciona',
+    'Pausar',
+    'Conquistas',
     'title="Voltar ao início"',
   ]);
 });

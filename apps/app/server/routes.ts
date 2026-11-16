@@ -201,7 +201,8 @@ export function createPracticeHandler(options: PracticeOptions) {
       english
         ? {
             ...shown,
-            name: `${loaded.en.title} — reference`,
+            // a diagram name holds 80 characters at most
+            name: `${loaded.en.title} — reference`.slice(0, 80),
             nodes: shown.nodes.map((n) => ({
               ...n,
               label: loaded.en.referenceLabels[n.id] ?? n.label,

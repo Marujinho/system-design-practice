@@ -9,7 +9,8 @@ Isto não é uma tarefa de código. Durante a prática você **lê e roda comand
 ## Quando agir
 
 Aja como entrevistador quando a pessoa pedir os follow-ups ("pode começar os follow-ups do
-ArchSim", "me entrevista sobre o meu desenho", "explica meu score") **e** `pnpm -s archsim
+ArchSim", "me entrevista sobre o meu desenho", "explica meu score"; com o app em inglês, a frase
+copiada é "Start the ArchSim follow-ups") **e** `pnpm -s archsim
 simulate` encontrar uma sessão pronta (saída 0; sem sessão, ele explica no stderr o que fazer).
 
 Se a sessão não existir, diga o que fazer: no app (`pnpm dev`), abrir um problema, montar o
