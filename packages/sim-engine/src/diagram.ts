@@ -1,4 +1,10 @@
-import { findService, findVariant, type Catalog } from '@archsim/catalog';
+import {
+  catalogTextEn,
+  findService,
+  findVariant,
+  localizeCatalog,
+  type Catalog,
+} from '@archsim/catalog';
 import { z } from 'zod';
 
 export const LIMITS = {
@@ -113,10 +119,12 @@ export type DiagramErrorCode =
   | 'LOAD_TOO_HIGH';
 
 export type DiagramResult =
-  { ok: true; diagram: Diagram } | { ok: false; code: DiagramErrorCode; message: string };
+  | { ok: true; diagram: Diagram }
+  | { ok: false; code: DiagramErrorCode; message: string; messageEn: string };
 
-function fail(code: DiagramErrorCode, message: string): DiagramResult {
-  return { ok: false, code, message };
+/** `message` in Portuguese (CLI, agent); `messageEn` for the app in English (language-switch FR-8). */
+function fail(code: DiagramErrorCode, message: string, messageEn: string): DiagramResult {
+  return { ok: false, code, message, messageEn };
 }
 
 /** Requests per second a class generates. */
@@ -211,17 +219,33 @@ export function validateDiagram(input: unknown, catalog: Catalog): DiagramResult
       ? (input as Record<string, unknown>).schemaVersion
       : undefined;
   if (version !== 1) {
-    return fail('UNSUPPORTED_VERSION', 'Versão de arquivo não suportada; este app lê a versão 1.');
+    return fail(
+      'UNSUPPORTED_VERSION',
+      'Versão de arquivo não suportada; este app lê a versão 1.',
+      'Unsupported file version; this app reads version 1.',
+    );
   }
   if (arrayLength(input, 'nodes') > LIMITS.maxNodes) {
-    return fail('TOO_MANY_NODES', `O diagrama passa de ${LIMITS.maxNodes} nós.`);
+    return fail(
+      'TOO_MANY_NODES',
+      `O diagrama passa de ${LIMITS.maxNodes} nós.`,
+      `The diagram has more than ${LIMITS.maxNodes} nodes.`,
+    );
   }
   if (arrayLength(input, 'edges') > LIMITS.maxEdges) {
-    return fail('TOO_MANY_EDGES', `O diagrama passa de ${LIMITS.maxEdges} conexões.`);
+    return fail(
+      'TOO_MANY_EDGES',
+      `O diagrama passa de ${LIMITS.maxEdges} conexões.`,
+      `The diagram has more than ${LIMITS.maxEdges} connections.`,
+    );
   }
   const load = (input as Record<string, unknown>).load;
   if (arrayLength(load, 'classes') > LIMITS.maxClasses) {
-    return fail('TOO_MANY_CLASSES', `A carga passa de ${LIMITS.maxClasses} classes de requisição.`);
+    return fail(
+      'TOO_MANY_CLASSES',
+      `A carga passa de ${LIMITS.maxClasses} classes de requisição.`,
+      `The load has more than ${LIMITS.maxClasses} request classes.`,
+    );
   }
 
   const parsed = Diagram.safeParse(input);
@@ -230,22 +254,31 @@ export function validateDiagram(input: unknown, catalog: Catalog): DiagramResult
       (i) => i.code === 'too_big' && (i.path.includes('label') || i.path.includes('name')),
     );
     if (tooLong) {
-      return fail('LABEL_TOO_LONG', `Um rótulo passa de ${LIMITS.maxLabel} caracteres.`);
+      return fail(
+        'LABEL_TOO_LONG',
+        `Um rótulo passa de ${LIMITS.maxLabel} caracteres.`,
+        `A label is longer than ${LIMITS.maxLabel} characters.`,
+      );
     }
     const issues = parsed.error.issues;
     const first = issues[0];
-    const where = first ? safePath(first.path) : 'raiz';
-    const kind = first?.code === 'unrecognized_keys' ? 'campo desconhecido' : 'valor inválido';
+    const unknown = first?.code === 'unrecognized_keys';
     return fail(
       'INVALID_SCHEMA',
-      `Arquivo fora do formato esperado: ${String(issues.length)} problema(s); o primeiro é ${kind} em ${where}.`,
+      `Arquivo fora do formato esperado: ${String(issues.length)} problema(s); o primeiro é ${unknown ? 'campo desconhecido' : 'valor inválido'} em ${first ? safePath(first.path) : 'raiz'}.`,
+      `The file is not in the expected format: ${String(issues.length)} problem(s); the first is ${unknown ? 'an unknown field' : 'an invalid value'} at ${first ? safePath(first.path) : 'the root'}.`,
     );
   }
   const diagram = parsed.data;
 
   const ids = new Set<string>();
   for (const item of [...diagram.nodes, ...diagram.edges]) {
-    if (ids.has(item.id)) return fail('DUPLICATE_ID', 'Há dois nós ou conexões com o mesmo ID.');
+    if (ids.has(item.id))
+      return fail(
+        'DUPLICATE_ID',
+        'Há dois nós ou conexões com o mesmo ID.',
+        'Two nodes or connections have the same ID.',
+      );
     ids.add(item.id);
   }
   const nodeIds = new Set(diagram.nodes.map((n) => n.id));
@@ -254,40 +287,73 @@ export function validateDiagram(input: unknown, catalog: Catalog): DiagramResult
       return fail(
         'DANGLING_EDGE',
         `A conexão nº ${String(i + 1)} aponta para um nó que não existe.`,
+        `Connection #${String(i + 1)} points to a node that does not exist.`,
       );
     }
   }
 
   let entries = 0;
+  const english = localizeCatalog(catalog, 'en', catalogTextEn);
   for (const [i, node] of diagram.nodes.entries()) {
     const at = `no nó nº ${String(i + 1)}`;
+    const atEn = `at node #${String(i + 1)}`;
     const service = findService(catalog, node.serviceId);
-    if (!service) return fail('UNKNOWN_SERVICE', `Serviço desconhecido no catálogo ${at}.`);
+    if (!service)
+      return fail(
+        'UNKNOWN_SERVICE',
+        `Serviço desconhecido no catálogo ${at}.`,
+        `Service not in the catalog ${atEn}.`,
+      );
+    const serviceEn = findService(english, node.serviceId) ?? service;
     if (service.kind === 'entry') entries += 1;
     const variant = findVariant(service, node.variantId);
     if (!variant)
-      return fail('UNKNOWN_VARIANT', `Variante desconhecida de ${service.label} ${at}.`);
+      return fail(
+        'UNKNOWN_VARIANT',
+        `Variante desconhecida de ${service.label} ${at}.`,
+        `Unknown variant of ${serviceEn.label} ${atEn}.`,
+      );
     for (const [key, value] of Object.entries(node.props)) {
       const param = service.params.find((p) => p.key === key);
       if (!param)
-        return fail('INVALID_PARAM', `${service.label} ${at} tem uma propriedade que não existe.`);
-      if (value < param.min || value > param.max) {
         return fail(
           'INVALID_PARAM',
-          `${param.label} de ${service.label} ${at} fora do intervalo ${String(param.min)}–${String(param.max)}.`,
+          `${service.label} ${at} tem uma propriedade que não existe.`,
+          `${serviceEn.label} ${atEn} has a property that does not exist.`,
+        );
+      if (value < param.min || value > param.max) {
+        const paramEn = serviceEn.params.find((p) => p.key === key)?.label ?? param.label;
+        const range = `${String(param.min)}–${String(param.max)}`;
+        return fail(
+          'INVALID_PARAM',
+          `${param.label} de ${service.label} ${at} fora do intervalo ${range}.`,
+          `${paramEn} of ${serviceEn.label} ${atEn} is outside the range ${range}.`,
         );
       }
     }
     const allowed = overridableKeys(variant);
     if (Object.keys(node.overrides).some((k) => !allowed.has(k))) {
-      return fail('INVALID_PARAM', `${service.label} ${at} altera um número que não existe.`);
+      return fail(
+        'INVALID_PARAM',
+        `${service.label} ${at} altera um número que não existe.`,
+        `${serviceEn.label} ${atEn} changes a number that does not exist.`,
+      );
     }
   }
-  if (entries > 1) return fail('TOO_MANY_ENTRIES', 'Só pode haver um nó de Usuários.');
+  if (entries > 1)
+    return fail(
+      'TOO_MANY_ENTRIES',
+      'Só pode haver um nó de Usuários.',
+      'There can be only one Users node.',
+    );
 
   const classNames = new Set(diagram.load.classes.map((c) => c.name));
   if (classNames.size !== diagram.load.classes.length) {
-    return fail('DUPLICATE_ID', 'Há classes de requisição com o mesmo nome.');
+    return fail(
+      'DUPLICATE_ID',
+      'Há classes de requisição com o mesmo nome.',
+      'Two request classes have the same name.',
+    );
   }
   for (const [i, e] of diagram.edges.entries()) {
     for (const c of e.classes ?? []) {
@@ -295,12 +361,17 @@ export function validateDiagram(input: unknown, catalog: Catalog): DiagramResult
         return fail(
           'UNKNOWN_CLASS',
           `A conexão nº ${String(i + 1)} usa uma classe que não está na carga.`,
+          `Connection #${String(i + 1)} uses a class that is not in the load.`,
         );
       }
     }
   }
   if (totalRps(diagram.load) * 60 > LIMITS.maxTotalRpm) {
-    return fail('LOAD_TOO_HIGH', 'A carga total passa de 10.000.000 req/min.');
+    return fail(
+      'LOAD_TOO_HIGH',
+      'A carga total passa de 10.000.000 req/min.',
+      'The total load is above 10,000,000 req/min.',
+    );
   }
   return { ok: true, diagram };
 }
@@ -308,13 +379,13 @@ export function validateDiagram(input: unknown, catalog: Catalog): DiagramResult
 /** Parse a diagram file's text. Never throws. */
 export function parseDiagram(text: string, catalog: Catalog): DiagramResult {
   if (new TextEncoder().encode(text).byteLength > LIMITS.maxBytes) {
-    return fail('TOO_LARGE', 'O arquivo passa de 5 MB.');
+    return fail('TOO_LARGE', 'O arquivo passa de 5 MB.', 'The file is larger than 5 MB.');
   }
   let raw: unknown;
   try {
     raw = safeJsonParse(text);
   } catch {
-    return fail('INVALID_JSON', 'O arquivo não é um JSON válido.');
+    return fail('INVALID_JSON', 'O arquivo não é um JSON válido.', 'The file is not valid JSON.');
   }
   return validateDiagram(raw, catalog);
 }

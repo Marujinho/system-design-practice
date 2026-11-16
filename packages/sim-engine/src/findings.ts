@@ -1,6 +1,8 @@
 import {
+  catalogTextEn,
   findService,
   findVariant,
+  localizeCatalog,
   type Catalog,
   type Service,
   type Variant,
@@ -23,6 +25,8 @@ export interface Finding {
   nodeIds: string[];
   /** One sentence in Portuguese, for the result screen and the agent. */
   message: string;
+  /** The same sentence in English, for the result screen (language-switch FR-8). */
+  messageEn: string;
   numbers: Record<string, number>;
   /** Ordering key: higher first. */
   impact: number;
@@ -40,12 +44,18 @@ const IMPACT = {
   invalid: 100,
 } as const;
 
-function n(value: number, digits = 0): string {
-  return value.toLocaleString('pt-BR', { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+type Lang = 'pt' | 'en';
+const LOCALE: Record<Lang, string> = { pt: 'pt-BR', en: 'en-US' };
+
+function n(value: number, digits = 0, lang: Lang = 'pt'): string {
+  return value.toLocaleString(LOCALE[lang], {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: 0,
+  });
 }
 
-function usd(value: number): string {
-  return `US$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function usd(value: number, lang: Lang = 'pt'): string {
+  return `US$ ${value.toLocaleString(LOCALE[lang], { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 interface Ctx {
@@ -57,16 +67,28 @@ interface Ctx {
   requirements: RequirementResult[];
   req15: RequirementResult[];
   req2: RequirementResult[];
+  /** Requirement labels in English, by requirement id; the Portuguese label when absent. */
+  requirementLabelsEn?: Record<string, string>;
+}
+
+/** The catalog whose labels name the nodes in `lang`. */
+function catalogFor(ctx: Ctx, lang: Lang): Catalog {
+  return lang === 'pt' ? ctx.catalog : localizeCatalog(ctx.catalog, 'en', catalogTextEn);
+}
+
+/** Both languages of one finding's sentence. */
+function both(text: (lang: Lang) => string): { message: string; messageEn: string } {
+  return { message: text('pt'), messageEn: text('en') };
 }
 
 /**
  * Catalog label plus node id. Never the user's free-text label: findings reach
  * the agent, and user text must stay under `userContent` (PRD §12 A05).
  */
-function nameOf(ctx: Ctx, nodeId: string): string {
+function nameOf(ctx: Ctx, nodeId: string, lang: Lang = 'pt'): string {
   const node = ctx.diagram.nodes.find((x) => x.id === nodeId);
   if (!node) return nodeId;
-  const service = findService(ctx.catalog, node.serviceId);
+  const service = findService(catalogFor(ctx, lang), node.serviceId);
   return `${service?.label ?? node.serviceId} (${nodeId})`;
 }
 
@@ -74,7 +96,11 @@ function metricsList(result: SimResult): NodeMetrics[] {
   return Object.values(result.nodes);
 }
 
-function requirementText(r: RequirementResult): string {
+function requirementText(ctx: Ctx, r: RequirementResult, lang: Lang): string {
+  if (lang === 'en') {
+    const label = ctx.requirementLabelsEn?.[r.id] ?? r.label;
+    return `${label} (measured ${n(r.measured, 2, 'en')} ${r.unit}, target ${r.op} ${n(r.target, 2, 'en')} ${r.unit})`;
+  }
   return `${r.label} (medido ${n(r.measured, 2)} ${r.unit}, alvo ${r.op} ${n(r.target, 2)} ${r.unit})`;
 }
 
@@ -118,7 +144,8 @@ function saving(
   service: Service,
   variant: Variant,
   m: NodeMetrics,
-): { saving: number; suggestion: string } | null {
+  serviceEn: Service | undefined,
+): { saving: number; suggestion: (lang: Lang) => string } | null {
   for (const key of UNIT_PARAMS) {
     const param = service.params.find((p) => p.key === key);
     if (!param) continue;
@@ -129,9 +156,13 @@ function saving(
     );
     if (next >= units) return null;
     const perUnit = hourly(variant) * HOURS_PER_MONTH;
+    const en = serviceEn?.params.find((p) => p.key === key)?.label;
     return {
       saving: (units - next) * perUnit,
-      suggestion: `reduzir ${param.label.toLowerCase()} de ${n(units)} para ${n(next)}`,
+      suggestion: (lang) =>
+        lang === 'en'
+          ? `reduce ${(en ?? param.label).toLowerCase()} from ${n(units, 0, 'en')} to ${n(next, 0, 'en')}`
+          : `reduzir ${param.label.toLowerCase()} de ${n(units)} para ${n(next)}`,
     };
   }
   const needed = m.rpsIn / OVERPROVISIONED.targetRho;
@@ -141,7 +172,10 @@ function saving(
   if (!cheaper) return null;
   return {
     saving: (hourly(variant) - hourly(cheaper)) * HOURS_PER_MONTH,
-    suggestion: `trocar ${variant.id} por ${cheaper.id}`,
+    suggestion: (lang) =>
+      lang === 'en'
+        ? `switch ${variant.id} to ${cheaper.id}`
+        : `trocar ${variant.id} por ${cheaper.id}`,
   };
 }
 
@@ -169,9 +203,19 @@ export function findings(ctx: Ctx): Finding[] {
     out.push({
       type: 'bottleneck',
       nodeIds: [m.nodeId],
-      message: queue
-        ? `${nameOf(ctx, m.nodeId)} acumula fila: os consumidores não dão conta (backlog de ${n(m.backlog ?? 0)} mensagens).`
-        : `${nameOf(ctx, m.nodeId)} recebe ${n(m.rpsIn)} req/s para ${n(m.capacity)} de capacidade (${n(m.utilization * 100)}%) e devolve ${n(m.errorRps)} erros/s${hits.length > 0 ? `; derruba: ${hits.join(', ')}` : ''}.`,
+      ...both((lang) => {
+        const name = nameOf(ctx, m.nodeId, lang);
+        const k = (v: number) => n(v, 0, lang);
+        if (lang === 'en') {
+          const hitsEn = failing.map((r) => ctx.requirementLabelsEn?.[r.id] ?? r.label);
+          return queue
+            ? `${name} is building a queue: the consumers can't keep up (backlog of ${k(m.backlog ?? 0)} messages).`
+            : `${name} receives ${k(m.rpsIn)} req/s for ${k(m.capacity)} of capacity (${k(m.utilization * 100)}%) and returns ${k(m.errorRps)} errors/s${hitsEn.length > 0 ? `; it breaks: ${hitsEn.join(', ')}` : ''}.`;
+        }
+        return queue
+          ? `${name} acumula fila: os consumidores não dão conta (backlog de ${k(m.backlog ?? 0)} mensagens).`
+          : `${name} recebe ${k(m.rpsIn)} req/s para ${k(m.capacity)} de capacidade (${k(m.utilization * 100)}%) e devolve ${k(m.errorRps)} erros/s${hits.length > 0 ? `; derruba: ${hits.join(', ')}` : ''}.`;
+      }),
       numbers: {
         rpsIn: m.rpsIn,
         capacity: m.capacity,
@@ -188,7 +232,11 @@ export function findings(ctx: Ctx): Finding[] {
     out.push({
       type: 'requirement-failed',
       nodeIds: c ? [c.nodeId] : [],
-      message: `Requisito não atendido: ${requirementText(r)}${c ? `; quem mais pesa é ${nameOf(ctx, c.nodeId)}` : ''}.`,
+      ...both((lang) =>
+        lang === 'en'
+          ? `Requirement not met: ${requirementText(ctx, r, lang)}${c ? `; the heaviest is ${nameOf(ctx, c.nodeId, lang)}` : ''}.`
+          : `Requisito não atendido: ${requirementText(ctx, r, lang)}${c ? `; quem mais pesa é ${nameOf(ctx, c.nodeId)}` : ''}.`,
+      ),
       numbers: { measured: r.measured, target: r.target },
       impact: IMPACT.failed + Math.min(Math.abs(Math.log(Math.max(ratio, 1e-9))), 999),
     });
@@ -207,7 +255,11 @@ export function findings(ctx: Ctx): Finding[] {
       out.push({
         type: 'breaks-under-load',
         nodeIds: first ? [first.nodeId] : [],
-        message: `Com ${n(multiplier, 1)}× a carga, o design deixa de atender aos requisitos${first ? `; quem cede primeiro é ${nameOf(ctx, first.nodeId)} (${n(first.utilization * 100)}%)` : ''}.`,
+        ...both((lang) =>
+          lang === 'en'
+            ? `At ${n(multiplier, 1, 'en')}× the load, the design stops meeting the requirements${first ? `; the first to give out is ${nameOf(ctx, first.nodeId, lang)} (${n(first.utilization * 100, 0, 'en')}%)` : ''}.`
+            : `Com ${n(multiplier, 1)}× a carga, o design deixa de atender aos requisitos${first ? `; quem cede primeiro é ${nameOf(ctx, first.nodeId)} (${n(first.utilization * 100)}%)` : ''}.`,
+        ),
         numbers: { multiplier },
         impact,
       });
@@ -225,7 +277,11 @@ export function findings(ctx: Ctx): Finding[] {
       out.push({
         type: 'no-traffic',
         nodeIds: [node.id],
-        message: `${nameOf(ctx, node.id)} não recebe tráfego e custa ${usd(m.costMonth)}/mês.`,
+        ...both((lang) =>
+          lang === 'en'
+            ? `${nameOf(ctx, node.id, lang)} gets no traffic and costs ${usd(m.costMonth, 'en')}/month.`
+            : `${nameOf(ctx, node.id)} não recebe tráfego e custa ${usd(m.costMonth)}/mês.`,
+        ),
         numbers: { costMonth: m.costMonth },
         impact: m.costMonth,
       });
@@ -237,12 +293,16 @@ export function findings(ctx: Ctx): Finding[] {
       total > 0 &&
       m.costMonth / total >= OVERPROVISIONED.minCostShare
     ) {
-      const s = saving(node, service, variant, m);
+      const s = saving(node, service, variant, m, findService(catalogFor(ctx, 'en'), service.id));
       if (s && s.saving > 0) {
         out.push({
           type: 'overprovisioned',
           nodeIds: [node.id],
-          message: `${nameOf(ctx, node.id)} trabalha a ${n(m.utilization * 100)}% e custa ${usd(m.costMonth)}/mês: dá para ${s.suggestion} e economizar cerca de ${usd(s.saving)}/mês.`,
+          ...both((lang) =>
+            lang === 'en'
+              ? `${nameOf(ctx, node.id, lang)} runs at ${n(m.utilization * 100, 0, 'en')}% and costs ${usd(m.costMonth, 'en')}/month: you can ${s.suggestion(lang)} and save about ${usd(s.saving, 'en')}/month.`
+              : `${nameOf(ctx, node.id)} trabalha a ${n(m.utilization * 100)}% e custa ${usd(m.costMonth)}/mês: dá para ${s.suggestion(lang)} e economizar cerca de ${usd(s.saving)}/mês.`,
+          ),
           numbers: { utilization: m.utilization, costMonth: m.costMonth, saving: s.saving },
           impact: s.saving,
         });
@@ -259,7 +319,12 @@ export function findings(ctx: Ctx): Finding[] {
     out.push({
       type: 'invalid-connection',
       nodeIds: [e.source, e.target],
-      message: `A conexão ${nameOf(ctx, e.source)} → ${nameOf(ctx, e.target)} não é comum em ${s.label}; confira se é isso mesmo.`,
+      ...both((lang) => {
+        if (lang === 'pt')
+          return `A conexão ${nameOf(ctx, e.source)} → ${nameOf(ctx, e.target)} não é comum em ${s.label}; confira se é isso mesmo.`;
+        const label = findService(catalogFor(ctx, lang), s.id)?.label ?? s.label;
+        return `The connection ${nameOf(ctx, e.source, lang)} → ${nameOf(ctx, e.target, lang)} is not usual for ${label}; check that this is what you meant.`;
+      }),
       numbers: {},
       impact: IMPACT.invalid,
     });

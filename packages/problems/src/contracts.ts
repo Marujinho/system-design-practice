@@ -27,6 +27,8 @@ export const FindingSchema = z
     ]),
     nodeIds: z.array(z.string()),
     message: z.string(),
+    /** Absent in sessions and attempts saved before language-switch. */
+    messageEn: z.string().optional(),
     numbers: z.record(z.string(), z.number()),
     impact: z.number(),
   })

@@ -308,6 +308,9 @@
           "message": {
             "type": "string"
           },
+          "messageEn": {
+            "type": "string"
+          },
           "numbers": {
             "type": "object",
             "propertyNames": {

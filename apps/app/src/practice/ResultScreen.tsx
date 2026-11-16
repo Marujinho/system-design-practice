@@ -1,6 +1,7 @@
 import type { FinalizeResponse } from '@archsim/problems';
 import { useEffect, useState } from 'react';
 import { formatCompact, formatUsd } from '../format';
+import { useLang } from '../i18n/store';
 import { useT } from '../i18n/t';
 import { useReducedMotion } from '../viz/useReducedMotion';
 import { AgentHint } from './AgentHint';
@@ -45,6 +46,7 @@ export function ResultScreen({
   study?: boolean;
 }) {
   const t = useT();
+  const lang = useLang();
   const reduced = useReducedMotion();
   const shown = useCountUp(result.score.total, reduced);
   const s = result.score;
@@ -119,7 +121,9 @@ export function ResultScreen({
             <h3>{t('result.findings')}</h3>
             <ol className="findings">
               {result.findings.map((f, i) => (
-                <li key={`${f.type}-${String(i)}`}>{f.message}</li>
+                <li key={`${f.type}-${String(i)}`}>
+                  {lang === 'en' ? (f.messageEn ?? f.message) : f.message}
+                </li>
               ))}
             </ol>
           </section>

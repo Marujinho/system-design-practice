@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
+import { useLang } from '../i18n/store';
 import { useT } from '../i18n/t';
 import { hasProblem, useDiagram } from '../store/diagram-store';
 import { downloadDiagram, readDiagramFile } from './save-open';
 
 export function FileMenu() {
   const t = useT();
+  const lang = useLang();
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +42,7 @@ export function FileMenu() {
           if (!file) return;
           void readDiagramFile(file).then((r) => {
             if (!r.ok) {
-              setError(r.message);
+              setError(lang === 'en' ? r.messageEn : r.message);
               return;
             }
             setError(null);

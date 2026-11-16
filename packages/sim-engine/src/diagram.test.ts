@@ -227,6 +227,9 @@ describe('safe messages and overrides (PRD §12 A05, review)', () => {
     const unknown = diagram([node('payload-id', 'aws.nope', 'x')], []);
     const u = parse(unknown);
     expect(u.ok ? '' : u.message).toBe('Serviço desconhecido no catálogo no nó nº 1.');
+    expect(u.ok ? '' : u.messageEn).toBe('Service not in the catalog at node #1.');
+    expect(r.ok ? '' : r.messageEn).toContain('an unknown field');
+    expect(r.ok ? '' : r.messageEn).not.toContain('ignore');
   });
 
   it('accepts overrides the variant has and refuses any other key', () => {

@@ -34,7 +34,12 @@ export function downloadDiagram(diagram: Diagram, doc: Document = document): voi
 /** Read and validate a picked file before anything replaces the current diagram (FR-35, A06, A08). */
 export async function readDiagramFile(file: Pick<File, 'size' | 'text'>): Promise<DiagramResult> {
   if (file.size > LIMITS.maxBytes) {
-    return { ok: false, code: 'TOO_LARGE', message: 'O arquivo passa de 5 MB.' };
+    return {
+      ok: false,
+      code: 'TOO_LARGE',
+      message: 'O arquivo passa de 5 MB.',
+      messageEn: 'The file is larger than 5 MB.',
+    };
   }
   return parseDiagram(await file.text(), catalog);
 }
