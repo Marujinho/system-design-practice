@@ -299,3 +299,55 @@ PRD §18, com estes detalhes:
   5. Recarregar: continua em EN.
   6. `pnpm -s archsim simulate` segue em português.
 - O PR leva a amostra para revisão: o enunciado de 2 problemas, 5 serviços e 10 textos da interface.
+
+## Implementation
+
+**Branch**: `feat/i18n-pt-en` · **Base**: `master` · **Date**: 2026-11-16
+
+| Task | Commit | Check | Lint / Types / Tests |
+|---|---|---|---|
+| T1 | `2888e87` | ✅ | ✅ ✅ ✅ (756) |
+| T2 | `eaaa013` | ✅ | ✅ ✅ ✅ (761) |
+| T3 | `2c8ec59` | ✅ | ✅ ✅ ✅ (764) |
+| T4 | `882de62` | ✅ | ✅ ✅ ✅ (774) |
+| T5 | `db77942` | ✅ | ✅ ✅ ✅ (779) |
+| T6 | `ab5011b` | ✅ | ✅ ✅ ✅ (796) |
+| T7 | `17d5cd6` | ✅ | ✅ ✅ ✅ (800) |
+| T8 | `31ea500` | ✅ (80 e2e) | ✅ ✅ ✅ (800) |
+
+Linha de base: 744 testes unitários e 64 e2e, todos verdes. No fim: 800 unitários e 80 e2e (os 64 de antes, mais 6 de idioma e 10 de acessibilidade em inglês), verdes.
+
+### Deviations
+- **T1** — a formatação solta no `PropertiesPanel` e no `ChatPanel` ficou para T2 e T3, que já mexiam nesses arquivos. O aviso de tradução faltando sai sempre, e não só em dev, porque o `import.meta.env` não existe quando o servidor importa o módulo.
+- **T2/T3** — entraram também `store/proposal.ts` (`describeOp`), os avisos do `diagram-store.ts` e os erros do `sim-client.ts`, que mostram texto ao usuário e a lista de arquivos não citava. Os helpers fora do React recebem `lang` ou usam `tr()`, e o componente que os chama assina o idioma.
+- **T4** — o `catalogVersion` não subiu: o `catalog.json` não mudou, e a tradução fica em `catalog.en.json`.
+- **T5** — os avisos de simulação (`SimWarning`) não ganharam `messageEn`. O app não os mostra em lugar nenhum; eles só vão para a CLI e para a sessão, em português. Ganharam inglês os achados e os erros de arquivo de diagrama, que a pessoa vê. Os JSON Schemas foram regenerados (`pnpm schemas`).
+- **T6** — em vez de reescrever o diagrama, um store (`i18n/problem-text.ts`) leva para os painéis os rótulos em inglês das classes e dos requisitos do problema aberto. O resumo da lista ganhou `titleEn`.
+- **T7** — os textos que só o modelo lê (`TOOL_RESULT`, `TOOL_REJECTED` e o resto do prompt) ficaram em português, com a regra de idioma pedindo a resposta em inglês. O script MCP não precisou ser gerado por idioma. O motivo de uma recusa, que a pessoa vê, sai no idioma do pedido. O `ApiError` guarda o texto em português para comparação (`ProposalCard`). O ajuste do teste de troca do T6 (comparar o conteúdo do diagrama em vez da identidade) entrou neste commit.
+- **T8** — a varredura ignora o que a pessoa e o mentor escreveram por seletor (`.service-node-label`, `.chat-msg`, `.proposal`), sem o atributo `data-user-content` nos componentes. Ela achou dois problemas reais, já corrigidos:
+  - o título da solução, que vinha do `name` da referência em português;
+  - o nome acessível do controle de idioma, que não continha o texto visível (axe `label-content-name-mismatch`).
+- **T8** — o primeiro commit do T8 passou com 2 erros de lint, porque um pipe escondeu o código de saída do gate. Foi corrigido com `--amend` antes de qualquer push.
+
+### Definition of Done
+- [x] Todo Must atende ao critério de aceite: FR-1 a FR-13 com testes unitários e e2e.
+- [x] O teste do NFR-2 passa. Na interface, o tipo `Record<Key, string>` e o teste de placeholders garantem a completude. O catálogo passa por `catalogTextGaps` e pela checagem de português. Os 10 problemas passam pelo `problemTextGaps` na carga e pela checagem de português no `bank.test`.
+- [x] O e2e do FR-11 passa em chromium e webkit, e o teste negativo pega uma string injetada.
+- [x] Os testes existentes que procuram texto em português seguem verdes em PT.
+- [x] Roteiro do §18:
+  - a interface foi coberta pelo e2e nos dois navegadores: home, lista, problema, propriedades, resultado, solução, estudo e canvas livre, além da troca no meio do problema com recarga;
+  - o mentor real (assinatura) respondeu em inglês às duas perguntas, no preview com um diretório de prática temporário;
+  - `pnpm -s archsim simulate` segue em português.
+- [x] `pnpm lint`, `typecheck`, `test` (800) e `test:e2e` (80) passam. O `pnpm audit` acusa 1 moderate em `minimatch` (dev, via eslint), herdado e sem dependência nova neste branch.
+- [ ] A amostra da tradução para a pessoa revisar vai no PR.
+
+### Verification
+- Mentor real, em inglês, com `lang=en` e a assinatura:
+  - "What is the bottleneck here?" → a resposta veio em inglês, com os números da simulação;
+  - "Add a MongoDB database" → em inglês, sem card. O modelo não chamou a ferramenta e explicou que o MongoDB não está no catálogo, com o DynamoDB como alternativa. O motivo de recusa em inglês está coberto pelo teste da rota.
+- Log: `... propostas=0 rejeitadas=0 lang=en`, sem a pergunta.
+- Tempo até o primeiro token: 4,6 s e 5,3 s.
+- A troca no meio do problema leva menos de 100 ms, medida no e2e.
+
+### Inherited failures
+Nenhuma nos testes. O aviso do audit (`minimatch`) é anterior ao branch.
