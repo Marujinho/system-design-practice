@@ -54,7 +54,7 @@ export function createPracticeHandler(options: PracticeOptions) {
   };
   const problemOf = (id: string | undefined): LoadedProblem => {
     const p = id !== undefined && ID.test(id) ? problems().get(id) : undefined;
-    if (!p) throw new Refusal(404, 'problema não existe');
+    if (!p) throw new Refusal(404, 'problema não existe', 'problem does not exist');
     return p;
   };
 
@@ -90,12 +90,17 @@ export function createPracticeHandler(options: PracticeOptions) {
     try {
       body = safeJsonParse(text);
     } catch {
-      throw new Refusal(400, 'JSON inválido');
+      throw new Refusal(400, 'JSON inválido', 'invalid JSON');
     }
     const { problemId, diagram } = (body ?? {}) as { problemId?: unknown; diagram?: unknown };
     const loaded = problemOf(typeof problemId === 'string' ? problemId : undefined);
     const checked = validateDiagram(diagram, options.catalog);
-    if (!checked.ok) throw new Refusal(400, `diagrama inválido: ${checked.code}`);
+    if (!checked.ok)
+      throw new Refusal(
+        400,
+        `diagrama inválido: ${checked.code}`,
+        `invalid diagram: ${checked.code}`,
+      );
     const attemptDiagram = withProblemLoad(checked.diagram, loaded.problem);
     const scored = scoreAttempt({
       problem: loaded.problem,
@@ -182,7 +187,11 @@ export function createPracticeHandler(options: PracticeOptions) {
     const h = store.readHistory();
     // The solution stays on the server until the problem has been finalized once (FR-46, A06).
     if (!h.attempts.some((a) => a.problemId === loaded.problem.id)) {
-      throw new Refusal(403, 'finalize o problema antes de ver a solução');
+      throw new Refusal(
+        403,
+        'finalize o problema antes de ver a solução',
+        'finish the problem before seeing the solution',
+      );
     }
     store.markSolutionViewed(loaded.problem.id, now().toISOString());
     const shown = withProblemLoad(loaded.reference, loaded.problem);
@@ -248,7 +257,7 @@ export function createPracticeHandler(options: PracticeOptions) {
           return;
         case 'mentor':
           if (parts[1] !== 'status' || parts.length !== 2)
-            throw new Refusal(404, 'rota desconhecida');
+            throw new Refusal(404, 'rota desconhecida', 'unknown route');
           await mentor.status(req, res);
           return;
         case 'conversation':
@@ -269,18 +278,21 @@ export function createPracticeHandler(options: PracticeOptions) {
           );
           return;
         default:
-          throw new Refusal(404, 'rota desconhecida');
+          throw new Refusal(404, 'rota desconhecida', 'unknown route');
       }
     } catch (error) {
       if (error instanceof Refusal) {
         logRefusal(req, error, log);
-        sendJson(res, error.status, { error: error.reason });
+        sendJson(res, error.status, { error: error.reason, errorEn: error.reasonEn });
         return;
       }
       log(
         `[archsim] erro interno em ${clean(req.method)} ${clean(url)}: ${error instanceof Error ? error.message : 'desconhecido'}`,
       );
-      sendJson(res, 500, { error: 'não consegui gravar a sessão' });
+      sendJson(res, 500, {
+        error: 'não consegui gravar a sessão',
+        errorEn: "couldn't save the session",
+      });
     }
   };
 }

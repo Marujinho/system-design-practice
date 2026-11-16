@@ -137,6 +137,8 @@ export const ChatRequest = z
     provider: MentorProviderId,
     message: z.string().trim().min(1).max(MAX_MESSAGE_CHARS),
     diagram: z.unknown(),
+    /** The language of the reply; a closed list, never free text (language-switch FR-9, A05). */
+    lang: z.enum(['pt', 'en']).default('pt'),
   })
   .strict();
 export type ChatRequest = z.infer<typeof ChatRequest>;

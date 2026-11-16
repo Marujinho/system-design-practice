@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Palette } from '../canvas/Palette';
 import { LoadPanel } from '../panels/LoadPanel';
 import { PropertiesPanel } from '../panels/PropertiesPanel';
+import { apiErrorOf } from '../practice/api';
 import { emptyDiagram } from '../store/defaults';
 import { useDiagram } from '../store/diagram-store';
 import { useLangStore } from './store';
@@ -105,5 +106,26 @@ describe('the canvas and the panels in English (language-switch FR-5)', () => {
   it('a new free canvas starts with its load labelled in the active language', () => {
     english();
     expect(emptyDiagram().load.classes[0]?.label).toBe('Requests');
+  });
+});
+
+describe('server refusals in the active language (language-switch FR-5)', () => {
+  it('shows errorEn in English and error in Portuguese, keeping the Portuguese for matching', () => {
+    const body = {
+      error: 'já há uma resposta em andamento',
+      errorEn: 'a reply is already in progress',
+    };
+    expect(apiErrorOf(body, 409).message).toBe('já há uma resposta em andamento');
+    english();
+    const e = apiErrorOf(body, 409);
+    expect(e.message).toBe('a reply is already in progress');
+    expect(e.pt).toBe('já há uma resposta em andamento');
+  });
+
+  it('falls back to error when the server sent no English, and to the status without a body', () => {
+    english();
+    expect(apiErrorOf({ error: 'só português' }, 400).message).toBe('só português');
+    expect(apiErrorOf({ error: 'x', errorEn: 3 }, 400).message).toBe('x');
+    expect(apiErrorOf(null, 502).message).toBe('error 502');
   });
 });

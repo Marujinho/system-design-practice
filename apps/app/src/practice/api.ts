@@ -1,9 +1,27 @@
+import { currentLang } from '../i18n/store';
 import { tr } from '../i18n/t';
 import { FinalizeResponse, History, ProblemSummary, PublicProblem } from '@archsim/problems';
 import { Diagram } from '@archsim/sim-engine';
 import { z } from 'zod';
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  /** `message` is in the active language; `pt` is the server's Portuguese reason, for matching. */
+  constructor(
+    message: string,
+    readonly pt: string = message,
+  ) {
+    super(message);
+  }
+}
+
+/** The server's refusal in the active language: `errorEn` in English when it sent one. */
+export function apiErrorOf(body: unknown, status: number): ApiError {
+  if (body === null || typeof body !== 'object' || !('error' in body))
+    return new ApiError(tr('api.status', { status }));
+  const pt = String(body.error);
+  const en = 'errorEn' in body && typeof body.errorEn === 'string' ? body.errorEn : null;
+  return new ApiError(currentLang() === 'en' && en !== null ? en : pt, pt);
+}
 
 async function call<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -13,13 +31,7 @@ async function call<T>(schema: z.ZodType<T>, path: string, init?: RequestInit): 
     throw new ApiError(tr('api.noServer'));
   }
   const body: unknown = await res.json().catch(() => null);
-  if (!res.ok) {
-    const reason =
-      body !== null && typeof body === 'object' && 'error' in body
-        ? String(body.error)
-        : tr('api.status', { status: res.status });
-    throw new ApiError(reason);
-  }
+  if (!res.ok) throw apiErrorOf(body, res.status);
   const parsed = schema.safeParse(body);
   if (!parsed.success) throw new ApiError(tr('api.unexpected'));
   return parsed.data;

@@ -8,7 +8,7 @@ import {
 import type { Diagram } from '@archsim/sim-engine';
 import { create } from 'zustand';
 import { tr } from '../i18n/t';
-import { ApiError } from './api';
+import { ApiError, apiErrorOf } from './api';
 
 async function json<T>(parse: (v: unknown) => T, path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -19,14 +19,8 @@ async function json<T>(parse: (v: unknown) => T, path: string, init?: RequestIni
   }
   if (res.status === 204) return parse(null);
   const body: unknown = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(errorOf(body, res.status));
+  if (!res.ok) throw apiErrorOf(body, res.status);
   return parse(body);
-}
-
-function errorOf(body: unknown, status: number): string {
-  return body !== null && typeof body === 'object' && 'error' in body
-    ? String(body.error)
-    : tr('api.status', { status });
 }
 
 /** Splits a server-sent-event stream into its `data:` payloads. */
@@ -65,7 +59,13 @@ export const mentorApi = {
    * refuses before streaming; an abort ends it quietly.
    */
   async chat(
-    body: { problemId: string; provider: MentorProviderId; message: string; diagram: Diagram },
+    body: {
+      problemId: string;
+      provider: MentorProviderId;
+      message: string;
+      diagram: Diagram;
+      lang: 'pt' | 'en';
+    },
     signal: AbortSignal,
     onEvent: (event: MentorEvent) => void,
   ): Promise<void> {
@@ -84,7 +84,7 @@ export const mentorApi = {
     }
     if (!res.ok || !res.body) {
       const err: unknown = await res.json().catch(() => null);
-      throw new ApiError(errorOf(err, res.status));
+      throw apiErrorOf(err, res.status);
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();

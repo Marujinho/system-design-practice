@@ -215,7 +215,7 @@ export function ChatPanel({ problemId }: { problemId: string }) {
 
     mentorApi
       .chat(
-        { problemId, provider, message: text, diagram: useDiagram.getState().diagram },
+        { problemId, provider, message: text, diagram: useDiagram.getState().diagram, lang },
         c.signal,
         (e) => {
           if (e.type === 'delta') {

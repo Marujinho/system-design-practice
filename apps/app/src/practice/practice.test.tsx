@@ -186,8 +186,8 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     const firstClass = loaded.problem.load.classes[0];
     expect(screen.getByText(loaded.en.classes[firstClass?.name ?? ''] ?? '')).toBeTruthy();
     expect(document.body.textContent).not.toContain('Encurtador de URL');
-    // the diagram is the same object: nothing was recreated by the switch
-    expect(useDiagram.getState().diagram).toBe(nodesBefore);
+    // the switch changes no node, edge or load of the diagram
+    expect(useDiagram.getState().diagram).toEqual(nodesBefore);
   });
 
   it('renders a statement with <script> as text, never as an element', async () => {

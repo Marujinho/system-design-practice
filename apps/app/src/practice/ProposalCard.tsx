@@ -49,7 +49,7 @@ export function ProposalCard({
         setUnsynced(null);
       },
       (e: unknown) => {
-        if (e instanceof ApiError && e.message.includes('em andamento')) {
+        if (e instanceof ApiError && e.pt.includes('em andamento')) {
           setUnsynced(status);
           return;
         }
@@ -80,7 +80,7 @@ export function ProposalCard({
       setNote(
         r.code === 'missing'
           ? tr('proposal.stale')
-          : tr('proposal.cannotApply', { reason: r.message }),
+          : tr('proposal.cannotApply', { reason: lang === 'en' ? r.messageEn : r.message }),
       );
       return;
     }

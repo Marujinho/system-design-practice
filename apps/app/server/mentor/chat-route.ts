@@ -33,7 +33,21 @@ export interface MentorOptions {
 
 const CHAT_BODY_LIMIT = 1024 * 1024;
 
-class Rejected extends Error {}
+class Rejected extends Error {
+  constructor(
+    message: string,
+    /** The same reason in English (language-switch FR-9). */
+    readonly messageEn: string,
+  ) {
+    super(message);
+  }
+}
+
+/** A refusal of a proposal, in both languages; the reply's language picks one. */
+interface Reason {
+  pt: string;
+  en: string;
+}
 
 /**
  * The mentor's neutral ids (n3) back to the diagram's own, with the map of the
@@ -47,10 +61,17 @@ export function translateOps(
   const real = (ref: string, allowNew: boolean): string => {
     if (NewRef.safeParse(ref).success) {
       if (allowNew) return ref;
-      throw new Rejected('um nó novo não pode ser desconectado');
+      throw new Rejected(
+        'um nó novo não pode ser desconectado',
+        'a new node cannot be disconnected',
+      );
     }
     const id = /^n\d+$/.test(ref) ? ids[ref] : undefined;
-    if (id === undefined) throw new Rejected(`o nó ${ref.slice(0, 16)} não está no desenho`);
+    if (id === undefined)
+      throw new Rejected(
+        `o nó ${ref.slice(0, 16)} não está no desenho`,
+        `node ${ref.slice(0, 16)} is not in the diagram`,
+      );
     return id;
   };
   return ops.map((op): ProposalOp => {
@@ -113,7 +134,8 @@ export function mentorRoutes(deps: {
     const problemId = deps.problemOf(id).problem.id;
     if (req.method === 'DELETE') {
       // A reply in flight would write the old messages back when it ends.
-      if (inFlight.has(problemId)) throw new Refusal(409, 'já há uma resposta em andamento');
+      if (inFlight.has(problemId))
+        throw new Refusal(409, 'já há uma resposta em andamento', 'a reply is already in progress');
       deps.store.clearConversation(problemId);
       res.writeHead(204, { 'Cache-Control': 'no-store' }).end();
       return;
@@ -128,21 +150,32 @@ export function mentorRoutes(deps: {
       body = safeJsonParse(await readJsonBody(req, CHAT_BODY_LIMIT));
     } catch (error) {
       if (error instanceof Refusal) throw error;
-      throw new Refusal(400, 'JSON inválido');
+      throw new Refusal(400, 'JSON inválido', 'invalid JSON');
     }
     const message = (body as { message?: unknown } | null)?.message;
     if (typeof message === 'string' && message.length > MAX_MESSAGE_CHARS)
-      throw new Refusal(413, `mensagem passa de ${String(MAX_MESSAGE_CHARS)} caracteres`);
+      throw new Refusal(
+        413,
+        `mensagem passa de ${String(MAX_MESSAGE_CHARS)} caracteres`,
+        `message is longer than ${String(MAX_MESSAGE_CHARS)} characters`,
+      );
     const parsed = ChatRequest.safeParse(body);
-    if (!parsed.success) throw new Refusal(400, 'pedido de chat inválido');
+    if (!parsed.success) throw new Refusal(400, 'pedido de chat inválido', 'invalid chat request');
     const request = parsed.data;
     const loaded = deps.problemOf(request.problemId);
     const checked = validateDiagram(request.diagram, deps.catalog);
-    if (!checked.ok) throw new Refusal(400, `diagrama inválido: ${checked.code}`);
+    if (!checked.ok)
+      throw new Refusal(
+        400,
+        `diagrama inválido: ${checked.code}`,
+        `invalid diagram: ${checked.code}`,
+      );
     const provider = providers.find((p) => p.id === request.provider);
-    if (!provider || !(await provider.available())) throw new Refusal(409, 'provedor indisponível');
+    if (!provider || !(await provider.available()))
+      throw new Refusal(409, 'provedor indisponível', 'provider unavailable');
     const problemId = loaded.problem.id;
-    if (inFlight.has(problemId)) throw new Refusal(409, 'já há uma resposta em andamento');
+    if (inFlight.has(problemId))
+      throw new Refusal(409, 'já há uma resposta em andamento', 'a reply is already in progress');
     inFlight.add(problemId);
 
     const started = Date.now();
@@ -175,10 +208,12 @@ export function mentorRoutes(deps: {
     try {
       const saved = deps.store.readConversation(problemId);
       const { kept, trimmed } = trimHistory(saved.messages);
-      let system = systems.get(problemId);
+      // One stable prompt per problem and language, so the provider can cache it.
+      const key = `${problemId}:${request.lang}`;
+      let system = systems.get(key);
       if (system === undefined) {
-        system = systemPrompt(loaded, deps.catalog);
-        systems.set(problemId, system);
+        system = systemPrompt(loaded, deps.catalog, request.lang);
+        systems.set(key, system);
       }
       const seen = currentState(loaded, checked.diagram, deps.catalog);
       const state = seen.text;
@@ -202,18 +237,22 @@ export function mentorRoutes(deps: {
       // The single decision about the reply's proposal (review M2): the first that holds up
       // counts; the model is told the others don't. Providers ask it before answering the tool.
       const verdict = { asked: false, lastReason: undefined as string | undefined };
+      const say = (r: Reason) => (request.lang === 'en' ? r.en : r.pt);
       const check = (raw: unknown): string | null => {
         verdict.asked = true;
         if (proposal !== undefined)
-          return 'já há uma proposta registrada nesta resposta; ela é a que vale';
+          return say({
+            pt: 'já há uma proposta registrada nesta resposta; ela é a que vale',
+            en: 'a proposal is already registered in this reply; that one counts',
+          });
         const r = validateProposal(raw, seen.ids, checked.diagram);
         if (r.ok) {
           proposal = r.proposal;
           return null;
         }
         rejected += 1;
-        verdict.lastReason = r.reason;
-        return r.reason;
+        verdict.lastReason = say(r.reason);
+        return verdict.lastReason;
       };
       const unchecked: unknown[] = [];
       const input = { system, history: kept, state, message: request.message, model, check };
@@ -294,7 +333,7 @@ export function mentorRoutes(deps: {
         `[archsim] mentor problema=${problemId} provedor=${provider.id} status=${outcome} ` +
           `ttft_ms=${ttft === null ? '-' : String(ttft)} in=${String(usage?.inputTokens ?? 0)} ` +
           `out=${String(usage?.outputTokens ?? 0)} propostas=${proposal === undefined ? '0' : '1'} ` +
-          `rejeitadas=${String(rejected)}`,
+          `rejeitadas=${String(rejected)} lang=${request.lang}`,
       );
     }
   }
@@ -304,18 +343,30 @@ export function mentorRoutes(deps: {
     input: unknown,
     ids: Record<string, string>,
     seenDiagram: Parameters<typeof applyProposal>[0],
-  ): { ok: true; proposal: Proposal } | { ok: false; reason: string } {
+  ): { ok: true; proposal: Proposal } | { ok: false; reason: Reason } {
     const parsed = ProposalInput.safeParse(input);
-    if (!parsed.success) return { ok: false, reason: 'a proposta não segue o formato esperado' };
+    if (!parsed.success)
+      return {
+        ok: false,
+        reason: {
+          pt: 'a proposta não segue o formato esperado',
+          en: 'the proposal is not in the expected format',
+        },
+      };
     let ops: ProposalOp[];
     try {
       ops = translateOps(parsed.data.ops, ids);
     } catch (error) {
-      if (error instanceof Rejected) return { ok: false, reason: error.message };
+      if (error instanceof Rejected)
+        return { ok: false, reason: { pt: error.message, en: error.messageEn } };
       throw error;
     }
     const dry = applyProposal(seenDiagram, ops, { catalog: deps.catalog, newId: dryRunId });
-    if (!dry.ok) return { ok: false, reason: dry.message.slice(0, 200) };
+    if (!dry.ok)
+      return {
+        ok: false,
+        reason: { pt: dry.message.slice(0, 200), en: dry.messageEn.slice(0, 200) },
+      };
     return {
       ok: true,
       proposal: { summary: parsed.data.summary, ops, id: randomUUID(), status: 'pending' },
@@ -330,23 +381,28 @@ export function mentorRoutes(deps: {
       body = safeJsonParse(await readJsonBody(req, 4096));
     } catch (error) {
       if (error instanceof Refusal) throw error;
-      throw new Refusal(400, 'JSON inválido');
+      throw new Refusal(400, 'JSON inválido', 'invalid JSON');
     }
     const parsed = ProposalStatusRequest.safeParse(body);
-    if (!parsed.success) throw new Refusal(400, 'pedido inválido');
+    if (!parsed.success) throw new Refusal(400, 'pedido inválido', 'invalid request');
     const problemId = deps.problemOf(parsed.data.problemId).problem.id;
-    if (inFlight.has(problemId)) throw new Refusal(409, 'já há uma resposta em andamento');
+    if (inFlight.has(problemId))
+      throw new Refusal(409, 'já há uma resposta em andamento', 'a reply is already in progress');
     const conversation = deps.store.readConversation(problemId);
     const message = conversation.messages.find(
       (m) => m.role === 'mentor' && m.proposal?.id === parsed.data.proposalId,
     );
     if (message?.role !== 'mentor' || message.proposal === undefined)
-      throw new Refusal(404, 'proposta não encontrada');
+      throw new Refusal(404, 'proposta não encontrada', 'proposal not found');
     // pending ↔ applied, pending → discarded; a discarded proposal stays discarded.
     if (message.proposal.status === 'discarded')
-      throw new Refusal(409, 'a proposta já foi descartada');
+      throw new Refusal(409, 'a proposta já foi descartada', 'the proposal was already discarded');
     if (message.proposal.status === 'applied' && parsed.data.status === 'discarded')
-      throw new Refusal(409, 'desfaça a proposta antes de descartá-la');
+      throw new Refusal(
+        409,
+        'desfaça a proposta antes de descartá-la',
+        'undo the proposal before discarding it',
+      );
     message.proposal = { ...message.proposal, status: parsed.data.status };
     deps.store.writeConversation(conversation);
     sendJson(res, 200, conversation);
