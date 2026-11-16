@@ -46,3 +46,48 @@ export function withUnits<T extends Record<string, unknown>>(
   if (n) n.props.units = units;
   return copy;
 }
+
+/** What the person or the mentor wrote: data, shown as it was written (language-switch §9). */
+const USER_CONTENT = '.service-node-label, .chat-msg, .proposal, [lang="pt-BR"]';
+
+/** Accents and words that exist in Portuguese and not in the English texts. */
+const PORTUGUESE =
+  /[çãõâêôáéíóú]|\b(não|você|uma|nó|nós|carga|custo|enunciado|requisitos?|problemas?|estudo|conexão|réplicas?|fila|gargalo|mês|abrir|salvar|fechar|enviar|pergunte|selecione|nenhum)\b/i;
+
+/**
+ * Portuguese left on the page — in the text, `aria-label`, `title` and
+ * `placeholder` — outside what the person or the mentor wrote (language-switch FR-11).
+ */
+export async function portugueseLeftovers(page: Page): Promise<string[]> {
+  const found = await page.evaluate(
+    ([skip, source]) => {
+      const re = new RegExp(source, 'i');
+      const out: string[] = [];
+      const outside = (el: Element) => el.closest(skip) === null;
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const text = n.textContent?.trim() ?? '';
+        const el = n.parentElement;
+        if (text === '' || !el || !outside(el) || el.closest('[hidden], script, style')) continue;
+        if (re.test(text)) out.push(text);
+      }
+      for (const el of document.querySelectorAll('[aria-label], [title], [placeholder]')) {
+        if (!outside(el)) continue;
+        for (const a of ['aria-label', 'title', 'placeholder']) {
+          const v = el.getAttribute(a);
+          if (v && re.test(v)) out.push(`${a}="${v}"`);
+        }
+      }
+      return out;
+    },
+    [USER_CONTENT, PORTUGUESE.source] as const,
+  );
+  return [...new Set(found)];
+}
+
+/** Open the app in a language, as a stored choice would. */
+export async function inLanguage(page: Page, lang: 'pt' | 'en'): Promise<void> {
+  await page.addInitScript((l) => {
+    localStorage.setItem('archsim:lang', l);
+  }, lang);
+}

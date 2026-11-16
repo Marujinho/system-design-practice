@@ -201,6 +201,7 @@ export function createPracticeHandler(options: PracticeOptions) {
       english
         ? {
             ...shown,
+            name: `${loaded.en.title} — reference`,
             nodes: shown.nodes.map((n) => ({
               ...n,
               label: loaded.en.referenceLabels[n.id] ?? n.label,

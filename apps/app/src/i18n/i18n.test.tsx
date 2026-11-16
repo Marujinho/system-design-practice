@@ -129,14 +129,17 @@ describe('LanguageToggle (FR-1, FR-2, NFR-4)', () => {
       </>,
     );
     const label = screen.getByTestId('label');
-    expect(screen.getByRole('button', { name: 'Português' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'PT — Português' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
     expect(label).toHaveTextContent('Idioma');
-    await userEvent.click(screen.getByRole('button', { name: 'English' }));
-    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Português' })).toHaveAttribute(
+    await userEvent.click(screen.getByRole('button', { name: 'EN — English' }));
+    expect(screen.getByRole('button', { name: 'EN — English' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'PT — Português' })).toHaveAttribute(
       'aria-pressed',
       'false',
     );
@@ -151,7 +154,7 @@ describe('LanguageToggle (FR-1, FR-2, NFR-4)', () => {
     render(<LanguageToggle />);
     await userEvent.tab();
     await userEvent.tab();
-    expect(screen.getByRole('button', { name: 'English' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'EN — English' })).toHaveFocus();
     await userEvent.keyboard('{Enter}');
     expect(useLangStore.getState().lang).toBe('en');
     await userEvent.keyboard('{Shift>}{Tab}{/Shift} ');

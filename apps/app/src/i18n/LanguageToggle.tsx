@@ -20,7 +20,8 @@ export function LanguageToggle() {
           className="button"
           lang={l === 'en' ? 'en' : 'pt-BR'}
           aria-pressed={lang === l}
-          aria-label={t(l === 'en' ? 'lang.en' : 'lang.pt')}
+          // the visible code first, so the accessible name contains what is on screen (WCAG 2.5.3)
+          aria-label={`${l.toUpperCase()} — ${t(l === 'en' ? 'lang.en' : 'lang.pt')}`}
           onClick={() => {
             setLang(l);
           }}
