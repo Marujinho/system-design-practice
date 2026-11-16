@@ -7,6 +7,7 @@ import { StudyView } from './practice/StudyView';
 import './practice/practice.css';
 import './panels/panels.css';
 import { hrefOf, type Route } from './routes';
+import { LanguageToggle } from './i18n/LanguageToggle';
 import { ThemeToggle } from './theme/ThemeToggle';
 import { useRoute } from './useRoute';
 import { Workspace } from './workspace/Workspace';
@@ -67,7 +68,10 @@ export function App() {
         <h1>
           <a href={hrefOf({ screen: 'home' })}>ARCHSIM</a>
         </h1>
-        <ThemeToggle />
+        <div className="app-header-tools">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
       </header>
       <main>
         <Screen route={route} />

@@ -14,7 +14,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: [['list']],
-  use: { baseURL: 'http://127.0.0.1:4173', trace: 'retain-on-failure' },
+  // the browsers report en-US; the specs read the Portuguese texts (language-switch FR-4)
+  use: { baseURL: 'http://127.0.0.1:4173', trace: 'retain-on-failure', locale: 'pt-BR' },
   projects: [
     {
       name: 'chromium',
