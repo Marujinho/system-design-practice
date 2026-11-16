@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
+import { useT } from '../i18n/t';
 import { hasProblem, useDiagram } from '../store/diagram-store';
 import { downloadDiagram, readDiagramFile } from './save-open';
 
 export function FileMenu() {
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +17,7 @@ export function FileMenu() {
           downloadDiagram(useDiagram.getState().diagram);
         }}
       >
-        Salvar arquivo
+        {t('files.save')}
       </button>
       <button
         type="button"
@@ -24,14 +26,14 @@ export function FileMenu() {
           input.current?.click();
         }}
       >
-        Abrir arquivo
+        {t('files.open')}
       </button>
       <input
         ref={input}
         type="file"
         accept=".json,.archsim.json,application/json"
         hidden
-        aria-label="Arquivo de diagrama"
+        aria-label={t('files.input')}
         onChange={(e) => {
           const file = e.target.files?.[0];
           e.target.value = '';
@@ -52,7 +54,7 @@ export function FileMenu() {
       />
       {error && (
         <p className="field-error" role="alert">
-          Não consegui abrir o arquivo: {error}
+          {t('files.error', { error })}
         </p>
       )}
     </div>

@@ -1,22 +1,27 @@
 import { useState } from 'react';
+import { useLang } from '../i18n/store';
+import { useT } from '../i18n/t';
+import { catalog } from '@archsim/catalog';
 import { DRAG_TYPE, paletteGroups } from './palette-model';
 
 export function Palette({ onAdd }: { onAdd: (serviceId: string) => void }) {
   const [query, setQuery] = useState('');
-  const groups = paletteGroups(query);
+  const lang = useLang();
+  const t = useT();
+  const groups = paletteGroups(query, catalog.services, lang);
   return (
-    <aside className="palette" aria-label="Serviços">
+    <aside className="palette" aria-label={t('palette.label')}>
       <input
         type="search"
         className="palette-search"
-        placeholder="Buscar serviço"
-        aria-label="Buscar serviço"
+        placeholder={t('palette.search')}
+        aria-label={t('palette.search')}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
         }}
       />
-      {groups.length === 0 && <p className="muted">Nenhum serviço encontrado.</p>}
+      {groups.length === 0 && <p className="muted">{t('palette.none')}</p>}
       {groups.map((g) => (
         <section key={g.category} aria-label={g.label}>
           <h3>{g.label}</h3>

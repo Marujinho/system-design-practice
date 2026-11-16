@@ -1,5 +1,7 @@
 import { catalog, findService, type Kind, type Service } from '@archsim/catalog';
 import type { Diagram, DiagramEdge, Protocol } from '@archsim/sim-engine';
+import type { Lang } from '../i18n/lang';
+import { translate } from '../i18n/t';
 
 /** The protocol a new connection starts with, from the pair of kinds (FR-5). */
 export function defaultProtocol(source: Kind, target: Kind): Protocol {
@@ -12,17 +14,21 @@ export function defaultProtocol(source: Kind, target: Kind): Protocol {
 }
 
 /** Why a connection is unusual, or null when the catalog expects it (FR-6). Never blocks. */
-export function connectionWarning(source: Service, target: Service): string | null {
+export function connectionWarning(
+  source: Service,
+  target: Service,
+  lang: Lang = 'pt',
+): string | null {
   if (source.validTargetKinds.includes(target.kind)) return null;
-  return `${source.label} → ${target.label} não é uma conexão comum; confira se é isso mesmo.`;
+  return translate(lang, 'edge.unusual', { source: source.label, target: target.label });
 }
 
-export function edgeWarning(diagram: Diagram, edge: DiagramEdge): string | null {
+export function edgeWarning(diagram: Diagram, edge: DiagramEdge, lang: Lang = 'pt'): string | null {
   const s = diagram.nodes.find((n) => n.id === edge.source);
   const t = diagram.nodes.find((n) => n.id === edge.target);
   const ss = s ? findService(catalog, s.serviceId) : undefined;
   const ts = t ? findService(catalog, t.serviceId) : undefined;
-  return ss && ts ? connectionWarning(ss, ts) : null;
+  return ss && ts ? connectionWarning(ss, ts, lang) : null;
 }
 
 export function protocolFor(diagram: Diagram, source: string, target: string): Protocol {

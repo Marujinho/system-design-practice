@@ -8,6 +8,7 @@ import { useDecorations } from '../viz/decorate';
 import { GlobalBar } from '../viz/GlobalBar';
 import { ParticleLayer } from '../viz/ParticleLayer';
 import { useReducedMotion } from '../viz/useReducedMotion';
+import { useT } from '../i18n/t';
 import { emptyDiagram } from '../store/defaults';
 import { useDiagram, type Mode } from '../store/diagram-store';
 import { Collapsible } from './Collapsible';
@@ -31,6 +32,7 @@ export interface WorkspaceProps {
 /** Collapse every panel around the canvas, then put them back as they were (edge-hover FR-12). */
 function FocusButton() {
   const active = useLayout((s) => s.before !== null);
+  const t = useT();
   return (
     <button
       type="button"
@@ -40,7 +42,7 @@ function FocusButton() {
         useLayout.getState().focusCanvas();
       }}
     >
-      {active ? 'Restaurar painéis' : 'Focar no canvas'}
+      {t(active ? 'ws.restore' : 'ws.focus')}
     </button>
   );
 }
@@ -48,12 +50,13 @@ function FocusButton() {
 /** On the collapsed side strip: something is selected, its properties are one click away (FR-15). */
 function SelectionBadge() {
   const n = useDiagram((s) => s.selection.length);
+  const t = useT();
   if (n === 0) return null;
   return (
     <span
       className="selection-badge num"
       role="status"
-      aria-label={`Propriedades — ${n} ${n === 1 ? 'item selecionado' : 'itens selecionados'}`}
+      aria-label={t(n === 1 ? 'ws.selectionOne' : 'ws.selectionOther', { n })}
     >
       {n}
     </span>
@@ -62,6 +65,7 @@ function SelectionBadge() {
 
 /** Palette, canvas and side panel around the diagram store, with autosave per mode. */
 export function Workspace({ mode, initial, side, top, topSummary, chat }: WorkspaceProps) {
+  const t = useT();
   const centre = useRef<() => { x: number; y: number }>(() => ({ x: 0, y: 0 }));
   const modeKey = mode.kind === 'free' ? 'free' : `${mode.kind}:${mode.problemId}`;
 
@@ -103,14 +107,14 @@ export function Workspace({ mode, initial, side, top, topSummary, chat }: Worksp
     <div className="workspace">
       <Collapsible
         id="top"
-        label="barra superior"
+        label={t('ws.top')}
         edge="top"
-        summary={<span className="collapsible-summary">{topSummary ?? 'Carga'}</span>}
+        summary={<span className="collapsible-summary">{topSummary ?? t('load.label')}</span>}
       >
         <div className="workspace-top">{top}</div>
       </Collapsible>
       <div className={bodyClass}>
-        <Collapsible id="palette" label="paleta" edge="left">
+        <Collapsible id="palette" label={t('ws.palette')} edge="left">
           <Palette
             onAdd={(serviceId) => {
               const s = useDiagram.getState();
@@ -137,7 +141,7 @@ export function Workspace({ mode, initial, side, top, topSummary, chat }: Worksp
             </>
           }
         />
-        <Collapsible id="side" label="painel lateral" edge="right" summary={<SelectionBadge />}>
+        <Collapsible id="side" label={t('ws.side')} edge="right" summary={<SelectionBadge />}>
           <div className="side-panel">{side}</div>
         </Collapsible>
         {chat && (

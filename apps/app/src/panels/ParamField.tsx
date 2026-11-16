@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import { formatCompact } from '../format';
+import { useT } from '../i18n/t';
 
 export interface ParamFieldProps {
   label: string;
@@ -15,6 +16,7 @@ export interface ParamFieldProps {
 /** A numeric field that refuses values outside its range and says what the range is (FR-7). */
 export function ParamField({ label, unit, value, min, max, step, onCommit }: ParamFieldProps) {
   const id = useId();
+  const t = useT();
   const [text, setText] = useState(String(value));
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +28,7 @@ export function ParamField({ label, unit, value, min, max, step, onCommit }: Par
   const commit = () => {
     const n = Number(text.replace(',', '.'));
     if (text.trim() === '' || !Number.isFinite(n) || n < min || n > max || !onCommit(n)) {
-      setError(`Use um valor entre ${formatCompact(min)} e ${formatCompact(max)}.`);
+      setError(t('param.range', { min: formatCompact(min), max: formatCompact(max) }));
       return;
     }
     setError(null);

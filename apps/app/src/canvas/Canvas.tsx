@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from 'react';
+import { useLang } from '../i18n/store';
 import { useDiagram } from '../store/diagram-store';
 import { useLayout } from '../workspace/layout-store';
 import { protocolFor } from './connection-rules';
@@ -41,7 +42,11 @@ function CanvasInner({ decorate, decorateEdges, overlay, onReady }: CanvasProps)
   const diagram = useDiagram((s) => s.diagram);
   const selection = useDiagram((s) => s.selection);
   const flow = useReactFlow();
-  const { nodes, edges } = useMemo(() => toFlow(diagram, selection), [diagram, selection]);
+  const lang = useLang();
+  const { nodes, edges } = useMemo(
+    () => toFlow(diagram, selection, lang),
+    [diagram, selection, lang],
+  );
   // Sizes React Flow measured: without them every simulation tick remounts all edges.
   const sizes = useRef(new Map<string, { width: number; height: number }>());
   const shown = useMemo(

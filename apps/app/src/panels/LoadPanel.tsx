@@ -2,6 +2,7 @@ import { LIMITS, rpsOf, totalRps, type Load, type RequestClass } from '@archsim/
 import { useState } from 'react';
 import { formatCompact, formatRps } from '../format';
 import { FileMenu } from '../files/FileMenu';
+import { useT } from '../i18n/t';
 import { useSim } from '../sim/sim-store';
 import { hasProblem, useDiagram } from '../store/diagram-store';
 
@@ -41,6 +42,7 @@ function ClassRow({
   locked: boolean;
   onChange: (next: RequestClass) => void;
 }) {
+  const t = useT();
   const rpm = rpsOf(c) * 60;
   const num = (label: string, value: number | undefined, apply: (n: number) => RequestClass) => (
     <label className="load-field">
@@ -48,7 +50,7 @@ function ClassRow({
       <input
         className="num"
         inputMode="decimal"
-        aria-label={`${label} — ${c.label}`}
+        aria-label={t('load.field', { label, cls: c.label })}
         disabled={locked}
         defaultValue={value ?? 0}
         key={`${label}-${value ?? 0}`}
@@ -67,22 +69,22 @@ function ClassRow({
       <strong>{c.label}</strong>
       {!locked && (
         <select
-          aria-label={`Modo de carga — ${c.label}`}
+          aria-label={t('load.mode', { cls: c.label })}
           value={c.mode}
           onChange={(e) => {
             const mode = e.target.value as RequestClass['mode'];
             onChange(withRate({ ...c, mode, reqPerUserPerMin: c.reqPerUserPerMin ?? 10 }, rpm));
           }}
         >
-          <option value="users">usuários × req/min</option>
+          <option value="users">{t('load.usersPerMin')}</option>
           <option value="rps">req/s</option>
           <option value="rpm">req/min</option>
         </select>
       )}
       {c.mode === 'users' && (
         <>
-          {num('Usuários', c.users, (n) => ({ ...c, users: n }))}
-          {num('req/usuário/min', c.reqPerUserPerMin, (n) => ({ ...c, reqPerUserPerMin: n }))}
+          {num(t('load.users'), c.users, (n) => ({ ...c, users: n }))}
+          {num(t('load.reqPerUser'), c.reqPerUserPerMin, (n) => ({ ...c, reqPerUserPerMin: n }))}
         </>
       )}
       {c.mode === 'rps' && num('req/s', c.rps, (n) => ({ ...c, rps: n }))}
@@ -90,7 +92,7 @@ function ClassRow({
       {!locked && (
         <input
           type="range"
-          aria-label={`Carga (escala logarítmica) — ${c.label}`}
+          aria-label={t('load.slider', { cls: c.label })}
           min={0}
           max={SLIDER_STEPS}
           value={sliderFromRpm(rpm)}
@@ -110,13 +112,14 @@ export function LoadPanel() {
   const locked = useDiagram((s) => hasProblem(s.mode));
   const status = useSim((s) => s.status);
   const error = useSim((s) => s.error);
+  const t = useT();
   const [refusal, setRefusal] = useState<string | null>(null);
 
   const apply = (index: number, next: RequestClass) => {
     const classes = load.classes.map((c, i) => (i === index ? next : c));
     const candidate: Load = { classes };
     if (totalRps(candidate) * 60 > MAX_RPM) {
-      setRefusal(`A carga total passa do máximo de ${formatCompact(MAX_RPM)} req/min.`);
+      setRefusal(t('load.tooMuch', { max: formatCompact(MAX_RPM) }));
       return;
     }
     setRefusal(null);
@@ -124,7 +127,7 @@ export function LoadPanel() {
   };
 
   return (
-    <section className="load-panel" aria-label="Carga">
+    <section className="load-panel" aria-label={t('load.label')}>
       <div className="load-classes">
         {load.classes.map((c, i) => (
           <ClassRow
@@ -136,10 +139,10 @@ export function LoadPanel() {
             }}
           />
         ))}
-        {locked && <span className="muted">Carga definida pelo problema.</span>}
+        {locked && <span className="muted">{t('load.locked')}</span>}
       </div>
       <div className="load-status">
-        <span className="num">Total: {formatRps(totalRps(load))}</span>
+        <span className="num">{t('load.total', { rate: formatRps(totalRps(load)) })}</span>
         <FileMenu />
         {status === 'running' && (
           <button
@@ -149,7 +152,7 @@ export function LoadPanel() {
               useSim.getState().pause();
             }}
           >
-            Pausar
+            {t('load.pause')}
           </button>
         )}
         {status === 'paused' && (
@@ -160,7 +163,7 @@ export function LoadPanel() {
               useSim.getState().resume();
             }}
           >
-            Retomar
+            {t('load.resume')}
           </button>
         )}
       </div>
@@ -171,7 +174,7 @@ export function LoadPanel() {
       )}
       {status === 'error' && (
         <div className="banner" role="alert">
-          Simulação parou: {error}
+          {t('load.stopped', { error: error ?? '' })}
           <button
             type="button"
             className="button"
@@ -179,7 +182,7 @@ export function LoadPanel() {
               useSim.getState().restart();
             }}
           >
-            Reiniciar
+            {t('load.restart')}
           </button>
         </div>
       )}

@@ -1,21 +1,26 @@
 import { catalog } from '@archsim/catalog';
 import type { Diagram, Load } from '@archsim/sim-engine';
+import { currentLang } from '../i18n/store';
+import { translate } from '../i18n/t';
 
-export const FREE_LOAD: Load = {
-  classes: [
-    {
-      name: 'default',
-      label: 'Requisições',
-      mode: 'rps',
-      op: 'read',
-      rps: 100,
-      payloadKB: 1,
-      cacheable: true,
-    },
-  ],
-};
+/** The free canvas's starting load; its label in the language active when it is created. */
+export function freeLoad(): Load {
+  return {
+    classes: [
+      {
+        name: 'default',
+        label: translate(currentLang(), 'load.defaultClass'),
+        mode: 'rps',
+        op: 'read',
+        rps: 100,
+        payloadKB: 1,
+        cacheable: true,
+      },
+    ],
+  };
+}
 
-export function emptyDiagram(load: Load = FREE_LOAD): Diagram {
+export function emptyDiagram(load: Load = freeLoad()): Diagram {
   return { schemaVersion: 1, catalogVersion: catalog.catalogVersion, nodes: [], edges: [], load };
 }
 
@@ -29,7 +34,7 @@ export function problemStart(load: Load): Diagram {
         serviceId: 'core.users',
         variantId: 'default',
         position: { x: 0, y: 160 },
-        label: 'Usuários',
+        label: translate(currentLang(), 'load.users'),
         props: {},
         overrides: {},
       },
