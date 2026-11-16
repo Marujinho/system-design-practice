@@ -1,0 +1,74 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: Real-time chat
+statement: |
+  Design a chat with group conversations, in the style of Slack.
+
+  Each connected person keeps a WebSocket connection open. A message that is sent has to
+  reach every online member of the conversation in under half a second, even if they
+  are connected to different servers. History is kept forever.
+
+  At peak there are **200,000 connected people**, **3,000 messages sent/s** and
+  **1,000 history loads/s**.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Send messages to a conversation
+  - Deliver the message to online members, on any server
+  - Load a conversation's history
+  - Show who is online
+qualitative:
+  - Routing the message to the server where the recipient is connected
+  - Online presence and the cost of keeping that state
+  - Message ordering within a conversation
+  - Reconnection and messages missed during the outage
+requirements:
+  message-throughput: Messages accepted
+  history-throughput: History loads served
+  message-p99: Delivery p99
+  error-rate: Error rate
+classes:
+  message: Send message
+  history: Load history
+followups:
+  realtime-chat.routing:
+    question: Ana is on server 3 and Bruno is on server 7. How does Ana's message get to Bruno?
+    lookFor:
+      - pub/sub bus between servers (Redis pub/sub)
+      - registry of which server holds each connection
+  realtime-chat.presence:
+    question: How do you know who's online without polling 200,000 connections every second?
+    lookFor:
+      - heartbeat with a TTL
+      - publish state changes only to those who care
+  realtime-chat.ordering:
+    question: Two people send a message in the same conversation at the same instant. In what order does everyone see them?
+    lookFor:
+      - per-conversation sequence number
+      - ordering on the server, not by the client's clock
+  realtime-chat.websocket-cost:
+    question: You used API Gateway WebSocket. How much do 200,000 open connections and 3,000 messages per second cost?
+    lookFor:
+      - cost per connection-minute
+      - cost per million messages
+      - compare with your own servers behind an NLB
+  realtime-chat.hot-room:
+    question: The message database is close to its write limit. What happens with a very active channel of 50,000 members?
+    lookFor:
+      - hot partition per conversation
+      - batched writes or a composite key
+  realtime-chat.p99:
+    question: Messages are arriving slowly. Where is the time going?
+    lookFor:
+      - read the per-node latency
+      - don't wait for the durable write before delivering
+  realtime-chat.all-hands:
+    question: An all-hands meeting is going to quadruple messages for a few minutes. What saturates?
+    lookFor:
+      - identify the first node to saturate
+      - database write capacity
+referenceLabels:
+  users: Users
+  nlb: NLB (WebSocket)
+  chat: Chat servers
+  bus: Pub/sub and recent history (Redis)
+  messages: Messages

@@ -1,5 +1,6 @@
 import { evaluate, type Requirement } from '@archsim/sim-engine';
 import { formatUsd } from '../format';
+import { useRequirementLabel } from '../i18n/problem-text';
 import { useT } from '../i18n/t';
 import { useSim } from '../sim/sim-store';
 import { requirementLine } from './format-req';
@@ -17,6 +18,7 @@ export function EvaluationPanel({
   error: string | null;
 }) {
   const t = useT();
+  const label = useRequirementLabel();
   const result = useSim((s) => s.result);
   const rows = result ? evaluate(result, requirements) : [];
   const met = rows.filter((r) => r.pass).length;
@@ -38,7 +40,7 @@ export function EvaluationPanel({
                 {r.pass ? '✓' : '✗'}
               </span>
               <span className="req-label">
-                {r.label}
+                {label(r)}
                 <span className="sr-only">{t(r.pass ? 'eval.pass' : 'eval.fail')}</span>
               </span>
               <span className="num req-values">

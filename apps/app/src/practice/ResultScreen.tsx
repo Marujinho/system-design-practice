@@ -1,6 +1,7 @@
 import type { FinalizeResponse } from '@archsim/problems';
 import { useEffect, useState } from 'react';
 import { formatCompact, formatUsd } from '../format';
+import { useRequirementLabel } from '../i18n/problem-text';
 import { useLang } from '../i18n/store';
 import { useT } from '../i18n/t';
 import { useReducedMotion } from '../viz/useReducedMotion';
@@ -47,6 +48,7 @@ export function ResultScreen({
 }) {
   const t = useT();
   const lang = useLang();
+  const label = useRequirementLabel();
   const reduced = useReducedMotion();
   const shown = useCountUp(result.score.total, reduced);
   const s = result.score;
@@ -103,7 +105,7 @@ export function ResultScreen({
                     {r.pass ? '✓' : '✗'}
                   </span>
                   <span className="req-label">
-                    {r.label}
+                    {label(r)}
                     <span className="sr-only">{t(r.pass ? 'eval.pass' : 'eval.fail')}</span>
                   </span>
                   <span className="num req-values">

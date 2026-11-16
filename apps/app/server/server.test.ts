@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { catalog } from '@archsim/catalog';
 import { FinalizeResponse, History, ProblemSummary, Session } from '@archsim/problems';
-import { PROBLEMS_DIR } from '@archsim/problems/load';
+import { loadProblem, PROBLEMS_DIR } from '@archsim/problems/load';
 import { execFileSync } from 'node:child_process';
 import {
   existsSync,
@@ -217,6 +217,40 @@ describe('A06: size and the hidden reference', () => {
       (x) => ProblemSummary.parse(x),
     );
     expect(list).toHaveLength(10);
+  });
+
+  it('serves the English texts the browser may see, and nothing private in English either (language-switch A06)', async () => {
+    const loaded = loadProblem(join(PROBLEMS_DIR, 'url-shortener'));
+    if (!loaded.ok) throw new Error(loaded.message);
+    const en = loaded.value.en;
+    const r = await call('GET', '/__archsim/problems/url-shortener');
+    const body = JSON.parse(r.body) as { en: { title: string; requirements: object } };
+    expect(body.en.title).toBe(en.title);
+    expect(Object.keys(body.en.requirements)).toContain('redirect-p99');
+    const privateBits = [
+      ...Object.values(en.followups).flatMap((f) => [f.question, ...f.lookFor]),
+      ...en.qualitative,
+      ...Object.values(en.referenceLabels).filter((l) => l.length > 6 && l !== 'Users'),
+    ];
+    for (const bit of privateBits) expect(r.body).not.toContain(bit);
+    const list = JSON.parse((await call('GET', '/__archsim/problems')).body) as {
+      titleEn: string;
+    }[];
+    expect(list.map((p) => p.titleEn)).toContain('URL shortener');
+  });
+
+  it('gives the reference in English only after the first finalization, and only for lang=en', async () => {
+    expect((await call('GET', '/__archsim/reference/url-shortener?lang=en')).status).toBe(403);
+    await call('POST', '/__archsim/finalize', { body: finalizeBody() });
+    const label = (body: string, id: string) =>
+      (JSON.parse(body) as { nodes: { id: string; label: string }[] }).nodes.find(
+        (n) => n.id === id,
+      )?.label;
+    const en = await call('GET', '/__archsim/reference/url-shortener?lang=en');
+    expect(en.status).toBe(200);
+    expect(label(en.body, 'users')).toBe('Users');
+    const other = await call('GET', '/__archsim/reference/url-shortener?lang=xx');
+    expect(label(other.body, 'users')).toBe('Usuários');
   });
 });
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { parseProblem, parseYaml } from './load';
-import { Problem, toPublic } from './schema';
+import { stringify } from 'yaml';
+import { parseProblem, parseProblemText, parseYaml } from './load';
+import { Problem, toPublic, type ProblemText } from './schema';
 import { recordOf, emptyHistory } from './contracts';
 
 function base() {
@@ -157,10 +158,68 @@ describe('YAML parsing (A05)', () => {
   });
 });
 
+/** The fixture's English texts, one to one with `base()` and a reference with nodes users and app. */
+function english(): ProblemText {
+  const p = base();
+  return {
+    title: 'Demo',
+    statement: 'An example statement with enough text to pass the minimum the schema requires.',
+    functional: ['Shorten URLs'],
+    qualitative: ['Consistency'],
+    requirements: { reads: 'Reads' },
+    classes: { read: 'Read' },
+    followups: Object.fromEntries(
+      p.followups.map((f) => [f.id, { question: `In English: ${f.id}?`, lookFor: ['x-term'] }]),
+    ),
+    referenceLabels: { users: 'Users', app: 'Secret app label' },
+  };
+}
+
+describe('problem.en.yaml (language-switch FR-7, NFR-2, A08)', () => {
+  const p = Problem.parse(base());
+  const parse = (t: unknown) => parseProblemText(stringify(t), p, ['users', 'app']);
+
+  it('accepts texts that match the problem one to one', () => {
+    expect(parse(english())).toEqual({ ok: true, value: english() });
+  });
+
+  it('refuses a missing or extra requirement, class, follow-up or reference node', () => {
+    const extra = { ...english(), requirements: { reads: 'Reads', ghost: 'Ghost' } };
+    const r = parse(extra);
+    expect(r.ok).toBe(false);
+    expect(r.ok ? '' : r.message).toContain('sobra ghost');
+    const noClass = { ...english(), classes: {} };
+    expect(parse(noClass).ok ? '' : (parse(noClass) as { message: string }).message).toContain(
+      'falta read',
+    );
+    const followups = { ...english().followups };
+    delete followups['demo.a'];
+    expect(parse({ ...english(), followups }).ok).toBe(false);
+    expect(parse({ ...english(), referenceLabels: { users: 'Users' } }).ok).toBe(false);
+  });
+
+  it('refuses a functional or qualitative list of another length, or an unknown field', () => {
+    expect(parse({ ...english(), functional: ['One', 'Two'] }).ok).toBe(false);
+    expect(parse({ ...english(), qualitative: [] }).ok).toBe(false);
+    expect(parse({ ...english(), hint: 'nope' }).ok).toBe(false);
+  });
+
+  it('refuses YAML beyond plain data', () => {
+    expect(parseProblemText('title: !!js/function "x"\n', p, ['users', 'app']).ok).toBe(false);
+  });
+});
+
 describe('toPublic (FR-44)', () => {
-  it('drops follow-ups, lookFor, scoring and qualitative topics', () => {
+  it('drops follow-ups, lookFor, scoring and qualitative topics, in English too (language-switch A06)', () => {
     const p = Problem.parse({ ...base(), scoring: { base: 40 } });
-    const text = JSON.stringify(toPublic(p));
+    const pub = toPublic(p, english());
+    expect(pub.en.title).toBe('Demo');
+    expect(pub.en.requirements).toEqual({ reads: 'Reads' });
+    const text = JSON.stringify(pub);
+    expect(text).not.toContain('In English');
+    expect(text).not.toContain('x-term');
+    expect(text).not.toContain('Consistency');
+    expect(text).not.toContain('Secret app label');
     expect(text).not.toContain('followups');
     expect(text).not.toContain('lookFor');
     expect(text).not.toContain('TTL');

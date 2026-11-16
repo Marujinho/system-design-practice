@@ -73,6 +73,7 @@ export function createPracticeHandler(options: PracticeOptions) {
     return {
       id: p.problem.id,
       title: p.problem.title,
+      titleEn: p.en.title,
       difficulty: p.problem.difficulty,
       record: best?.score ?? null,
       stars: best?.stars ?? null,
@@ -101,6 +102,7 @@ export function createPracticeHandler(options: PracticeOptions) {
       reference: loaded.reference,
       diagram: attemptDiagram,
       catalog: options.catalog,
+      en: loaded.en,
     });
     return { problem: loaded.problem, attemptDiagram, scored };
   }
@@ -168,7 +170,13 @@ export function createPracticeHandler(options: PracticeOptions) {
     sendJson(res, 200, FinalizeResponse.parse(response));
   }
 
-  function reference(req: IncomingMessage, res: ServerResponse, id: string | undefined) {
+  /** `?lang=en` gives the reference's node labels in English; anything else, Portuguese (A05). */
+  function reference(
+    req: IncomingMessage,
+    res: ServerResponse,
+    id: string | undefined,
+    english: boolean,
+  ) {
     checkMethod(req, 'GET');
     const loaded = problemOf(id);
     const h = store.readHistory();
@@ -177,7 +185,26 @@ export function createPracticeHandler(options: PracticeOptions) {
       throw new Refusal(403, 'finalize o problema antes de ver a solução');
     }
     store.markSolutionViewed(loaded.problem.id, now().toISOString());
-    sendJson(res, 200, withProblemLoad(loaded.reference, loaded.problem));
+    const shown = withProblemLoad(loaded.reference, loaded.problem);
+    sendJson(
+      res,
+      200,
+      english
+        ? {
+            ...shown,
+            nodes: shown.nodes.map((n) => ({
+              ...n,
+              label: loaded.en.referenceLabels[n.id] ?? n.label,
+            })),
+            load: {
+              classes: shown.load.classes.map((c) => ({
+                ...c,
+                label: loaded.en.classes[c.name] ?? c.label,
+              })),
+            },
+          }
+        : shown,
+    );
   }
 
   return async function practice(
@@ -205,7 +232,8 @@ export function createPracticeHandler(options: PracticeOptions) {
               [...problems().values()].map((p) => summary(p, h)),
             );
           } else {
-            sendJson(res, 200, toPublic(problemOf(parts[1]).problem));
+            const loaded = problemOf(parts[1]);
+            sendJson(res, 200, toPublic(loaded.problem, loaded.en));
           }
           return;
         case 'history':
@@ -233,7 +261,12 @@ export function createPracticeHandler(options: PracticeOptions) {
           await mentor.proposalStatus(req, res);
           return;
         case 'reference':
-          reference(req, res, parts[1]);
+          reference(
+            req,
+            res,
+            parts[1],
+            new URLSearchParams(url.split('?')[1] ?? '').get('lang') === 'en',
+          );
           return;
         default:
           throw new Refusal(404, 'rota desconhecida');

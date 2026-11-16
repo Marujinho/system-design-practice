@@ -196,6 +196,8 @@ export const ProblemSummary = z
   .object({
     id: z.string(),
     title: z.string(),
+    /** The title in English (language-switch FR-7). */
+    titleEn: z.string(),
     difficulty: z.enum(['facil', 'medio', 'dificil']),
     record: z.number().int().nullable(),
     stars: z.number().int().min(0).max(3).nullable(),

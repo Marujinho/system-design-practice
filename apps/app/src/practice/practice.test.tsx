@@ -43,6 +43,7 @@ function summary(over: Partial<ProblemSummary> = {}): ProblemSummary {
   return {
     id: 'url-shortener',
     title: 'Encurtador de URL',
+    titleEn: 'URL shortener',
     difficulty: 'facil',
     record: null,
     stars: null,
@@ -150,7 +151,7 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
   function routes(solutionAvailable: boolean, statement = loaded.problem.statement): Route {
     return (url, init) => {
       if (url.endsWith('/problems/url-shortener'))
-        return { ...toPublic(loaded.problem), statement };
+        return { ...toPublic(loaded.problem, loaded.en), statement };
       if (url.endsWith('/problems'))
         return [summary({ solutionAvailable, attempts: solutionAvailable ? 1 : 0 })];
       if (url.endsWith('/finalize') && init?.method === 'POST') return finalizeAnswer();
@@ -171,6 +172,24 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     expect(useDiagram.getState().diagram.load).toEqual(loaded.problem.load);
   });
 
+  it('shows the problem in English, switching in place, with the load and requirements labelled in English (language-switch FR-2, FR-7)', async () => {
+    mockFetch(routes(false));
+    render(<ProblemView problemId="url-shortener" />);
+    await screen.findByText('Encurtador de URL');
+    const nodesBefore = useDiagram.getState().diagram;
+    act(() => {
+      useLangStore.getState().setLang('en');
+    });
+    expect(await screen.findAllByText(loaded.en.title)).not.toHaveLength(0);
+    expect(screen.getByText(loaded.en.functional[0] ?? '')).toBeTruthy();
+    expect(screen.getByText('Load set by the problem.')).toBeTruthy();
+    const firstClass = loaded.problem.load.classes[0];
+    expect(screen.getByText(loaded.en.classes[firstClass?.name ?? ''] ?? '')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Encurtador de URL');
+    // the diagram is the same object: nothing was recreated by the switch
+    expect(useDiagram.getState().diagram).toBe(nodesBefore);
+  });
+
   it('renders a statement with <script> as text, never as an element', async () => {
     mockFetch(
       routes(
@@ -188,7 +207,7 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
     const base = routes(false);
     mockFetch((url, init) =>
       url.endsWith('/problems/url-shortener')
-        ? { ...toPublic(loaded.problem), title }
+        ? { ...toPublic(loaded.problem, loaded.en), title }
         : base(url, init),
     );
     useLayout.setState({ collapsed: { ...EXPANDED, top: true }, before: null });
@@ -252,7 +271,7 @@ describe('ProblemView (FR-44, FR-46, A05)', () => {
 
 describe('double click asks for properties (mentor-edits FR-14)', () => {
   const routesFor: Route = (url) => {
-    if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem);
+    if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem, loaded.en);
     if (url.endsWith('/problems')) return [summary()];
     return undefined;
   };
@@ -400,7 +419,7 @@ describe('study mode (study-mode FR-1, FR-9)', () => {
     const calls: string[] = [];
     mockFetch((url, init) => {
       calls.push(url);
-      if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem);
+      if (url.endsWith('/problems/url-shortener')) return toPublic(loaded.problem, loaded.en);
       if (url.endsWith('/study-score') && init?.method === 'POST')
         return finalizeAnswer({ isRecord: false });
       return undefined;

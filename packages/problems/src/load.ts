@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
 import { z } from 'zod';
-import { Problem } from './schema';
+import { Problem, ProblemText, problemTextGaps } from './schema';
 
 /** The repository's `problems/` directory: next to this package, or up from the working directory. */
 function locateProblems(): string {
@@ -48,7 +48,24 @@ export function parseProblem(text: string): LoadResult<Problem> {
 export interface LoadedProblem {
   problem: Problem;
   reference: Diagram;
+  /** The problem's texts in English (language-switch FR-7). */
+  en: ProblemText;
   dir: string;
+}
+
+/** `problem.en.yaml`: plain YAML, the schema, then one-to-one with the problem and its reference. */
+export function parseProblemText(
+  text: string,
+  problem: Problem,
+  referenceNodeIds: readonly string[],
+): LoadResult<ProblemText> {
+  const yaml = parseYaml(text);
+  if (!yaml.ok) return yaml;
+  const parsed = ProblemText.safeParse(yaml.value);
+  if (!parsed.success) return { ok: false, message: z.prettifyError(parsed.error) };
+  const gaps = problemTextGaps(problem, referenceNodeIds, parsed.data);
+  if (gaps.length > 0) return { ok: false, message: gaps.join('\n') };
+  return { ok: true, value: parsed.data };
 }
 
 export function loadProblem(
@@ -57,13 +74,24 @@ export function loadProblem(
 ): LoadResult<LoadedProblem> {
   const problemPath = join(dir, 'problem.yaml');
   const referencePath = join(dir, 'reference.archsim.json');
+  const textPath = join(dir, 'problem.en.yaml');
   if (!existsSync(problemPath)) return { ok: false, message: `${problemPath} não existe` };
   if (!existsSync(referencePath)) return { ok: false, message: `${referencePath} não existe` };
+  if (!existsSync(textPath)) return { ok: false, message: `${textPath} não existe` };
   const problem = parseProblem(readFileSync(problemPath, 'utf8'));
   if (!problem.ok) return { ok: false, message: `${problemPath}:\n${problem.message}` };
   const reference = parseDiagram(readFileSync(referencePath, 'utf8'), catalog);
   if (!reference.ok) return { ok: false, message: `${referencePath}: ${reference.message}` };
-  return { ok: true, value: { problem: problem.value, reference: reference.diagram, dir } };
+  const en = parseProblemText(
+    readFileSync(textPath, 'utf8'),
+    problem.value,
+    reference.diagram.nodes.map((n) => n.id),
+  );
+  if (!en.ok) return { ok: false, message: `${textPath}:\n${en.message}` };
+  return {
+    ok: true,
+    value: { problem: problem.value, reference: reference.diagram, en: en.value, dir },
+  };
 }
 
 /** Every problem directory (names starting with `_` are fixtures). */

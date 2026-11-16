@@ -2,6 +2,7 @@ import type { FinalizeResponse, PublicProblem } from '@archsim/problems';
 import type { Diagram } from '@archsim/sim-engine';
 import { useEffect, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
+import { useProblemText, useShownProblem } from '../i18n/problem-text';
 import { useLang } from '../i18n/store';
 import { tr, useT } from '../i18n/t';
 import { LoadPanel } from '../panels/LoadPanel';
@@ -24,13 +25,14 @@ export function Brief({ problem }: { problem: PublicProblem }) {
   const [open, setOpen] = useState(true);
   const t = useT();
   const lang = useLang();
+  const shown = useShownProblem(problem);
   return (
     <section className="brief" aria-label={t('brief.label')}>
       <div className="brief-head">
         <a href={hrefOf({ screen: 'problems' })} className="muted">
           {t('list.title')}
         </a>
-        <h2>{problem.title}</h2>
+        <h2>{shown.title}</h2>
         <span className="muted">{difficultyLabel(problem.difficulty, lang)}</span>
         <button
           type="button"
@@ -47,13 +49,13 @@ export function Brief({ problem }: { problem: PublicProblem }) {
         <div className="brief-body">
           <div className="statement">
             <Markdown allowedElements={ALLOWED} skipHtml unwrapDisallowed>
-              {problem.statement}
+              {shown.statement}
             </Markdown>
           </div>
           <div>
             <h3>{t('brief.functional')}</h3>
             <ul>
-              {problem.functional.map((f) => (
+              {shown.functional.map((f) => (
                 <li key={f}>{f}</li>
               ))}
             </ul>
@@ -65,8 +67,24 @@ export function Brief({ problem }: { problem: PublicProblem }) {
   );
 }
 
+/** The problem's title in the active language, as text (A05). */
+export function ProblemTitle({ problem }: { problem: PublicProblem }) {
+  return <strong>{useShownProblem(problem).title}</strong>;
+}
+
+/** Hands the problem's English texts to the panels while the screen is open. */
+export function useProblemTextFor(problem: PublicProblem | null): void {
+  useEffect(() => {
+    useProblemText.getState().set(problem ? problem.en : null);
+    return () => {
+      useProblemText.getState().set(null);
+    };
+  }, [problem]);
+}
+
 export function ProblemView({ problemId }: { problemId: string }) {
   const t = useT();
+  const lang = useLang();
   const [problem, setProblem] = useState<PublicProblem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'req' | 'props'>('req');
@@ -82,6 +100,14 @@ export function ProblemView({ problemId }: { problemId: string }) {
   const [result, setResult] = useState<FinalizeResponse | null>(null);
   const [canSeeSolution, setCanSeeSolution] = useState(false);
   const [solution, setSolution] = useState<Diagram | null>(null);
+  // The language the open solution was fetched in: a switch fetches its labels again.
+  const solutionLang = useRef(lang);
+  useProblemTextFor(problem);
+  useEffect(() => {
+    if (solution === null || solutionLang.current === lang) return;
+    solutionLang.current = lang;
+    api.reference(problemId, lang).then(setSolution, () => undefined);
+  }, [lang, solution, problemId]);
 
   useEffect(() => {
     setProblem(null);
@@ -120,7 +146,8 @@ export function ProblemView({ problemId }: { problemId: string }) {
   };
 
   const openSolution = () => {
-    api.reference(problem.id).then(
+    solutionLang.current = lang;
+    api.reference(problem.id, lang).then(
       (d) => {
         setResult(null);
         setSolution(d);
@@ -136,7 +163,7 @@ export function ProblemView({ problemId }: { problemId: string }) {
       <Workspace
         mode={{ kind: 'problem', problemId: problem.id }}
         initial={() => problemStart(problem.load)}
-        topSummary={<strong>{problem.title}</strong>}
+        topSummary={<ProblemTitle problem={problem} />}
         top={
           <>
             <Brief problem={problem} />

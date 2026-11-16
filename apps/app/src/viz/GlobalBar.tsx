@@ -1,6 +1,7 @@
 import type { SimResult } from '@archsim/sim-engine';
 import { useReactFlow } from '@xyflow/react';
 import { formatMs, formatPct, formatUsd } from '../format';
+import { useClassLabel } from '../i18n/problem-text';
 import { useT } from '../i18n/t';
 import { useSim } from '../sim/sim-store';
 import { useDiagram } from '../store/diagram-store';
@@ -19,6 +20,7 @@ function bottleneckName(result: SimResult): { id: string; label: string } | null
  */
 export function GlobalBar() {
   const t = useT();
+  const classLabel = useClassLabel();
   const result = useSim((s) => s.result);
   const classes = useDiagram((s) => s.diagram.load.classes);
   const flow = useReactFlow();
@@ -45,7 +47,7 @@ export function GlobalBar() {
     <div className="global-bar num" role="status" aria-label={t('global.label')}>
       {classes.map((c) => (
         <span key={c.name}>
-          {c.label}: p50 {formatMs(result.global.p50ByClass[c.name] ?? 0)} · p99{' '}
+          {classLabel(c)}: p50 {formatMs(result.global.p50ByClass[c.name] ?? 0)} · p99{' '}
           {formatMs(result.global.p99ByClass[c.name] ?? 0)}
         </span>
       ))}

@@ -2,6 +2,7 @@ import { LIMITS, rpsOf, totalRps, type Load, type RequestClass } from '@archsim/
 import { useState } from 'react';
 import { formatCompact, formatRps } from '../format';
 import { FileMenu } from '../files/FileMenu';
+import { useClassLabel } from '../i18n/problem-text';
 import { useT } from '../i18n/t';
 import { useSim } from '../sim/sim-store';
 import { hasProblem, useDiagram } from '../store/diagram-store';
@@ -43,6 +44,7 @@ function ClassRow({
   onChange: (next: RequestClass) => void;
 }) {
   const t = useT();
+  const cls = useClassLabel()(c);
   const rpm = rpsOf(c) * 60;
   const num = (label: string, value: number | undefined, apply: (n: number) => RequestClass) => (
     <label className="load-field">
@@ -50,7 +52,7 @@ function ClassRow({
       <input
         className="num"
         inputMode="decimal"
-        aria-label={t('load.field', { label, cls: c.label })}
+        aria-label={t('load.field', { label, cls })}
         disabled={locked}
         defaultValue={value ?? 0}
         key={`${label}-${value ?? 0}`}
@@ -66,10 +68,10 @@ function ClassRow({
   );
   return (
     <div className="load-class">
-      <strong>{c.label}</strong>
+      <strong>{cls}</strong>
       {!locked && (
         <select
-          aria-label={t('load.mode', { cls: c.label })}
+          aria-label={t('load.mode', { cls })}
           value={c.mode}
           onChange={(e) => {
             const mode = e.target.value as RequestClass['mode'];
@@ -92,7 +94,7 @@ function ClassRow({
       {!locked && (
         <input
           type="range"
-          aria-label={t('load.slider', { cls: c.label })}
+          aria-label={t('load.slider', { cls })}
           min={0}
           max={SLIDER_STEPS}
           value={sliderFromRpm(rpm)}

@@ -1,0 +1,75 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: Video on demand streaming
+statement: |
+  Design a video-on-demand platform for online courses.
+
+  Creators upload videos (about 100 MB each). Each video is transcoded into HLS
+  segments, which takes about **1 minute** of processing per video. Viewers download
+  512 KB segments, one after another, while the video plays. A new video can take
+  a few minutes to become available.
+
+  At peak there are **500 segment downloads/s** and **0.2 video uploads/s** (about 17,000 videos
+  per day). Most of this system's cost is bandwidth: do the math.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Accept videos from creators
+  - Transcode into HLS segments
+  - Deliver the segments to viewers
+qualitative:
+  - Adaptive bitrate and the multiple resolutions of each video
+  - Content protection (signed URLs, DRM)
+  - Popular videos vs. the long tail in the CDN cache
+requirements:
+  watch-throughput: Segments delivered
+  upload-throughput: Uploads accepted
+  watch-p99: Segment p99
+  transcode-age: Maximum delay to start transcoding
+  error-rate: Error rate
+classes:
+  watch: Watch (video segment)
+  upload: Upload video
+followups:
+  video-on-demand.no-cdn:
+    question: Segments are served straight from storage. How much are you paying for data transfer per month, and how much would a CDN change that?
+    lookFor:
+      - cost per GB transferred is the largest cost
+      - a CDN reduces latency and origin load
+  video-on-demand.bandwidth:
+    question: Work out the bandwidth for your design. Which node costs the most, and why?
+    lookFor:
+      - 500 segments/s × 512 KB ≈ 256 MB/s
+      - cost per GB dominates the total cost
+  video-on-demand.backlog:
+    question: Videos are taking a long time to start transcoding. What's the limiting factor?
+    lookFor:
+      - transcoding concurrency
+      - read the queue age
+  video-on-demand.p99:
+    question: Segments are arriving slowly and the video stalls. Where is the time going?
+    lookFor:
+      - serve from the edge, close to the viewer
+      - don't route segments through the application server
+  video-on-demand.abr:
+    question: Does someone watching on a phone over 3G get the same segments as someone watching on a 4K TV?
+    lookFor:
+      - multiple resolutions per video
+      - the player picks the bitrate based on bandwidth
+  video-on-demand.launch:
+    question: A famous course is about to launch and views are going to grow tenfold. What changes in the cost, and what saturates?
+    lookFor:
+      - identify the first node to saturate
+      - bandwidth grows linearly with views
+  video-on-demand.protection:
+    question: How do you stop someone from sharing the link to a segment of a paid course?
+    lookFor:
+      - signed URLs or cookies with expiry
+      - DRM for high-value content
+referenceLabels:
+  users: Users
+  cdn: Segment CDN
+  segments: HLS segments
+  raw: Uploaded videos
+  jobs: Transcoding queue
+  transcode: Transcode
+  encoded: Encoded videos

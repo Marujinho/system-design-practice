@@ -51,7 +51,7 @@ export function ProblemList() {
           return (
             <li key={p.id} className="problem-row">
               <a className="problem-card" href={hrefOf({ screen: 'problem', problemId: p.id })}>
-                <span className="problem-title">{p.title}</span>
+                <span className="problem-title">{lang === 'en' ? p.titleEn : p.title}</span>
                 <span className="muted">{difficultyLabel(p.difficulty, lang)}</span>
                 <span className="problem-status">{t(STATUS_KEY[status])}</span>
                 {p.record !== null && (
@@ -66,7 +66,7 @@ export function ProblemList() {
               <a
                 className="button study-link"
                 href={hrefOf({ screen: 'study', problemId: p.id })}
-                aria-label={t('list.studyWith', { title: p.title })}
+                aria-label={t('list.studyWith', { title: lang === 'en' ? p.titleEn : p.title })}
               >
                 {t('list.study')}
               </a>

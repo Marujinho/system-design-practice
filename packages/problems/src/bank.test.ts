@@ -53,6 +53,21 @@ describe.each(problemDirs().map((dir) => [basename(dir), dir] as const))(
     const ref = scoreAttempt({ problem, reference, diagram: reference, catalog });
     const bad = scoreAttempt({ problem, reference, diagram: naive, catalog });
 
+    it('has its English texts, one to one and with no Portuguese left (language-switch FR-7, NFR-2)', () => {
+      const en = loaded.en;
+      const texts = [
+        en.title,
+        en.statement,
+        ...en.functional,
+        ...en.qualitative,
+        ...Object.values(en.requirements),
+        ...Object.values(en.classes),
+        ...Object.values(en.followups).flatMap((f) => [f.question, ...f.lookFor]),
+        ...Object.values(en.referenceLabels),
+      ];
+      expect(texts.filter((t) => /[çãõáéíóúâê]|\b(não|você|para|uma|que)\b/i.test(t))).toEqual([]);
+    });
+
     it('passes the schema and matches its directory', () => {
       expect(problem.id).toBe(id);
     });

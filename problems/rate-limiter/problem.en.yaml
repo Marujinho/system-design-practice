@@ -1,0 +1,75 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: Distributed rate limiter
+statement: |
+  Design a rate limiter for a public API.
+
+  Each client (identified by an API key) can make up to 100 requests per minute.
+  Beyond that, the API responds `429 Too Many Requests`. The limit has to apply to the client
+  as a whole, even when its requests land on different API instances.
+
+  The API receives **5,000 requests/s** at peak. Every request goes through the limiter before
+  moving on, so it can't become the bottleneck or make the API slow.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Limit each API key to 100 requests per minute
+  - Respond 429 when the limit is exceeded
+  - The limit applies to the client across all API instances
+qualitative:
+  - Rate-limiting algorithm (fixed window, sliding window, token bucket)
+  - Atomic counting across instances
+  - Behavior when the counter store fails (fail-open vs. fail-closed)
+requirements:
+  api-throughput: Requests served
+  api-p99: Call p99
+  error-rate: Error rate
+classes:
+  api: API call
+followups:
+  rate-limiter.algorithm:
+    question: Which algorithm do you use to count requests, and what happens when the window rolls over?
+    lookFor:
+      - fixed window allows a burst of up to 2x at the rollover
+      - sliding window or token bucket smooth it out
+      - memory cost of each algorithm
+  rate-limiter.atomicity:
+    question: Two instances get requests from the same client in the same millisecond. How do you make sure the count doesn't lose increments?
+    lookFor:
+      - atomic increment (INCR, Lua script)
+      - no separate read and write
+  rate-limiter.no-shared-store:
+    question: You didn't add a shared store for the counters. How does the limit apply to the whole client if its requests land on different instances?
+    lookFor:
+      - a local counter per instance multiplies the limit by the number of instances
+      - low-latency shared store
+  rate-limiter.dynamo-cost:
+    question: You kept the counters in DynamoDB. How much does each API request cost in counter writes alone?
+    lookFor:
+      - cost per million writes at high volume
+      - in-memory Redis is cheaper for ephemeral counters
+  rate-limiter.p99:
+    question: The call p99 went over the target. How much of that time is the limiter and how much is everything else?
+    lookFor:
+      - read the per-node latency in the simulation
+      - the limiter should cost a few milliseconds
+      - scale the tier that saturates
+  rate-limiter.redis-down:
+    question: The counters' Redis went down. Does the API stop working, or does it let everything through?
+    lookFor:
+      - fail-open vs. fail-closed and the risk of each
+      - Redis replica and failover
+  rate-limiter.traffic-3x:
+    question: A large client is about to triple its traffic. What saturates first?
+    lookFor:
+      - identify the node that saturates in the simulation
+      - the counter for a hot key
+  rate-limiter.api-gateway:
+    question: Why not just use API Gateway's built-in throttling?
+    lookFor:
+      - 10,000 req/s quota per account and region, shared across all APIs
+      - API Gateway per-key limits (usage plans) and their restrictions
+referenceLabels:
+  users: Users
+  alb: ALB
+  limiter: Gateway with limiter
+  counters: Counters (Redis)

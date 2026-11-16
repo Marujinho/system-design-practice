@@ -1,0 +1,72 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: Search autocomplete
+statement: |
+  Design the autocomplete for an e-commerce search box.
+
+  On every keystroke, the site sends the typed prefix and shows up to 10 product suggestions,
+  ranked by popularity. Suggestions have to appear while the person is typing.
+  The product catalog changes throughout the day and the index receives continuous updates.
+
+  At peak there are **6,000 prefix queries/s** and **20 index updates/s**. The shortest
+  prefixes repeat a lot: a few thousand prefixes account for most of the traffic.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Suggest up to 10 products for a prefix
+  - Rank by popularity
+  - Reflect catalog updates
+qualitative:
+  - Structure for prefix search (trie, edge n-grams)
+  - How long a stale suggestion can stay in the cache
+  - Reducing client calls (debounce, minimum characters)
+requirements:
+  suggest-throughput: Suggestions served
+  index-throughput: Index updates
+  suggest-p99: Suggestion p99
+  error-rate: Error rate
+classes:
+  suggest: Prefix suggestion
+  index: Index update
+followups:
+  autocomplete.structure:
+    question: What data structure solves prefix search, and where does it live in your design?
+    lookFor:
+      - trie or edge n-grams in the search index
+      - precompute the top 10 per prefix
+  autocomplete.no-cache:
+    question: Every keystroke goes all the way to the search index. How many distinct prefixes are there really, and what does that suggest?
+    lookFor:
+      - a few short prefixes concentrate the traffic
+      - a cache with a high hit rate in front of the index
+  autocomplete.search-hot:
+    question: The search index is running above 60%. What do you tune first, and how much does each option cost?
+    lookFor:
+      - raise the cache hit rate
+      - more index nodes and the cost of each one
+  autocomplete.p99:
+    question: Suggestions are arriving slowly. Where is the p99 time going?
+    lookFor:
+      - read the per-node latency
+      - take the index off the path of most queries
+  autocomplete.staleness:
+    question: A product was just discontinued. How long does it keep showing up in suggestions, and is that acceptable?
+    lookFor:
+      - cache TTL as the staleness window
+      - per-prefix invalidation when needed
+  autocomplete.black-friday:
+    question: On Black Friday, search is going to get 4x the traffic. What saturates?
+    lookFor:
+      - identify the first node to saturate
+      - scale the API and the cache, not just the index
+  autocomplete.client:
+    question: What can you do in the browser itself to cut down on calls?
+    lookFor:
+      - debounce between keystrokes
+      - minimum of 2 or 3 characters
+      - local cache of prefixes already seen
+referenceLabels:
+  users: Users
+  alb: ALB
+  app: Suggestions API
+  cache: Prefix cache
+  search: Search index

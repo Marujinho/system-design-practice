@@ -9,6 +9,7 @@ import {
 import { useId } from 'react';
 import { formatCompact, formatDate, formatRps, formatUsd } from '../format';
 import { useCatalog } from '../i18n/catalog';
+import { useClassLabel } from '../i18n/problem-text';
 import type { Lang } from '../i18n/lang';
 import { useLang } from '../i18n/store';
 import { translate, useT } from '../i18n/t';
@@ -211,6 +212,7 @@ function EdgePanel({ edge }: { edge: DiagramEdge }) {
   const protocolId = useId();
   const lang = useLang();
   const t = useT();
+  const classLabel = useClassLabel();
   return (
     <div className="panel" aria-label={t('props.edgeOf')}>
       <header>
@@ -273,7 +275,7 @@ function EdgePanel({ edge }: { edge: DiagramEdge }) {
                   store().setEdge(edge.id, { classes: all ? undefined : next });
                 }}
               />
-              {c.label}
+              {classLabel(c)}
             </label>
           );
         })}

@@ -1,0 +1,82 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: Ticket sales under a traffic spike
+statement: |
+  Design ticket sales for a heavily contested concert.
+
+  Sales open at an announced time. About 1 million people arrive in the first
+  5 minutes to see the seat map and try to buy. Each seat can be sold only
+  **once**. A buyer needs their order accepted right away, even if the final confirmation
+  takes a few seconds.
+
+  At peak there are **15,000 event views/s** and **1,500 purchase attempts/s**.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Show the event and the map of available seats
+  - Accept purchase orders during the peak
+  - Never sell the same seat twice
+  - Confirm or reject each order within a few seconds
+qualitative:
+  - Preventing double-selling the same seat (conditional write, lock, reservation with expiry)
+  - Order idempotency when the client retries
+  - Virtual waiting room to control admission
+  - Fairness in the order of service
+requirements:
+  browse-throughput: Views served
+  purchase-throughput: Orders accepted
+  browse-p99: View p99
+  confirm-age: Maximum delay to confirm
+  error-rate: Error rate
+classes:
+  browse: View event and seats
+  purchase: Buy ticket
+followups:
+  ticketing.double-sell:
+    question: Two orders arrive at the same time for seat F12. How does your design guarantee that only one gets it?
+    lookFor:
+      - conditional write or a transaction that locks the seat row
+      - temporary reservation with expiry
+      - ordering guaranteed per seat (FIFO queue per group)
+  ticketing.idempotency:
+    question: The app resent the same order because the response was slow. How do you avoid charging twice?
+    lookFor:
+      - idempotency key per order
+      - deduplication in the FIFO queue
+  ticketing.sync-purchase:
+    question: Purchases go straight to the database, on the request path. What happens to the database when 1,500 people buy per second?
+    lookFor:
+      - a queue decouples accepting the order from processing it
+      - the database processes at its own pace
+  ticketing.queue-age:
+    question: Confirmation is taking longer than the target. What do you change?
+    lookFor:
+      - more consumers
+      - read the queue age in the simulation
+  ticketing.fifo-limit:
+    question: The FIFO queue has a calls-per-second quota. At 1,500 orders/s, how do you stay within it?
+    lookFor:
+      - batches of up to 10 messages
+      - message groups per event or section
+  ticketing.browse-cache:
+    question: Almost everyone is just looking at the seat map. How much of that needs to reach the database?
+    lookFor:
+      - cache the map with a short TTL
+      - accept a slightly stale map and validate at purchase time
+  ticketing.waiting-room:
+    question: The artist announced an extra date and the peak is going to double. What breaks, and how would a waiting room help?
+    lookFor:
+      - identify the first node to saturate
+      - a waiting room limits admission to what the system can handle
+  ticketing.fairness:
+    question: Should whoever arrived first get to buy first? How does your design handle that?
+    lookFor:
+      - arrival order in the waiting room
+      - FIFO per group and what it guarantees
+referenceLabels:
+  users: Users
+  alb: ALB
+  app: Event API
+  cache: Seat map cache
+  orders: Order queue (FIFO)
+  workers: Reservation workers
+  db: Seats and orders

@@ -10,7 +10,7 @@ import { useLayout } from '../workspace/layout-store';
 import { Workspace } from '../workspace/Workspace';
 import { api, ApiError } from './api';
 import { EvaluationPanel } from './EvaluationPanel';
-import { Brief } from './ProblemView';
+import { Brief, ProblemTitle, useProblemTextFor } from './ProblemView';
 import { ChatPanel } from './ChatPanel';
 import { MentorLauncher } from './MentorLauncher';
 import { ResultScreen } from './ResultScreen';
@@ -34,6 +34,7 @@ export function StudyView({ problemId }: { problemId: string }) {
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [result, setResult] = useState<FinalizeResponse | null>(null);
+  useProblemTextFor(problem);
 
   useEffect(() => {
     setProblem(null);
@@ -69,7 +70,8 @@ export function StudyView({ problemId }: { problemId: string }) {
         chat={{ panel: <ChatPanel problemId={problem.id} />, launcher: <MentorLauncher /> }}
         topSummary={
           <>
-            <strong>{problem.title}</strong> <span className="study-badge">{t('study.badge')}</span>
+            <ProblemTitle problem={problem} />{' '}
+            <span className="study-badge">{t('study.badge')}</span>
           </>
         }
         top={

@@ -42,5 +42,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ problemId, diagram }),
     }),
-  reference: (id: string) => call(Diagram, `reference/${encodeURIComponent(id)}`),
+  /** The reference; with `en`, its node labels in English (language-switch FR-7). */
+  reference: (id: string, lang: 'pt' | 'en' = 'pt') =>
+    call(Diagram, `reference/${encodeURIComponent(id)}${lang === 'en' ? '?lang=en' : ''}`),
 };

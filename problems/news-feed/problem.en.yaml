@@ -1,0 +1,79 @@
+# English texts of this problem (language-switch FR-7). Numbers, ids and the load stay in problem.yaml.
+title: News feed with celebrity users
+statement: |
+  Design the feed of a social network.
+
+  Each user follows other users and, when they open the app, sees the latest posts from the people
+  they follow. On average, a post is delivered to 50 followers, but some accounts (celebrities)
+  have millions of followers.
+
+  At peak there are **5,000 feed opens/s** and **50 posts/s**. Delivering each post to the
+  followers' timelines generates **2,500 timeline inserts/s** (50 posts × 50 followers), which are already
+  counted in the load. A post can take a few seconds to show up in feeds, but
+  opening the feed has to be fast.
+
+  Meet every requirement at the lowest possible monthly cost.
+functional:
+  - Publish a post
+  - Open the feed with recent posts from the people the user follows
+  - Accept that a post may take a few seconds to reach feeds
+qualitative:
+  - Fan-out on write vs. fan-out on read
+  - Hybrid handling for celebrities
+  - Feed ordering and pagination
+requirements:
+  feed-throughput: Feed opens served
+  post-throughput: Posts accepted
+  fanout-throughput: Timeline inserts accepted
+  feed-p99: Feed open p99
+  delivery-age: Maximum delay to reach feeds
+  error-rate: Error rate
+classes:
+  feed: Open the feed
+  post: Publish post
+  fanout: Timeline delivery
+followups:
+  news-feed.push-vs-pull:
+    question: Do you deliver the post to timelines when it's published, or build the feed when it's opened? Why?
+    lookFor:
+      - fan-out on write makes reads cheap
+      - fan-out on read avoids writing for people who never open the app
+      - the read/write ratio decides
+  news-feed.celebrity:
+    question: A celebrity with 30 million followers posts. What happens to your fan-out queue?
+    lookFor:
+      - fan-out on write blows up for large accounts
+      - hybrid, with celebrity posts merged in at read time
+  news-feed.sync-fanout:
+    question: You do the fan-out on the post request path. What happens to the latency for the person posting?
+    lookFor:
+      - a queue decouples the post from the fan-out
+      - the poster doesn't wait for 50 writes
+  news-feed.backlog:
+    question: The fan-out queue is backing up. How long does a post take to show up?
+    lookFor:
+      - read the queue age
+      - more fan-out workers
+  news-feed.feed-p99:
+    question: Opening the feed got slow. Where does the feed come from in your design?
+    lookFor:
+      - timeline pre-built in memory
+      - don't merge posts from hundreds of accounts at read time
+  news-feed.timeline-memory:
+    question: The timelines live in Redis. How much memory does that take, and what do you store in each one?
+    lookFor:
+      - store only post IDs, not the content
+      - cap the size of each timeline
+  news-feed.event:
+    question: A major sporting event is going to triple everything. What breaks first?
+    lookFor:
+      - identify the first node to saturate
+      - the fan-out queue absorbs the load while the workers scale
+referenceLabels:
+  users: Users
+  alb: ALB
+  app: Feed API
+  posts: Posts
+  fanout: Fan-out queue
+  workers: Fan-out workers
+  timelines: Timelines (Redis)
